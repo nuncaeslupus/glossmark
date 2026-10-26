@@ -5,6 +5,7 @@ label: "CommonMark pipeline"
 priority: 5
 deps: [t-724e3930]
 tags: [S-1]
+status: merged
 ---
 
 Render pipeline core: markdown-it with CommonMark settings, run the CommonMark spec suite
