@@ -1,0 +1,830 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="arsenal-source-sha256" content="5419dda54341bf7c013e14b16e9da295d4d38b46212f35fcf6d629070c885893">
+<title>Glossmark plan — Plan (annotatable)</title>
+<style>
+:root{
+  --bg:#fbfaf7;--fg:#1d1c1a;--muted:#5f5c56;--line:#e3ded4;
+  --card:#ffffff;--accent:#0f766e;--accent2:#9a4a0b;--chip:#e8efed;
+  --note:#fffaf0;--note-line:#d9a441;--note-fg:#7a3b06;--code:#f1eee8;--link:#0f766e;
+  --measure:70ch;
+  --serif:Charter,"Bitstream Charter","Iowan Old Style","Sitka Text",Cambria,Georgia,serif;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+@media(prefers-color-scheme:dark){
+  :root{
+    --bg:#16151a;--fg:#ebe9e4;--muted:#aaa69f;--line:#34313a;
+    --card:#1e1d23;--accent:#5eead4;--accent2:#fbbf24;--chip:#24302f;
+    --note:#221d12;--note-line:#8a6a22;--note-fg:#fcd34d;--code:#26242b;--link:#7ff0dc;
+  }
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;background:var(--bg);color:var(--fg);
+  font:17px/1.65 var(--sans);
+  padding-bottom:96px;
+}
+/* The document reads in a book face; the reader's own chrome (bars, buttons,
+   headings, notes) stays in the UI face, so the two never blur together. */
+.sec-body{font-family:var(--serif);font-size:1.06em;line-height:1.7}
+.sec-body table,.sec-body pre{font-family:var(--sans)}
+.sec-body pre{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.wrap{max-width:calc(var(--measure) + 120px);margin:0 auto;padding:0 16px}
+a{color:var(--link);text-underline-offset:2px}
+code{background:var(--code);padding:.08em .35em;border-radius:5px;font-size:.86em;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;word-break:break-word}
+pre{background:var(--code);padding:12px;border-radius:8px;overflow:auto;font-size:.88em;line-height:1.5}
+pre code{background:none;padding:0;font-size:1em}
+.topbar{position:sticky;top:0;z-index:30;background:var(--bg);
+  border-bottom:1px solid var(--line);backdrop-filter:saturate(120%) blur(6px)}
+.topbar .wrap{display:flex;align-items:center;gap:8px;padding-top:10px;padding-bottom:10px}
+.brand{font-weight:700;font-size:16px;margin-right:auto;letter-spacing:.2px;min-width:0;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.brand small{font-weight:500;color:var(--muted);display:block;font-size:11px;letter-spacing:0}
+.btn{appearance:none;border:1px solid var(--line);background:var(--card);color:var(--fg);
+  border-radius:9px;padding:8px 11px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
+.btn:active{transform:translateY(1px)}
+.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+@media(prefers-color-scheme:dark){.btn.primary{color:#06201d}}
+.count{font-size:12px;color:var(--muted);white-space:nowrap;font-weight:600}
+.savestate{font-size:12px;font-weight:700;white-space:nowrap;transition:color .2s}
+.savestate.ok{color:var(--accent)}
+.savestate.warn{color:#9a4a0b}
+@media(prefers-color-scheme:dark){.savestate.warn{color:#fbbf24}}
+.statusbar{border-bottom:1px solid var(--line);background:var(--card)}
+.statusbar .wrap{padding:7px 16px;font-size:12px;color:var(--muted)}
+#warnbar{display:none;background:#fff4e5;border-bottom:1px solid var(--note-line);color:#7c2d12}
+#warnbar .wrap{padding:10px 16px;font-size:13px;line-height:1.45}
+@media(prefers-color-scheme:dark){#warnbar{background:#3a2a0e;color:#fde68a;border-color:#6b531c}}
+.hero{padding:34px 0 8px}
+.hero h1{font-size:2rem;line-height:1.15;margin:.1em 0 .3em;letter-spacing:-.02em}
+.hero p{color:var(--muted);margin:.3em 0;max-width:var(--measure)}
+.help{border:1px solid var(--line);background:var(--card);border-radius:12px;padding:4px 14px;margin:14px 0}
+.help summary{cursor:pointer;font-weight:600;padding:10px 0}
+.help ul{margin:.2em 0 1em;padding-left:1.2em}
+.help li{margin:.3em 0}
+.toc{border:1px solid var(--line);background:var(--card);border-radius:12px;padding:4px 14px;margin:14px 0}
+.toc>summary{cursor:pointer;font-weight:700;padding:11px 0;font-size:15px}
+.toc-part{margin:2px 0;border-top:1px solid var(--line)}
+.toc-part>summary{cursor:pointer;padding:9px 2px;font-weight:600;font-size:14px}
+.toc-part ul{margin:.1em 0 .7em;padding-left:1.1em}
+.toc-part li{margin:.22em 0;font-size:13.5px;line-height:1.4}
+.toc-part a,.toc-flat a{text-decoration:none}
+.toc-flat{margin:.1em 0 .8em;padding-left:1.1em}
+.toc-flat li{margin:.25em 0;font-size:14px;line-height:1.4;break-inside:avoid}
+.toc-flat li.sub{margin-left:1.1em;font-size:13px}
+.toc-flat a:hover{text-decoration:underline}
+.toc-part a:hover{text-decoration:underline}
+.part{margin:30px 0}
+.part-title{font-size:1.45rem;line-height:1.25;border-bottom:2px solid var(--accent);
+  padding-bottom:8px;margin:18px 0 10px}
+.badge{display:inline-block;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;
+  vertical-align:middle;padding:3px 7px;border-radius:6px;margin-right:8px}
+.badge.spec,.badge.plan{background:var(--chip);color:var(--accent)}
+.badge.workspace{background:var(--chip);color:var(--accent2)}
+/* Two heading levels, told apart by size, weight and a rule: a ## section opens
+   with a full-width rule; a ### section sits indented under it on a side rule. */
+.sec{scroll-margin-top:72px}
+.sec.l2{padding:22px 0 6px;border-top:1px solid var(--line);margin-top:18px}
+.part>.sec.l2:first-of-type{border-top:none;margin-top:0}
+.sec.l3{margin:6px 0 6px 2px;padding:2px 0 2px 14px;border-left:3px solid var(--line)}
+.sec-h{margin:6px 0 8px;line-height:1.3}
+h3.sec-h{font-size:1.3rem;font-weight:750}
+h4.sec-h{font-size:1.08rem;font-weight:650;color:var(--fg)}
+.sec.bare>.sec-h{margin-bottom:2px}
+.chip{display:inline-block;font-family:ui-monospace,Menlo,monospace;font-size:12px;font-weight:700;
+  color:var(--accent);background:var(--chip);border-radius:6px;padding:2px 7px;margin-right:8px;vertical-align:middle}
+h4 .chip{font-size:11px;color:var(--muted)}
+.sec-title{vertical-align:middle}
+.sec-body{margin:.2em 0 .4em}
+.sec-body p,.sec-body li,.sec-body blockquote{max-width:var(--measure)}
+.sec-body p{margin:.6em 0}
+.sec-body ul,.sec-body ol{margin:.5em 0;padding-left:1.35em}
+.sec-body li{margin:.3em 0}
+.sec-body h4,.sec-body h5,.sec-body h6{font-size:1em;margin:1em 0 .3em}
+.sec-body blockquote{margin:.7em 0;padding:.5em .9em;border-left:3px solid var(--accent);
+  background:var(--code);border-radius:0 8px 8px 0;color:var(--fg)}
+.sec-body blockquote p{margin:.3em 0}
+.sec-body figure.drawspec{margin:.8em 0;overflow-x:auto}
+.sec-body figure.drawspec svg{display:block;max-width:100%;height:auto;margin:0 auto}
+.sec-body table{border-collapse:separate;border-spacing:0;font-size:14px;line-height:1.45;margin:.8em 0;
+  display:block;width:max-content;max-width:100%;overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--card)}
+.sec-body th,.sec-body td{border-bottom:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+.sec-body tr:last-child td{border-bottom:none}
+.sec-body tbody tr:nth-child(even) td{background:color-mix(in srgb,var(--chip) 45%,transparent)}
+.sec-body th{background:var(--chip);font-weight:700;font-size:12.5px;letter-spacing:.02em}
+.sec-body strong{font-weight:700}
+/* The note field: the one thing on the page that is the reviewer's, so it must
+   not read as more document — but an empty one must not shout over the text
+   either. Empty: a quiet dashed margin slip. Focused: it opens into a writing
+   card. Written in: a solid amber card that stands out on a skim. */
+.note{max-width:var(--measure);background:transparent;border:1.5px dashed var(--note-line);
+  border-radius:10px;padding:6px 12px;margin:14px 0 20px;opacity:.78;
+  transition:background .15s,box-shadow .15s,opacity .15s,padding .15s}
+.note:hover{opacity:1}
+.note:focus-within,.note.filled{opacity:1;background:var(--note);border-style:solid;
+  border-left:4px solid var(--note-line);padding:10px 14px}
+.note:focus-within{box-shadow:0 0 0 3px color-mix(in srgb,var(--note-line) 28%,transparent),0 6px 20px #0000000f}
+.note-head{display:flex;align-items:center;gap:8px;cursor:text}
+.note-ico{color:var(--note-fg);font-weight:800}
+.note-label{font-size:11px;font-weight:800;color:var(--note-fg);text-transform:uppercase;letter-spacing:.07em}
+.note-ref{margin-left:auto;font-family:ui-monospace,Menlo,monospace;font-size:10.5px;color:var(--muted);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+/* While empty the label row collapses into the placeholder line beside the icon. */
+.note:not(.filled):not(:focus-within){display:flex;align-items:center;gap:8px}
+.note:not(.filled):not(:focus-within) .note-label,
+.note:not(.filled):not(:focus-within) .note-ref{display:none}
+.note:focus-within .note-head,.note.filled .note-head{margin-bottom:4px}
+.note-ta{display:block;width:100%;border:none;background:transparent;color:var(--fg);font:inherit;font-size:16px;
+  resize:none;outline:none;line-height:1.55;padding:2px 0;overflow:hidden;min-height:1.6em}
+.note:focus-within .note-ta{min-height:4.8em}
+.note-ta::placeholder{color:var(--muted);opacity:1;font-style:italic}
+.fab{position:fixed;right:14px;bottom:16px;z-index:40;display:flex;flex-direction:column;gap:8px;align-items:flex-end}
+.fab .btn{box-shadow:0 4px 14px #0003}
+.modal{position:fixed;inset:0;z-index:60;background:#0008;display:none;align-items:center;justify-content:center;padding:16px}
+.modal.open{display:flex}
+.modal-card{background:var(--card);border:1px solid var(--line);border-radius:14px;max-width:680px;width:100%;
+  max-height:86vh;display:flex;flex-direction:column;padding:16px}
+.modal-card h3{margin:.1em 0 .5em}
+.modal-card p{color:var(--muted);font-size:13.5px;margin:.2em 0 .6em}
+.modal-card textarea{width:100%;flex:1;min-height:220px;border:1px solid var(--line);border-radius:8px;
+  background:var(--bg);color:var(--fg);font:13px/1.5 ui-monospace,Menlo,monospace;padding:10px;resize:vertical}
+.modal-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.hidden-input{display:none}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:84px;z-index:70;background:#111;color:#fff;
+  padding:9px 14px;border-radius:9px;font-size:13px;opacity:0;transition:opacity .25s;pointer-events:none}
+.toast.show{opacity:.96}
+/* Phone width: smaller type, no floating column over the text, the hint dropped. */
+@media(max-width:600px){
+  body{font-size:16px;padding-bottom:76px}
+  .hero h1{font-size:1.45rem}
+  .part-title{font-size:1.25rem}
+  h3.sec-h{font-size:1.15rem}
+  h4.sec-h{font-size:1rem}
+  .sec.l3{padding-left:10px}
+  .statusbar .hint{display:none}
+  .fab{left:0;right:0;bottom:0;flex-direction:row;justify-content:flex-end;gap:6px;padding:8px 10px;
+    flex-wrap:wrap;background:var(--bg);border-top:1px solid var(--line)}
+  .fab .btn{box-shadow:none;padding:7px 9px}
+  .toast{bottom:64px}
+}
+@media print{.topbar,.statusbar,.fab,.help,.note:not(.filled){display:none}}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="wrap">
+    <div class="brand">Glossmark plan — Plan<small>annotatable reader · 2026-10-26</small></div>
+    <span class="savestate ok" id="savestate">✓ Auto-saving</span>
+    <button class="btn primary" id="btn-export">Save / Export</button>
+  </div>
+</div>
+<div class="statusbar"><div class="wrap"><span class="count" id="count">0 / 10 notes</span><span class="hint"> · notes save automatically; <strong>Save / Export</strong> keeps a file you can send back</span></div></div>
+<div id="warnbar"><div class="wrap"><strong>Heads up —</strong> this browser isn't storing your notes automatically (private/incognito mode or restricted file view). Tap <strong>Save / Export</strong> regularly.</div></div>
+
+<div class="wrap">
+  <div class="hero">
+    <h1>Glossmark plan — Plan</h1>
+    <p>Read at your own pace and leave a note on any point you want to discuss.</p>
+  </div>
+  <details class="help">
+    <summary>How to annotate (tap)</summary>
+    <ul>
+      <li>Tap the note field under any section and type. Each note is tagged so your feedback maps to an exact point.</li>
+      <li><strong>Notes save automatically</strong> in this browser as you type.</li>
+      <li><strong>Save / Export</strong> downloads a Markdown file of your notes — the copy to send back. Tap whenever you pause, especially on a phone.</li>
+      <li><strong>Import</strong> reloads notes from a file you exported earlier (after clearing the browser or switching devices).</li>
+      <li><strong>Clear</strong> erases every note in this browser. Export first.</li>
+    </ul>
+  </details>
+  <details class="toc" open><summary>Contents</summary>
+<ul class="toc-flat">
+<li><a href="#s-plan-intro">Preamble &amp; scope</a></li>
+<li><a href="#s-plan-technical-solution">Technical solution</a></li>
+<li class="sub"><a href="#s-plan-architecture-overview">Architecture overview</a></li>
+<li class="sub"><a href="#s-plan-data-flow">Data flow</a></li>
+<li class="sub"><a href="#s-plan-state-changes">State changes</a></li>
+<li class="sub"><a href="#s-plan-technology-choices">Technology choices</a></li>
+<li class="sub"><a href="#s-plan-out-of-scope">Out of scope</a></li>
+<li><a href="#s-plan-implementation-tasks">Implementation tasks</a></li>
+<li class="sub"><a href="#s-plan-dependency-graph">Dependency graph</a></li>
+<li><a href="#s-plan-evidence-log">Evidence log</a></li>
+<li><a href="#s-plan-sign-off">Sign-off</a></li>
+</ul>
+</details>
+  <section class="part">
+<article class="sec l2" id="s-plan-intro">
+<h3 class="sec-h"><span class="chip">overview</span><span class="sec-title">Preamble &amp; scope</span></h3>
+<div class="sec-body"><p><strong>Date</strong>: 2026-10-26<br />
+<strong>Specification</strong>: <code>status/specification.md</code> (approved, revision 3)<br />
+<strong>Author</strong>: nuncaeslupus, with Claude<br />
+<strong>Revision</strong>: 1<br />
+<strong>Status</strong>: approved (2026-10-26, revision 1) — without annotations<br />
+<strong>Revision log</strong>:
+- r1 — first draft</p>
+<blockquote>
+<p>Review record, kept the way the spec keeps its own: each round of notes bumps
+<strong>Revision</strong> with a log line naming the <code>&lt;repo&gt;-plan-v&lt;N&gt;-&lt;date&gt;-notes.md</code>
+export it applied, committed beside this file in the same commit. Approval is
+<code>approved (YYYY-MM-DD, revision N)</code>, plus <code>— without annotations</code> when there
+were none.</p>
+</blockquote></div>
+<div class="note" data-for="s-plan-intro"><label class="note-head" for="n-s-plan-intro"><span class="note-ico" aria-hidden="true">✎</span><span class="note-label">Your note</span><span class="note-ref">PLAN · intro</span></label><textarea class="note-ta" data-key="s-plan-intro" id="n-s-plan-intro" data-label="Preamble &amp; scope" data-part="Plan" rows="1" placeholder="Add a note on this section…"></textarea></div>
+</article>
+<article class="sec l2 bare" id="s-plan-technical-solution">
+<h3 class="sec-h"><span class="chip">▸</span><span class="sec-title">Technical solution</span></h3>
+</article>
+<article class="sec l3" id="s-plan-architecture-overview">
+<h4 class="sec-h"><span class="chip">▸</span><span class="sec-title">Architecture overview</span></h4>
+<div class="sec-body"><p>One Tauri v2 window. The Rust core (<code>src-tauri/</code>) is a thin OS layer: it reads and watches
+files, keeps the config, enforces the filesystem scope and turns CLI arguments, second
+launches and file associations into <code>open-files</code> events. Everything visible is the web
+frontend (<code>src/</code>), plain TypeScript built by Vite, with no UI framework:</p>
+<pre><code>src/
+  main.ts            boot, wires the bar, tabs and IPC
+  strings.ts         every UI string (D-14)
+  ui/                bar.ts, menus.ts, tabs.ts, outline.ts, find.ts, zoom.ts, empty.ts
+  render/            pipeline.ts (markdown-it + plugins), sanitize.ts, enhance/ (highlight,
+                     katex, mermaid, anchors, svg-inline, images)
+  themes/            glossmark.css (light + dark via custom properties), print.css, fonts/
+src-tauri/src/
+  main.rs, commands.rs, scope.rs, watch.rs, config.rs
+</code></pre>
+<p>The window has <strong>one slim bar</strong>, modelled on Chrome's PDF viewer (D-11): tab strip above;
+in the bar the Outline toggle, the document title, HTML menus (File, View, Go, Help), Back,
+Forward, zoom (−, percentage, +), Find and Print. There is no native menu bar, no status bar
+and no second toolbar; the menus are drawn in the bar, as Chrome's viewer draws its own.</p>
+<figure class="drawspec"><svg xmlns="http://www.w3.org/2000/svg" viewBox="-1.25 -1.25 666.5 447.3" role="img"><path d="M 322.381 63.7 L 322.381 111.7" fill="none" stroke="currentColor" stroke-width="1.5"/><polygon points="322.381,111.7 318.781,103.7 325.981,103.7" fill="currentColor" stroke="none"/><path d="M 303.131 163.4 L 303.131 211.4" fill="none" stroke="currentColor" stroke-width="1.5"/><polygon points="303.131,211.4 299.531,203.4 306.731,203.4" fill="currentColor" stroke="none"/><path d="M 322.381 248.25 L 322.381 296.25" fill="none" stroke="currentColor" stroke-width="1.5"/><polygon points="322.381,296.25 318.781,288.25 325.981,288.25" fill="currentColor" stroke="none"/><path d="M 322.381 347.95 L 322.381 395.95" fill="none" stroke="currentColor" stroke-width="1.5"/><polygon points="322.381,395.95 318.781,387.95 325.981,387.95" fill="currentColor" stroke="none"/><path d="M 341.631 163.4 L 341.631 211.4" fill="none" stroke="currentColor" stroke-width="1.5"/><polygon points="341.631,211.4 338.031,203.4 345.231,203.4" fill="currentColor" stroke="none"/><rect x="226.133" y="111.7" width="192.497" height="51.7" rx="4" fill="none" stroke="currentColor" stroke-width="1.5"/><text x="322.381" y="132.933" font-family="'DejaVu Sans', sans-serif" font-size="11" fill="currentColor" text-anchor="middle"><tspan>Rust core: scope check,</tspan></text><text x="322.381" y="147.783" font-family="'DejaVu Sans', sans-serif" font-size="11" fill="currentColor" text-anchor="middle"><tspan>read, watch, config</tspan></text><rect x="248.657" y="12" width="147.448" height="51.7" rx="25.85" fill="none" stroke="currentColor" stroke-width="1.5"/><text x="322.381" y="33.233" font-family="'DejaVu Sans', sans-serif" font-size="11" fill="currentColor" text-anchor="middle"><tspan>CLI, second launch,</tspan></text><text x="322.381" y="48.083" font-family="'DejaVu Sans', sans-serif" font-size="11" fill="currentColor" text-anchor="middle"><tspan>file association, drop</tspan></text><rect x="226.133" y="296.25" width="192.497" height="51.7" rx="4" fill="none" stroke="currentColor" stroke-width="1.5"/><text x="322.381" y="317.483" font-family="'DejaVu Sans', sans-serif" font-size="11" fill="currentColor" text-anchor="middle"><tspan>Render: markdown-it,</tspan></text><text x="322.381" y="332.333" font-family="'DejaVu Sans', sans-serif" font-size="11" fill="currentColor" text-anchor="middle"><tspan>DOMPurify, enhancers</tspan></text><rect x="276.219" y="395.95" width="92.324" height="36.85" rx="18.425" fill="none" stroke="currentColor" stroke-width="2.5"/><text x="322.381" y="417.183" font-family="'DejaVu Sans', sans-serif" font-size="11" fill="currentColor" text-anchor="middle"><tspan>Paper sheet</tspan></text><rect x="226.133" y="211.4" width="192.497" height="36.85" rx="4" fill="none" stroke="currentColor" stroke-width="1.5"/><text x="322.381" y="232.633" font-family="'DejaVu Sans', sans-serif" font-size="11" fill="currentColor" text-anchor="middle"><tspan>Tab: path, history, scroll, zoom</tspan></text><text x="327.131" y="91.162" font-family="'DejaVu Sans', sans-serif" font-size="10" fill="currentColor">open-files</text><text x="220.408" y="190.862" font-family="'DejaVu Sans', sans-serif" font-size="10" fill="currentColor">read_document</text><text x="346.381" y="190.862" font-family="'DejaVu Sans', sans-serif" font-size="10" fill="currentColor">document-changed</text></svg></figure></div>
+<div class="note" data-for="s-plan-architecture-overview"><label class="note-head" for="n-s-plan-architecture-overview"><span class="note-ico" aria-hidden="true">✎</span><span class="note-label">Your note</span><span class="note-ref">PLAN › Architecture overview</span></label><textarea class="note-ta" data-key="s-plan-architecture-overview" id="n-s-plan-architecture-overview" data-label="Architecture overview" data-part="Plan" rows="1" placeholder="Add a note on this section…"></textarea></div>
+</article>
+<article class="sec l3" id="s-plan-data-flow">
+<h4 class="sec-h"><span class="chip">▸</span><span class="sec-title">Data flow</span></h4>
+<div class="sec-body"><ol>
+<li>A path arrives (<code>open-files</code> event, File › Open, drop or a link). The core adds its folder to
+   the scope and the frontend opens or focuses a tab.</li>
+<li>The tab calls <code>read_document</code>, runs the pipeline (parse → sanitise → insert → enhance) and
+   calls <code>watch</code>.</li>
+<li>Enhancers run after insertion: heading anchors and the outline first, then highlight.js,
+   KaTeX, local image URLs (<code>convertFileSrc</code>), SVG inlining (<code>read_svg</code> → sanitise → insert),
+   and Mermaid last, imported only when a <code>mermaid</code> fence exists.</li>
+<li>On <code>document-changed</code>, the tab re-runs steps 2–3 and restores the scroll offset by the
+   nearest heading anchor plus offset.</li>
+</ol></div>
+<div class="note" data-for="s-plan-data-flow"><label class="note-head" for="n-s-plan-data-flow"><span class="note-ico" aria-hidden="true">✎</span><span class="note-label">Your note</span><span class="note-ref">PLAN › Data flow</span></label><textarea class="note-ta" data-key="s-plan-data-flow" id="n-s-plan-data-flow" data-label="Data flow" data-part="Plan" rows="1" placeholder="Add a note on this section…"></textarea></div>
+</article>
+<article class="sec l3" id="s-plan-state-changes">
+<h4 class="sec-h"><span class="chip">▸</span><span class="sec-title">State changes</span></h4>
+<div class="sec-body"><table>
+<thead>
+<tr>
+<th>Service</th>
+<th>Database</th>
+<th>Change</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Rust core</td>
+<td><code>config.json</code></td>
+<td>CREATE/UPDATE</td>
+<td>Theme, default zoom, remote images, recent files</td>
+</tr>
+<tr>
+<td>Rust core</td>
+<td>window-state file</td>
+<td>CREATE/UPDATE</td>
+<td>Window size and position (plugin-owned)</td>
+</tr>
+<tr>
+<td>Frontend</td>
+<td>memory only</td>
+<td>—</td>
+<td>Tabs, per-tab history and scroll; not persisted in v1</td>
+</tr>
+</tbody>
+</table></div>
+<div class="note" data-for="s-plan-state-changes"><label class="note-head" for="n-s-plan-state-changes"><span class="note-ico" aria-hidden="true">✎</span><span class="note-label">Your note</span><span class="note-ref">PLAN › State changes</span></label><textarea class="note-ta" data-key="s-plan-state-changes" id="n-s-plan-state-changes" data-label="State changes" data-part="Plan" rows="1" placeholder="Add a note on this section…"></textarea></div>
+</article>
+<article class="sec l3" id="s-plan-technology-choices">
+<h4 class="sec-h"><span class="chip">▸</span><span class="sec-title">Technology choices</span></h4>
+<div class="sec-body"><table>
+<thead>
+<tr>
+<th>Choice</th>
+<th>Justification</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Tauri v2, <code>tauri-plugin-single-instance</code>, <code>-opener</code>, <code>-dialog</code>, <code>-window-state</code></td>
+<td>D-2; official plugins cover second launch, external links, the Open dialog and window size</td>
+</tr>
+<tr>
+<td><code>notify</code> (Rust)</td>
+<td>De-facto file watcher; debounced 100 ms in <code>watch.rs</code></td>
+</tr>
+<tr>
+<td>Vite + TypeScript, no UI framework</td>
+<td>The UI is one bar, tabs and a sidebar; a framework would outweigh it</td>
+</tr>
+<tr>
+<td>markdown-it + plugins: footnote, deflist, abbr, mark, sub, sup, emoji, task-lists, github-alerts, front-matter, texmath/KaTeX, wikilinks</td>
+<td>Option B; each construct in D-7 is an existing plugin</td>
+</tr>
+<tr>
+<td>DOMPurify</td>
+<td>The standard sanitiser; also has an SVG profile for D-13</td>
+</tr>
+<tr>
+<td>highlight.js, KaTeX, Mermaid (lazy <code>import()</code>)</td>
+<td>GitHub-parity enhancers; Mermaid only loaded when used (D-5)</td>
+</tr>
+<tr>
+<td>Vitest + jsdom</td>
+<td>Fast unit tests for the pipeline, sanitiser, history and strings</td>
+</tr>
+<tr>
+<td>Playwright with WebKit</td>
+<td>The closest engine to WebKitGTK available in CI, for layout, theme, print and Mermaid tests</td>
+</tr>
+<tr>
+<td>Bundled fonts (e.g. Source Serif 4, Inter, JetBrains Mono, all OFL)</td>
+<td>Same look on every machine and in print</td>
+</tr>
+<tr>
+<td>Makefile: <code>sync</code>, <code>lint</code>, <code>format</code>, <code>test</code>, <code>build</code>, <code>clean</code>, <code>update-skills</code></td>
+<td>Owner's convention; also the arsenal <code>host-gate</code> (<code>make lint test</code>)</td>
+</tr>
+</tbody>
+</table></div>
+<div class="note" data-for="s-plan-technology-choices"><label class="note-head" for="n-s-plan-technology-choices"><span class="note-ico" aria-hidden="true">✎</span><span class="note-label">Your note</span><span class="note-ref">PLAN › Technology choices</span></label><textarea class="note-ta" data-key="s-plan-technology-choices" id="n-s-plan-technology-choices" data-label="Technology choices" data-part="Plan" rows="1" placeholder="Add a note on this section…"></textarea></div>
+</article>
+<article class="sec l3" id="s-plan-out-of-scope">
+<h4 class="sec-h"><span class="chip">▸</span><span class="sec-title">Out of scope</span></h4>
+<div class="sec-body"><ul>
+<li>Editing (S-3), folder sidebar (I-20), theme picker (I-22), translations (I-23 beyond the strings file).</li>
+<li>Windows, macOS, Flathub, Snap and store submissions (S-4).</li>
+<li>Native menu bar, status bar, thumbnails, annotations, export formats other than print-to-PDF.</li>
+<li>Rendering <code>drawspec</code> fences (they show as code, D-13).</li>
+<li>Persisting tabs between launches.</li>
+</ul></div>
+<div class="note" data-for="s-plan-out-of-scope"><label class="note-head" for="n-s-plan-out-of-scope"><span class="note-ico" aria-hidden="true">✎</span><span class="note-label">Your note</span><span class="note-ref">PLAN › Out of scope</span></label><textarea class="note-ta" data-key="s-plan-out-of-scope" id="n-s-plan-out-of-scope" data-label="Out of scope" data-part="Plan" rows="1" placeholder="Add a note on this section…"></textarea></div>
+</article>
+<article class="sec l2" id="s-plan-implementation-tasks">
+<h3 class="sec-h"><span class="chip">▸</span><span class="sec-title">Implementation tasks</span></h3>
+<div class="sec-body"><p>Real-world READMEs for the visual parity check (T17): <code>rust-lang/rust</code>, <code>mermaid-js/mermaid</code>
+and <code>sindresorhus/awesome</code>, each saved under <code>docs/fixtures/readmes/</code> with its images.</p>
+<table>
+<thead>
+<tr>
+<th>T#</th>
+<th>Description</th>
+<th>Scope</th>
+<th>Service</th>
+<th>Size</th>
+<th>Depends</th>
+<th>Gate</th>
+<th>Tests</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>T1</td>
+<td>Scaffold and CI</td>
+<td>Scaffold Tauri v2 + Vite + TS, Makefile, CI (lint, type-check, Vitest, cargo test); set arsenal <code>host-gate = "make lint test"</code> and <code>preflight-gate</code></td>
+<td>repo</td>
+<td>M</td>
+<td>—</td>
+<td><code>ci_failed_checks == 0</code></td>
+<td><code>test_app_boot_with_no_file_shows_empty_state</code> in <code>src/main.test.ts</code> — booting with no paths renders the "Open or drop a Markdown file" area</td>
+</tr>
+<tr>
+<td>T2</td>
+<td>CommonMark pipeline</td>
+<td>Render pipeline core: markdown-it with CommonMark settings, run the CommonMark spec suite</td>
+<td>frontend</td>
+<td>M</td>
+<td>T1</td>
+<td><code>commonmark_spec_pass_rate == 1.0</code></td>
+<td><code>test_commonmark_spec_all_examples_match</code> in <code>src/render/commonmark.test.ts</code> — every example in spec.json renders to its expected HTML (normalised)</td>
+</tr>
+<tr>
+<td>T3</td>
+<td>GFM extensions</td>
+<td>GFM: tables, task lists, strikethrough, extended autolinks, tag filter</td>
+<td>frontend</td>
+<td>M</td>
+<td>T2</td>
+<td><code>gfm_extension_examples_pass_rate == 1.0</code></td>
+<td><code>test_gfm_extension_examples_all_match</code> in <code>src/render/gfm.test.ts</code> — every example in the GFM spec's extension sections matches</td>
+</tr>
+<tr>
+<td>T4</td>
+<td>Extras and fixture</td>
+<td>Extras: footnotes, alerts, emoji, front-matter block, KaTeX math, <code>==mark==</code>, sup/sub, wiki links, abbreviations, definition lists; write <code>docs/fixtures/all-features.md</code></td>
+<td>frontend</td>
+<td>M</td>
+<td>T3</td>
+<td><code>parser_fixture_constructs_rendered == 1.0</code></td>
+<td><code>test_feature_fixture_parser_constructs_present</code> in <code>src/render/fixture.test.ts</code> — each parser-level construct in the fixture yields its expected element (<code>mark</code>, <code>sup</code>, <code>sub</code>, <code>abbr</code>, <code>dl</code>, <code>.katex</code>, <code>.markdown-alert</code>, <code>section.footnotes</code>)</td>
+</tr>
+<tr>
+<td>T5</td>
+<td>Sanitiser and CSP</td>
+<td>Sanitiser: DOMPurify allowlist for GitHub's safe HTML (D-15), CSP in <code>tauri.conf.json</code>, links rewritten to safe handlers</td>
+<td>frontend</td>
+<td>S</td>
+<td>T2</td>
+<td><code>script_execution_from_document == 0</code></td>
+<td><code>test_sanitize_hostile_fixture_nothing_executes</code> in <code>src/render/sanitize.test.ts</code> — <code>&lt;script&gt;</code>, <code>on*=</code>, <code>javascript:</code> and <code>&lt;iframe&gt;</code> are all removed; <code>test_sanitize_safe_html_kept</code> — <code>details</code>, <code>kbd</code>, <code>img</code>, <code>sub</code> survive</td>
+</tr>
+<tr>
+<td>T6</td>
+<td>Enhancers</td>
+<td>Enhancers: highlight.js with copy button, heading anchors and outline data, Mermaid lazy-loaded with <code>securityLevel: 'strict'</code></td>
+<td>frontend</td>
+<td>M</td>
+<td>T4, T5</td>
+<td><code>feature_fixture_constructs_rendered == 1.0</code></td>
+<td><code>test_feature_fixture_all_constructs_rendered</code> in <code>e2e/fixture.spec.ts</code> (Playwright WebKit) — every construct incl. highlighted code and Mermaid <code>svg</code> is present; <code>test_mermaid_absent_not_loaded</code> — a doc without Mermaid never requests its chunk</td>
+</tr>
+<tr>
+<td>T7</td>
+<td>Rust core</td>
+<td>Rust core: <code>read_document</code>, <code>watch</code>/<code>unwatch</code>, <code>open-files</code> (CLI, single instance), config, user CSS, <code>open_external</code>, filesystem scope</td>
+<td>core</td>
+<td>L</td>
+<td>T1</td>
+<td><code>out_of_scope_reads_allowed == 0</code></td>
+<td><code>test_read_document_outside_scope_not_permitted</code> in <code>src-tauri/src/scope.rs</code> — a path outside opened folders returns <code>not_permitted</code>; <code>test_config_unknown_version_falls_back_to_defaults</code> in <code>config.rs</code></td>
+</tr>
+<tr>
+<td>T8</td>
+<td>Images</td>
+<td>Images: local via asset protocol, local SVG inlining (sanitised, IDs prefixed), remote-images setting rebuilding CSP <code>img-src</code></td>
+<td>frontend + core</td>
+<td>M</td>
+<td>T5, T7</td>
+<td><code>network_requests_with_remote_images_off == 0</code></td>
+<td><code>test_remote_images_off_no_requests</code> in <code>e2e/images.spec.ts</code> — no request leaves the app with the setting off; <code>test_svg_inline_style_tags_stripped</code> in <code>src/render/enhance/svg.test.ts</code></td>
+</tr>
+<tr>
+<td>T9</td>
+<td>Signature theme</td>
+<td>Signature theme: paper sheet on grey canvas, typography, light and dark, bundled fonts, user CSS loaded last</td>
+<td>themes</td>
+<td>L</td>
+<td>T6, T8</td>
+<td><code>themed_svg_fill_matches_text_colour == true</code></td>
+<td><code>test_currentcolor_svg_follows_theme_light_and_dark</code> in <code>e2e/theme.spec.ts</code> — the fixture SVG's computed fill equals the body text colour in both themes; <code>test_body_text_contrast_at_least_aa</code> — contrast ≥ 4.5 in both themes</td>
+</tr>
+<tr>
+<td>T10</td>
+<td>Print</td>
+<td>Print stylesheet: no app controls, no canvas, no breaks inside code, tables, figures</td>
+<td>themes</td>
+<td>S</td>
+<td>T9</td>
+<td><code>print_parity_owner_signoff == true</code></td>
+<td><code>test_print_media_hides_app_controls</code> in <code>e2e/print.spec.ts</code> — under <code>emulateMedia('print')</code> the bar, tabs and outline are not displayed</td>
+</tr>
+<tr>
+<td>T11</td>
+<td>Window shell</td>
+<td>Window shell: the slim bar (Chrome PDF viewer layout), HTML menus, tab strip, empty state with recent files, <code>strings.ts</code></td>
+<td>frontend</td>
+<td>L</td>
+<td>T7</td>
+<td><code>toolbar_buttons &lt;= 8</code></td>
+<td><code>test_ui_definition_within_simplicity_budget</code> in <code>src/ui/budget.test.ts</code> — bar buttons ≤ 8, settings ≤ 4, dialogs while reading == 0; <code>test_strings_all_ui_text_from_strings_file</code></td>
+</tr>
+<tr>
+<td>T12</td>
+<td>Navigation</td>
+<td>Navigation: per-tab back/forward, <code>.md</code> links in place, Ctrl/middle-click new tab, <code>#anchors</code>, wiki-link resolution, external links to the OS</td>
+<td>frontend</td>
+<td>M</td>
+<td>T11</td>
+<td><code>link_routing_cases_failed == 0</code></td>
+<td><code>test_link_routing_table_all_cases</code> in <code>src/ui/links.test.ts</code> — each (link kind, modifier) pair routes to the expected action; <code>test_history_back_after_two_links_returns_first</code></td>
+</tr>
+<tr>
+<td>T13</td>
+<td>Reading tools</td>
+<td>Reading tools: outline sidebar with current section, find (own TreeWalker search), zoom incl. fit-width, View › Theme, settings in menus</td>
+<td>frontend</td>
+<td>M</td>
+<td>T6, T11</td>
+<td><code>keyboard_shortcuts_missing == 0</code></td>
+<td><code>test_every_bar_action_has_shortcut</code> in <code>src/ui/shortcuts.test.ts</code> — each bar and menu action maps to a shortcut listed in Help › Keyboard Shortcuts; <code>test_find_cycles_matches_forward_and_back</code> in <code>e2e/find.spec.ts</code></td>
+</tr>
+<tr>
+<td>T14</td>
+<td>Live reload</td>
+<td>Live reload: re-render on <code>document-changed</code>, keep scroll by nearest heading, deleted-file notice</td>
+<td>frontend + core</td>
+<td>S</td>
+<td>T7, T11</td>
+<td><code>live_reload_ms &lt;= 500</code></td>
+<td><code>test_live_reload_after_save_updates_and_keeps_scroll</code> in <code>e2e/reload.spec.ts</code> — after an external write the change appears and scroll moves less than one screen</td>
+</tr>
+<tr>
+<td>T15</td>
+<td>Performance</td>
+<td>Performance: benchmarks for 100 KB and 1 MB docs, 20 Mermaid diagrams; move parsing to a Web Worker only if the bound fails</td>
+<td>frontend</td>
+<td>M</td>
+<td>T6</td>
+<td><code>render_ms_1MB &lt;= 1500</code></td>
+<td><code>test_render_1mb_within_budget_no_long_tasks</code> in <code>e2e/perf.spec.ts</code> — full render ≤ 1500 ms and no task longer than 200 ms</td>
+</tr>
+<tr>
+<td>T16</td>
+<td>Linux packaging</td>
+<td>Linux packaging: <code>.desktop</code>, MIME association for <code>text/markdown</code>, icon, <code>.deb</code> and AppImage built in CI on every PR</td>
+<td>repo</td>
+<td>M</td>
+<td>T7</td>
+<td><code>deb_package_mb &lt;= 20</code></td>
+<td><code>test_desktop_file_declares_markdown_mime</code> in <code>src-tauri/tests/desktop_file.rs</code>; CI step fails when the <code>.deb</code> exceeds 20 MB</td>
+</tr>
+<tr>
+<td>T17</td>
+<td>Acceptance</td>
+<td>Acceptance on the reference machine and a fresh Ubuntu 24.04 VM: first paint, idle RSS, install and double-click, owner's review of simplicity and GitHub parity (fixture + three READMEs)</td>
+<td>repo</td>
+<td>M</td>
+<td>T10, T12, T13, T14, T15, T16</td>
+<td><code>first_paint_ms_100KB &lt;= 500</code></td>
+<td><code>scripts/measure.sh</code> records <code>first_paint_ms_100KB</code> and <code>idle_rss_mb</code> (≤ 250 with three 100 KB tabs); owner sign-off recorded in the Evidence log</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Status legend</strong>: ☐ not started · ◐ in progress · ☑ merged</p>
+<p><strong>Merge order</strong>: T1; then T2 and T7 in parallel; T3, T5, T11, T16 as their dependencies land;
+T4 → T6 → T8 → T9 → T10; T12, T13, T14, T15 in parallel after their dependencies; T17 last.
+<strong>Branch pattern</strong>: <code>s1-t&lt;N&gt;-description</code> from <code>main</code>, one PR per task.</p></div>
+<div class="note" data-for="s-plan-implementation-tasks"><label class="note-head" for="n-s-plan-implementation-tasks"><span class="note-ico" aria-hidden="true">✎</span><span class="note-label">Your note</span><span class="note-ref">PLAN › Implementation tasks</span></label><textarea class="note-ta" data-key="s-plan-implementation-tasks" id="n-s-plan-implementation-tasks" data-label="Implementation tasks" data-part="Plan" rows="1" placeholder="Add a note on this section…"></textarea></div>
+</article>
+<article class="sec l3" id="s-plan-dependency-graph">
+<h4 class="sec-h"><span class="chip">▸</span><span class="sec-title">Dependency graph</span></h4>
+<div class="sec-body"><p>Generated from the <strong>Depends</strong> column — never drawn by hand.</p>
+<figure class="drawspec"><svg xmlns="http://www.w3.org/2000/svg" viewBox="-0.75 -0.75 665.5 191.75" role="img" aria-labelledby="ds397d19000d-title"><title id="ds397d19000d-title">Task dependencies — phases</title><path d="M 332 78.55 L 332 126.55" fill="none" stroke="currentColor" stroke-width="1.5"/><polygon points="332,126.55 328.4,118.55 335.6,118.55" fill="currentColor" stroke="none"/><rect x="219.657" y="12" width="224.686" height="66.55" rx="4" fill="none" stroke="currentColor" stroke-width="1.5"/><text x="332" y="33.233" font-family="'DejaVu Sans', sans-serif" font-size="11" fill="currentColor" text-anchor="middle"><tspan font-weight="bold">Phase 1</tspan></text><text x="332" y="48.083" font-family="'DejaVu Sans', sans-serif" font-size="11" fill="currentColor" text-anchor="middle"><tspan>T1, T2, T7, T3, T5, T11,</tspan></text><text x="332" y="62.933" font-family="'DejaVu Sans', sans-serif" font-size="11" fill="currentColor" text-anchor="middle"><tspan>T16, T4, T8</tspan></text><rect x="219.657" y="126.55" width="224.686" height="51.7" rx="4" fill="none" stroke="currentColor" stroke-width="1.5"/><text x="332" y="147.783" font-family="'DejaVu Sans', sans-serif" font-size="11" fill="currentColor" text-anchor="middle"><tspan font-weight="bold">Phase 2</tspan></text><text x="332" y="162.633" font-family="'DejaVu Sans', sans-serif" font-size="11" fill="currentColor" text-anchor="middle"><tspan>T12, T14, T6, T9, T13, T15, T10, T17</tspan></text></svg></figure>
+<p><strong>Phase 1</strong> — T1, T2, T7, T3, T5, T11, T16, T4, T8</p>
+<figure class="drawspec"><svg xmlns="http://www.w3.org/2000/svg" viewBox="-0.75 -0.75 665.5 370.36" role="img" aria-labelledby="ds85e2a643c7-title"><title id="ds85e2a643c7-title">Task dependencies — phase 1</title><path d="M 317.839 62.215 L 317.839 86.215 L 249.193 86.215 L 249.193 110.215" fill="none" stroke="currentColor" stroke-width="1.5"/><polygon points="249.193,110.215 245.593,102.215 252.793,102.215" fill="currentColor" stroke="none"/><path d="M 235.032 160.43 L 235.032 184.43 L 83.58 184.43 L 83.58 208.43" fill="none" stroke="currentColor" stroke-width="1.5"/><polygon points="83.58,208.43 79.98,200.43 87.18,200.43" fill="currentColor" stroke="none"/><path d="M 83.58 258.645 L 83.58 306.645" fill="none" stroke="currentColor" stroke-width="1.5"/><polygon points="83.58,306.645 79.98,298.645 87.18,298.645" fill="currentColor" stroke="none"/><path d="M 249.193 160.43 L 249.193 208.43" fill="none" stroke="currentColor" stroke-width="1.5"/><polygon points="249.193,208.43 245.593,200.43 252.793,200.43" fill="currentColor" stroke="none"/><path d="M 346.161 62.215 L 346.161 86.215 L 414.807 86.215 L 414.807 110.215" fill="none" stroke="currentColor" stroke-width="1.5"/><polygon points="414.807,110.215 411.207,102.215 418.407,102.215" fill="currentColor" stroke="none"/><path d="M 249.193 258.645 L 249.193 282.645 L 317.839 282.645 L 317.839 306.645" fill="none" stroke="currentColor" stroke-width="1.5"/><polygon points="317.839,306.645 314.239,298.645 321.439,298.645" fill="currentColor" stroke="none"/><path d="M 393.565 160.43 L 393.565 184.43 L 332 184.43 L 332 306.645" fill="none" stroke="currentColor" stroke-width="1.5"/><polygon points="332,306.645 328.4,298.645 335.6,298.645" fill="currentColor" stroke="none"/><path d="M 414.807 160.43 L 414.807 208.43" fill="none" stroke="currentColor" stroke-width="1.5"/><polygon points="414.807,208.43 411.207,200.43 418.407,200.43" fill="currentColor" stroke="none"/><path d="M 436.049 160.43 L 436.049 184.43 L 580.42 184.43 L 580.42 208.43" fill="none" stroke="currentColor" stroke-width="1.5"/><polygon points="580.42,208.43 576.82,200.43 584.02,200.43" fill="currentColor" stroke="none"/><rect x="261.193" y="12" width="141.614" height="50.215" rx="4" fill="none" stroke="currentColor" stroke-width="1.5"/><text x="332" y="32.671" font-family="'DejaVu Sans', sans-serif" font-size="10.45" fill="currentColor" text-anchor="middle"><tspan font-weight="bold">T1</tspan></text><text x="332" y="46.779" font-family="'DejaVu Sans', sans-serif" font-size="10.45" fill="currentColor" text-anchor="middle"><tspan>Scaffold and CI</tspan></text><rect x="344" y="208.43" width="141.614" height="50.215" rx="4" fill="none" stroke="currentColor" stroke-width="1.5"/><text x="414.807" y="229.101" font-family="'DejaVu Sans', sans-serif" font-size="10.45" fill="currentColor" text-anchor="middle"><tspan font-weight="bold">T11</tspan></text><text x="414.807" y="243.209" font-family="'DejaVu Sans', sans-serif" font-size="10.45" fill="currentColor" text-anchor="middle"><tspan>Window shell</tspan></text><rect x="509.614" y="208.43" width="141.614" height="50.215" rx="4" fill="none" stroke="currentColor" stroke-width="1.5"/><text x="580.42" y="229.101" font-family="'DejaVu Sans', sans-serif" font-size="10.45" fill="currentColor" text-anchor="middle"><tspan font-weight="bold">T16</tspan></text><text x="580.42" y="243.209" font-family="'DejaVu Sans', sans-serif" font-size="10.45" fill="currentColor" text-anchor="middle"><tspan>Linux packaging</tspan></text><rect x="178.386" y="110.215" width="141.614" height="50.215" rx="4" fill="none" stroke="currentColor" stroke-width="1.5"/><text x="249.193" y="130.886" font-family="'DejaVu Sans', sans-serif" font-size="10.45" fill="currentColor" text-anchor="middle"><tspan font-weight="bold">T2</tspan></text><text x="249.193" y="144.994" font-family="'DejaVu Sans', sans-serif" font-size="10.45" fill="currentColor" text-anchor="middle"><tspan>CommonMark pipeline</tspan></text><rect x="12.773" y="208.43" width="141.614" height="50.215" rx="4" fill="none" stroke="currentColor" stroke-width="1.5"/><text x="83.58" y="229.101" font-family="'DejaVu Sans', sans-serif" font-size="10.45" fill="currentColor" text-anchor="middle"><tspan font-weight="bold">T3</tspan></text><text x="83.58" y="243.209" font-family="'DejaVu Sans', sans-serif" font-size="10.45" fill="currentColor" text-anchor="middle"><tspan>GFM extensions</tspan></text><rect x="12.773" y="306.645" width="141.614" height="50.215" rx="4" fill="none" stroke="currentColor" stroke-width="1.5"/><text x="83.58" y="327.316" font-family="'DejaVu Sans', sans-serif" font-size="10.45" fill="currentColor" text-anchor="middle"><tspan font-weight="bold">T4</tspan></text><text x="83.58" y="341.424" font-family="'DejaVu Sans', sans-serif" font-size="10.45" fill="currentColor" text-anchor="middle"><tspan>Extras and fixture</tspan></text><rect x="178.386" y="208.43" width="141.614" height="50.215" rx="4" fill="none" stroke="currentColor" stroke-width="1.5"/><text x="249.193" y="229.101" font-family="'DejaVu Sans', sans-serif" font-size="10.45" fill="currentColor" text-anchor="middle"><tspan font-weight="bold">T5</tspan></text><text x="249.193" y="243.209" font-family="'DejaVu Sans', sans-serif" font-size="10.45" fill="currentColor" text-anchor="middle"><tspan>Sanitiser and CSP</tspan></text><rect x="344" y="110.215" width="141.614" height="50.215" rx="4" fill="none" stroke="currentColor" stroke-width="1.5"/><text x="414.807" y="130.886" font-family="'DejaVu Sans', sans-serif" font-size="10.45" fill="currentColor" text-anchor="middle"><tspan font-weight="bold">T7</tspan></text><text x="414.807" y="144.994" font-family="'DejaVu Sans', sans-serif" font-size="10.45" fill="currentColor" text-anchor="middle"><tspan>Rust core</tspan></text><rect x="261.193" y="306.645" width="141.614" height="50.215" rx="4" fill="none" stroke="currentColor" stroke-width="1.5"/><text x="332" y="327.316" font-family="'DejaVu Sans', sans-serif" font-size="10.45" fill="currentColor" text-anchor="middle"><tspan font-weight="bold">T8</tspan></text><text x="332" y="341.424" font-family="'DejaVu Sans', sans-serif" font-size="10.45" fill="currentColor" text-anchor="middle"><tspan>Images</tspan></text></svg></figure>
+<p><strong>Phase 2</strong> — T12, T14, T6, T9, T13, T15, T10, T17 (with T4, T5, T8, T11, T16 from earlier phases)</p>
+<figure class="drawspec"><svg xmlns="http://www.w3.org/2000/svg" viewBox="-0.75 -0.75 665.5 464.12" role="img" aria-labelledby="ds68d0b1da37-title"><title id="ds68d0b1da37-title">Task dependencies — phase 2</title><path d="M 66.539 61.324 L 66.539 85.324 L 122.032 85.324 L 122.032 109.324" fill="none" stroke="currentColor" stroke-width="1.5"/><polygon points="122.032,109.324 118.432,101.324 125.632,101.324" fill="currentColor" stroke="none"/><path d="M 199.27 61.324 L 199.27 85.324 L 143.778 85.324 L 143.778 109.324" fill="none" stroke="currentColor" stroke-width="1.5"/><polygon points="143.778,109.324 140.178,101.324 147.378,101.324" fill="currentColor" stroke="none"/><path d="M 116.595 158.648 L 116.595 196.148 L 77.788 196.148 L 77.788 206.648" fill="none" stroke="currentColor" stroke-width="1.5"/><polygon points="77.788,206.648 74.188,198.648 81.388,198.648" fill="currentColor" stroke="none"/><path d="M 332 61.324 L 332 187.148 L 99.534 187.148 L 99.534 206.648" fill="none" stroke="currentColor" stroke-width="1.5"/><polygon points="99.534,206.648 95.934,198.648 103.134,198.648" fill="currentColor" stroke="none"/><path d="M 88.661 255.972 L 88.661 303.972" fill="none" stroke="currentColor" stroke-width="1.5"/><polygon points="88.661,303.972 85.061,295.972 92.261,295.972" fill="currentColor" stroke="none"/><path d="M 464.73 61.324 L 464.73 79.324 L 398.365 79.324 L 398.365 109.324" fill="none" stroke="currentColor" stroke-width="1.5"/><polygon points="398.365,109.324 394.765,101.324 401.965,101.324" fill="currentColor" stroke="none"/><path d="M 132.905 158.648 L 132.905 184.148 L 210.518 184.148 L 210.518 206.648" fill="none" stroke="currentColor" stroke-width="1.5"/><polygon points="210.518,206.648 206.918,198.648 214.118,198.648" fill="currentColor" stroke="none"/><path d="M 448.421 61.324 L 448.421 91.324 L 232.264 91.324 L 232.264 206.648" fill="none" stroke="currentColor" stroke-width="1.5"/><polygon points="232.264,206.648 228.664,198.648 235.864,198.648" fill="currentColor" stroke="none"/><path d="M 481.04 61.324 L 481.04 85.324 L 531.095 85.324 L 531.095 109.324" fill="none" stroke="currentColor" stroke-width="1.5"/><polygon points="531.095,109.324 527.495,101.324 534.695,101.324" fill="currentColor" stroke="none"/><path d="M 149.214 158.648 L 149.214 172.148 L 354.122 172.148 L 354.122 206.648" fill="none" stroke="currentColor" stroke-width="1.5"/><polygon points="354.122,206.648 350.522,198.648 357.722,198.648" fill="currentColor" stroke="none"/><path d="M 88.661 353.296 L 88.661 383.296 L 341.883 383.296 L 341.883 401.296" fill="none" stroke="currentColor" stroke-width="1.5"/><polygon points="341.883,401.296 338.283,393.296 345.483,393.296" fill="currentColor" stroke="none"/><path d="M 398.365 158.648 L 398.365 182.648 L 436.139 182.648 L 436.139 328.634 L 369.842 328.634 L 369.842 401.296" fill="none" stroke="currentColor" stroke-width="1.5"/><polygon points="369.842,401.296 366.242,393.296 373.442,393.296" fill="currentColor" stroke="none"/><path d="M 221.391 255.972 L 221.391 371.296 L 351.203 371.296 L 351.203 401.296" fill="none" stroke="currentColor" stroke-width="1.5"/><polygon points="351.203,401.296 347.603,393.296 354.803,393.296" fill="currentColor" stroke="none"/><path d="M 531.095 158.648 L 531.095 353.296 L 379.162 353.296 L 379.162 401.296" fill="none" stroke="currentColor" stroke-width="1.5"/><polygon points="379.162,401.296 375.562,393.296 382.762,393.296" fill="currentColor" stroke="none"/><path d="M 360.523 255.972 L 360.523 401.296" fill="none" stroke="currentColor" stroke-width="1.5"/><polygon points="360.523,401.296 356.923,393.296 364.123,393.296" fill="currentColor" stroke="none"/><path d="M 597.461 61.324 L 597.461 377.296 L 388.482 377.296 L 388.482 401.296" fill="none" stroke="currentColor" stroke-width="1.5"/><polygon points="388.482,401.296 384.882,393.296 392.082,393.296" fill="currentColor" stroke="none"/><rect x="34.296" y="303.972" width="108.73" height="49.324" rx="4" fill="none" stroke="currentColor" stroke-width="1.5"/><text x="88.661" y="324.306" font-family="'DejaVu Sans', sans-serif" font-size="10.12" fill="currentColor" text-anchor="middle"><tspan font-weight="bold">T10</tspan></text><text x="88.661" y="337.968" font-family="'DejaVu Sans', sans-serif" font-size="10.12" fill="currentColor" text-anchor="middle"><tspan>Print</tspan></text><rect x="410.365" y="12" width="108.73" height="49.324" rx="4" fill="none" stroke="currentColor" stroke-width="1.5"/><text x="464.73" y="32.334" font-family="'DejaVu Sans', sans-serif" font-size="10.12" fill="currentColor" text-anchor="middle"><tspan font-weight="bold">T11</tspan></text><text x="464.73" y="45.996" font-family="'DejaVu Sans', sans-serif" font-size="10.12" fill="currentColor" text-anchor="middle"><tspan>phase 1</tspan></text><rect x="344" y="109.324" width="108.73" height="49.324" rx="4" fill="none" stroke="currentColor" stroke-width="1.5"/><text x="398.365" y="129.658" font-family="'DejaVu Sans', sans-serif" font-size="10.12" fill="currentColor" text-anchor="middle"><tspan font-weight="bold">T12</tspan></text><text x="398.365" y="143.32" font-family="'DejaVu Sans', sans-serif" font-size="10.12" fill="currentColor" text-anchor="middle"><tspan>Navigation</tspan></text><rect x="167.026" y="206.648" width="108.73" height="49.324" rx="4" fill="none" stroke="currentColor" stroke-width="1.5"/><text x="221.391" y="226.982" font-family="'DejaVu Sans', sans-serif" font-size="10.12" fill="currentColor" text-anchor="middle"><tspan font-weight="bold">T13</tspan></text><text x="221.391" y="240.644" font-family="'DejaVu Sans', sans-serif" font-size="10.12" fill="currentColor" text-anchor="middle"><tspan>Reading tools</tspan></text><rect x="476.73" y="109.324" width="108.73" height="49.324" rx="4" fill="none" stroke="currentColor" stroke-width="1.5"/><text x="531.095" y="129.658" font-family="'DejaVu Sans', sans-serif" font-size="10.12" fill="currentColor" text-anchor="middle"><tspan font-weight="bold">T14</tspan></text><text x="531.095" y="143.32" font-family="'DejaVu Sans', sans-serif" font-size="10.12" fill="currentColor" text-anchor="middle"><tspan>Live reload</tspan></text><rect x="299.757" y="206.648" width="108.73" height="49.324" rx="4" fill="none" stroke="currentColor" stroke-width="1.5"/><text x="354.122" y="226.982" font-family="'DejaVu Sans', sans-serif" font-size="10.12" fill="currentColor" text-anchor="middle"><tspan font-weight="bold">T15</tspan></text><text x="354.122" y="240.644" font-family="'DejaVu Sans', sans-serif" font-size="10.12" fill="currentColor" text-anchor="middle"><tspan>Performance</tspan></text><rect x="543.095" y="12" width="108.73" height="49.324" rx="4" fill="none" stroke="currentColor" stroke-width="1.5"/><text x="597.461" y="32.334" font-family="'DejaVu Sans', sans-serif" font-size="10.12" fill="currentColor" text-anchor="middle"><tspan font-weight="bold">T16</tspan></text><text x="597.461" y="45.996" font-family="'DejaVu Sans', sans-serif" font-size="10.12" fill="currentColor" text-anchor="middle"><tspan>phase 1</tspan></text><rect x="310.817" y="401.296" width="108.73" height="49.324" rx="4" fill="none" stroke="currentColor" stroke-width="1.5"/><text x="365.183" y="421.63" font-family="'DejaVu Sans', sans-serif" font-size="10.12" fill="currentColor" text-anchor="middle"><tspan font-weight="bold">T17</tspan></text><text x="365.183" y="435.292" font-family="'DejaVu Sans', sans-serif" font-size="10.12" fill="currentColor" text-anchor="middle"><tspan>Acceptance</tspan></text><rect x="12.174" y="12" width="108.73" height="49.324" rx="4" fill="none" stroke="currentColor" stroke-width="1.5"/><text x="66.539" y="32.334" font-family="'DejaVu Sans', sans-serif" font-size="10.12" fill="currentColor" text-anchor="middle"><tspan font-weight="bold">T4</tspan></text><text x="66.539" y="45.996" font-family="'DejaVu Sans', sans-serif" font-size="10.12" fill="currentColor" text-anchor="middle"><tspan>phase 1</tspan></text><rect x="144.905" y="12" width="108.73" height="49.324" rx="4" fill="none" stroke="currentColor" stroke-width="1.5"/><text x="199.27" y="32.334" font-family="'DejaVu Sans', sans-serif" font-size="10.12" fill="currentColor" text-anchor="middle"><tspan font-weight="bold">T5</tspan></text><text x="199.27" y="45.996" font-family="'DejaVu Sans', sans-serif" font-size="10.12" fill="currentColor" text-anchor="middle"><tspan>phase 1</tspan></text><rect x="78.539" y="109.324" width="108.73" height="49.324" rx="4" fill="none" stroke="currentColor" stroke-width="1.5"/><text x="132.905" y="129.658" font-family="'DejaVu Sans', sans-serif" font-size="10.12" fill="currentColor" text-anchor="middle"><tspan font-weight="bold">T6</tspan></text><text x="132.905" y="143.32" font-family="'DejaVu Sans', sans-serif" font-size="10.12" fill="currentColor" text-anchor="middle"><tspan>Enhancers</tspan></text><rect x="277.635" y="12" width="108.73" height="49.324" rx="4" fill="none" stroke="currentColor" stroke-width="1.5"/><text x="332" y="32.334" font-family="'DejaVu Sans', sans-serif" font-size="10.12" fill="currentColor" text-anchor="middle"><tspan font-weight="bold">T8</tspan></text><text x="332" y="45.996" font-family="'DejaVu Sans', sans-serif" font-size="10.12" fill="currentColor" text-anchor="middle"><tspan>phase 1</tspan></text><rect x="34.296" y="206.648" width="108.73" height="49.324" rx="4" fill="none" stroke="currentColor" stroke-width="1.5"/><text x="88.661" y="226.982" font-family="'DejaVu Sans', sans-serif" font-size="10.12" fill="currentColor" text-anchor="middle"><tspan font-weight="bold">T9</tspan></text><text x="88.661" y="240.644" font-family="'DejaVu Sans', sans-serif" font-size="10.12" fill="currentColor" text-anchor="middle"><tspan>Signature theme</tspan></text></svg></figure></div>
+<div class="note" data-for="s-plan-dependency-graph"><label class="note-head" for="n-s-plan-dependency-graph"><span class="note-ico" aria-hidden="true">✎</span><span class="note-label">Your note</span><span class="note-ref">PLAN › Dependency graph</span></label><textarea class="note-ta" data-key="s-plan-dependency-graph" id="n-s-plan-dependency-graph" data-label="Dependency graph" data-part="Plan" rows="1" placeholder="Add a note on this section…"></textarea></div>
+</article>
+<article class="sec l2" id="s-plan-evidence-log">
+<h3 class="sec-h"><span class="chip">▸</span><span class="sec-title">Evidence log</span></h3>
+<div class="sec-body"><p><code>execution</code> appends one row per task as it lands (RED → GREEN → RECORD). A gated task is not
+"done" until its row is complete and the measured value meets the gate.</p>
+<table>
+<thead>
+<tr>
+<th>T#</th>
+<th>Gate</th>
+<th>Measured</th>
+<th>Command</th>
+<th>SHA</th>
+<th>Env</th>
+<th>Date</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<div class="note" data-for="s-plan-evidence-log"><label class="note-head" for="n-s-plan-evidence-log"><span class="note-ico" aria-hidden="true">✎</span><span class="note-label">Your note</span><span class="note-ref">PLAN › Evidence log</span></label><textarea class="note-ta" data-key="s-plan-evidence-log" id="n-s-plan-evidence-log" data-label="Evidence log" data-part="Plan" rows="1" placeholder="Add a note on this section…"></textarea></div>
+</article>
+<article class="sec l2" id="s-plan-sign-off">
+<h3 class="sec-h"><span class="chip">▸</span><span class="sec-title">Sign-off</span></h3>
+<div class="sec-body"><ul>
+<li>[ ] Plan reviewed by the owner (annotated reader)</li>
+<li>[ ] Tauri IPC contract (spec §5) agreed</li>
+<li>[ ] No migrations; config file versioned</li>
+<li>[ ] Ready for execution</li>
+</ul></div>
+<div class="note" data-for="s-plan-sign-off"><label class="note-head" for="n-s-plan-sign-off"><span class="note-ico" aria-hidden="true">✎</span><span class="note-label">Your note</span><span class="note-ref">PLAN › Sign-off</span></label><textarea class="note-ta" data-key="s-plan-sign-off" id="n-s-plan-sign-off" data-label="Sign-off" data-part="Plan" rows="1" placeholder="Add a note on this section…"></textarea></div>
+</article>
+</section>
+</div>
+
+<div class="fab">
+  <button class="btn" id="btn-top" title="Back to top">↑ Top</button>
+  <button class="btn" id="btn-import">Import</button>
+  <button class="btn" id="btn-clear">Clear</button>
+  <button class="btn primary" id="btn-export2">💾 Save / Export</button>
+</div>
+<input type="file" id="file-import" class="hidden-input" accept=".md,.markdown,.json,text/markdown,application/json">
+
+<div class="modal" id="modal">
+  <div class="modal-card">
+    <h3>Your notes</h3>
+    <p>Downloaded as a Markdown file. You can also copy the text below and paste it back.</p>
+    <textarea id="modal-ta" readonly></textarea>
+    <div class="modal-actions">
+      <button class="btn primary" id="modal-copy">Copy</button>
+      <button class="btn" id="modal-dl">Download again</button>
+      <button class="btn" id="modal-close">Close</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<script>var SPEC_SEED_NOTES={};</script>
+<script>
+(function(){
+  var NS = 'glossmark-plan-plan-v1:';
+  var tas = Array.prototype.slice.call(document.querySelectorAll('.note-ta'));
+
+  function autoGrow(t){t.style.height='auto';t.style.height=(t.scrollHeight)+'px';}
+  function setFilled(t){var box=t.closest('.note');if(box){box.classList.toggle('filled',t.value.trim()!=='');}}
+  function updateCount(){
+    var n=0;tas.forEach(function(t){if(t.value.trim()!=='')n++;});
+    var el=document.getElementById('count');if(el){el.textContent=n+' / '+tas.length+' notes';}
+    return n;
+  }
+  var lsOK=true,dirty=false;
+  try{localStorage.setItem('__vs__','1');localStorage.removeItem('__vs__');}catch(e){lsOK=false;}
+  var WARN='⚠ Not saving — tap Save / Export';
+  function nowStamp(){var d=new Date();return pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds());}
+  function setState(txt,cls){var el=document.getElementById('savestate');if(el){el.textContent=txt;el.className='savestate '+(cls||'');}}
+  window.addEventListener('beforeunload',function(e){if(!lsOK&&dirty){e.preventDefault();e.returnValue='';}});
+
+  var saveTimers={};
+  function save(t){
+    if(!lsOK){dirty=true;setState(WARN,'warn');return;}
+    var k=NS+t.dataset.key;
+    try{
+      // An empty note is stored as "", not removed: a missing key means "never
+      // touched" and the loader falls back to the seed, so removing it brought a
+      // seeded note back after the reviewer had deliberately cleared it (#477).
+      localStorage.setItem(k,t.value.trim()===''?'':t.value);
+      dirty=true;setState('✓ Saved '+nowStamp(),'ok');
+    }catch(e){dirty=true;lsOK=false;document.getElementById('warnbar').style.display='block';setState(WARN,'warn');}
+  }
+  var SEED=(typeof SPEC_SEED_NOTES!=='undefined')?SPEC_SEED_NOTES:{};
+  tas.forEach(function(t){
+    // Seed first, then let storage override it. With the read inside the same
+    // try as the seed, a throwing localStorage skipped the seed too and the
+    // reader came up empty exactly when it could save nothing (#477).
+    if(Object.prototype.hasOwnProperty.call(SEED,t.dataset.key)){
+      var sv=SEED[t.dataset.key];if(typeof sv==='string'){t.value=sv;}}
+    try{var v=localStorage.getItem(NS+t.dataset.key);if(v!=null){t.value=v;}}catch(e){}
+    autoGrow(t);setFilled(t);
+    t.addEventListener('input',function(){
+      autoGrow(t);setFilled(t);updateCount();
+      clearTimeout(saveTimers[t.dataset.key]);
+      saveTimers[t.dataset.key]=setTimeout(function(){save(t);},350);
+    });
+    t.addEventListener('blur',function(){save(t);});
+  });
+  updateCount();
+  if(lsOK){setState('✓ Auto-saving','ok');}else{document.getElementById('warnbar').style.display='block';setState(WARN,'warn');}
+
+  function toast(msg){var el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');setTimeout(function(){el.classList.remove('show');},1900);}
+  function pad(n){return n<10?'0'+n:''+n;}
+  function today(){var d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
+  function stamp(){var d=new Date();return today()+'-'+pad(d.getHours())+pad(d.getMinutes());}
+  // Named like the reader, <repo>-<doc>-v<N>-<YYYY-MM-DD-HHMM>-notes.md, stamped at export.
+  function exportName(){return 'glossmark-plan-v1-'+stamp()+'-notes.md';}
+
+  function buildExport(){
+    var byPart={},order=[],data={},n=0;
+    tas.forEach(function(t){
+      var v=t.value.trim();if(v==='')return;n++;
+      data[t.dataset.key]=t.value;
+      var part=t.dataset.part||'Other';
+      if(!byPart[part]){byPart[part]=[];order.push(part);}
+      byPart[part].push({label:t.dataset.label,ref:keyFromDom(t.dataset.key,t),note:t.value});
+    });
+    var lines=['# Plan notes','','_Exported '+today()+' · '+n+' note'+(n===1?'':'s')+'._','',
+      '> Send this file back to continue the review. Notes are embedded as data at the bottom','> so importing this file restores them in the reader.',''];
+    order.forEach(function(part){
+      lines.push('## '+part,'');
+      byPart[part].forEach(function(it){
+        lines.push('**'+it.label+'**  `'+it.ref+'`');
+        it.note.split('\n').forEach(function(ln){lines.push('> '+ln);});
+        lines.push('');
+      });
+    });
+    lines.push('<!-- SPEC-NOTES-DATA');
+    lines.push(JSON.stringify(data));
+    lines.push('-->');
+    return{text:lines.join('\n'),n:n};
+  }
+  function keyFromDom(domkey,t){var box=t.closest('.note');var r=box?box.querySelector('.note-ref'):null;return r?r.textContent:domkey;}
+
+  function download(name,text){
+    try{var blob=new Blob([text],{type:'text/markdown'});var url=URL.createObjectURL(blob);
+        var a=document.createElement('a');a.href=url;a.download=name;
+        document.body.appendChild(a);a.click();
+        setTimeout(function(){URL.revokeObjectURL(url);a.remove();},1500);return true;}catch(e){return false;}
+  }
+
+  var modal=document.getElementById('modal');
+  var modalTa=document.getElementById('modal-ta');
+  function openModal(text){modalTa.value=text;modal.classList.add('open');}
+  function closeModal(){modal.classList.remove('open');}
+
+  document.getElementById('btn-export').addEventListener('click',function(){
+    var r=buildExport();
+    if(r.n===0){toast('No notes yet — add some first.');return;}
+    var saved=download(exportName(),r.text);openModal(r.text);
+    // download() returning only means the download was REQUESTED; a browser can
+    // still block or drop it. So `dirty` — what arms the unload warning — is
+    // cleared only on a confirmed copy: the clipboard promise fulfilling.
+    var cp=null;
+    try{if(navigator.clipboard&&navigator.clipboard.writeText){cp=navigator.clipboard.writeText(r.text);}}catch(e){cp=null;}
+    if(cp&&typeof cp.then==='function'){cp.then(function(){dirty=false;setState('✓ Copied to clipboard '+nowStamp(),'ok');},function(){});}
+    if(!saved){setState('⚠ Download blocked — copy the notes from this box','warn');
+               toast('Download blocked — copy the notes before leaving');return;}
+    setState('Download requested '+nowStamp(),'ok');
+    toast('Download requested — '+r.n+' note'+(r.n===1?'':'s'));
+  });
+  document.getElementById('btn-export2').addEventListener('click',function(){document.getElementById('btn-export').click();});
+
+  document.getElementById('modal-copy').addEventListener('click',function(){
+    // Success is reported only once a copy actually happened: the legacy
+    // execCommand returned true, or the clipboard promise fulfilled. Claiming it
+    // before writeText settled told the reviewer a rejected copy had worked (#477).
+    function report(ok){if(ok){dirty=false;setState('✓ Copied to clipboard '+nowStamp(),'ok');}
+                        toast(ok?'Copied to clipboard':'Select the text and copy');}
+    modalTa.select();var legacy=false;try{legacy=document.execCommand('copy')===true;}catch(e){}
+    if(legacy){report(true);return;}
+    var p=null;
+    try{if(navigator.clipboard&&navigator.clipboard.writeText){p=navigator.clipboard.writeText(modalTa.value);}}catch(e){p=null;}
+    if(p&&typeof p.then==='function'){p.then(function(){report(true);},function(){report(false);});}
+    else{report(false);}
+  });
+  document.getElementById('modal-dl').addEventListener('click',function(){download(exportName(),modalTa.value);toast('Download requested');});
+  document.getElementById('modal-close').addEventListener('click',closeModal);
+  modal.addEventListener('click',function(e){if(e.target===modal)closeModal();});
+
+  // buildExport only ever writes strings, but an import takes whatever the file
+  // holds: an object arrives as "[object Object]", an array joins on commas,
+  // null becomes "null" — each then persisted over notes the reviewer wrote.
+  // The realistic trigger is a hand-edited or truncated export, not an attack;
+  // it just fails in the least useful way, silently and destructively. Skip
+  // anything that is not a string and say how many were skipped.
+  function applyData(obj){
+    var applied=0,skipped=0;
+    tas.forEach(function(t){
+      if(!Object.prototype.hasOwnProperty.call(obj,t.dataset.key))return;
+      var v=obj[t.dataset.key];
+      if(typeof v!=='string'){skipped++;return;}
+      t.value=v;save(t);autoGrow(t);setFilled(t);applied++;
+    });
+    updateCount();return{applied:applied,skipped:skipped};
+  }
+  document.getElementById('file-import').addEventListener('change',function(e){
+    var f=e.target.files[0];if(!f)return;
+    var rd=new FileReader();
+    rd.onload=function(){
+      var txt=String(rd.result||'');var obj=null;
+      // Last LINE-ANCHORED marker. A plain lastIndexOf lands inside the JSON
+      // string of a note that mentions the marker, and the import then reads as
+      // a corrupt file — the same defect the Python seeder had (#239).
+      var mk=/^[ \t]*<!--[ \t]*SPEC-NOTES-DATA/gm,mm=null,mx;
+      while((mx=mk.exec(txt))!==null){mm=mx;}
+      try{
+        if(mm){var after=txt.slice(mm.index+mm[0].length);var jstart=after.indexOf('{');var jend=after.lastIndexOf('}');
+                  if(jstart>=0&&jend>jstart){obj=JSON.parse(after.slice(jstart,jend+1));}}
+        else{obj=JSON.parse(txt);}
+      }catch(err){obj=null;}
+      if(!obj){toast('Could not read notes from that file');return;}
+      var r=applyData(obj);
+      toast('Imported '+r.applied+' note'+(r.applied===1?'':'s')+
+            (r.skipped?' ('+r.skipped+' skipped — not text)':''));
+    };
+    rd.readAsText(f);e.target.value='';
+  });
+  document.getElementById('btn-import').addEventListener('click',function(){document.getElementById('file-import').click();});
+
+  document.getElementById('btn-clear').addEventListener('click',function(){
+    if(!confirm('Clear ALL notes from this browser? Export first if you want to keep them.'))return;
+    tas.forEach(function(t){t.value='';save(t);autoGrow(t);setFilled(t);});
+    updateCount();toast('All notes cleared');
+  });
+
+  document.getElementById('btn-top').addEventListener('click',function(){window.scrollTo({top:0,behavior:'smooth'});});
+})();
+</script>
+</body>
+</html>

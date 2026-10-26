@@ -1,0 +1,1053 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="arsenal-source-sha256" content="0562e7270ec2aec4bfd144082260a0a18a8123e1487a69195e7d6ce8750a4f7c">
+<title>Glossmark — Specification (annotatable)</title>
+<style>
+:root{
+  --bg:#fbfaf7;--fg:#1d1c1a;--muted:#5f5c56;--line:#e3ded4;
+  --card:#ffffff;--accent:#0f766e;--accent2:#9a4a0b;--chip:#e8efed;
+  --note:#fffaf0;--note-line:#d9a441;--note-fg:#7a3b06;--code:#f1eee8;--link:#0f766e;
+  --measure:70ch;
+  --serif:Charter,"Bitstream Charter","Iowan Old Style","Sitka Text",Cambria,Georgia,serif;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+@media(prefers-color-scheme:dark){
+  :root{
+    --bg:#16151a;--fg:#ebe9e4;--muted:#aaa69f;--line:#34313a;
+    --card:#1e1d23;--accent:#5eead4;--accent2:#fbbf24;--chip:#24302f;
+    --note:#221d12;--note-line:#8a6a22;--note-fg:#fcd34d;--code:#26242b;--link:#7ff0dc;
+  }
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;background:var(--bg);color:var(--fg);
+  font:17px/1.65 var(--sans);
+  padding-bottom:96px;
+}
+/* The document reads in a book face; the reader's own chrome (bars, buttons,
+   headings, notes) stays in the UI face, so the two never blur together. */
+.sec-body{font-family:var(--serif);font-size:1.06em;line-height:1.7}
+.sec-body table,.sec-body pre{font-family:var(--sans)}
+.sec-body pre{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.wrap{max-width:calc(var(--measure) + 120px);margin:0 auto;padding:0 16px}
+a{color:var(--link);text-underline-offset:2px}
+code{background:var(--code);padding:.08em .35em;border-radius:5px;font-size:.86em;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;word-break:break-word}
+pre{background:var(--code);padding:12px;border-radius:8px;overflow:auto;font-size:.88em;line-height:1.5}
+pre code{background:none;padding:0;font-size:1em}
+.topbar{position:sticky;top:0;z-index:30;background:var(--bg);
+  border-bottom:1px solid var(--line);backdrop-filter:saturate(120%) blur(6px)}
+.topbar .wrap{display:flex;align-items:center;gap:8px;padding-top:10px;padding-bottom:10px}
+.brand{font-weight:700;font-size:16px;margin-right:auto;letter-spacing:.2px;min-width:0;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.brand small{font-weight:500;color:var(--muted);display:block;font-size:11px;letter-spacing:0}
+.btn{appearance:none;border:1px solid var(--line);background:var(--card);color:var(--fg);
+  border-radius:9px;padding:8px 11px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
+.btn:active{transform:translateY(1px)}
+.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+@media(prefers-color-scheme:dark){.btn.primary{color:#06201d}}
+.count{font-size:12px;color:var(--muted);white-space:nowrap;font-weight:600}
+.savestate{font-size:12px;font-weight:700;white-space:nowrap;transition:color .2s}
+.savestate.ok{color:var(--accent)}
+.savestate.warn{color:#9a4a0b}
+@media(prefers-color-scheme:dark){.savestate.warn{color:#fbbf24}}
+.statusbar{border-bottom:1px solid var(--line);background:var(--card)}
+.statusbar .wrap{padding:7px 16px;font-size:12px;color:var(--muted)}
+#warnbar{display:none;background:#fff4e5;border-bottom:1px solid var(--note-line);color:#7c2d12}
+#warnbar .wrap{padding:10px 16px;font-size:13px;line-height:1.45}
+@media(prefers-color-scheme:dark){#warnbar{background:#3a2a0e;color:#fde68a;border-color:#6b531c}}
+.hero{padding:34px 0 8px}
+.hero h1{font-size:2rem;line-height:1.15;margin:.1em 0 .3em;letter-spacing:-.02em}
+.hero p{color:var(--muted);margin:.3em 0;max-width:var(--measure)}
+.help{border:1px solid var(--line);background:var(--card);border-radius:12px;padding:4px 14px;margin:14px 0}
+.help summary{cursor:pointer;font-weight:600;padding:10px 0}
+.help ul{margin:.2em 0 1em;padding-left:1.2em}
+.help li{margin:.3em 0}
+.toc{border:1px solid var(--line);background:var(--card);border-radius:12px;padding:4px 14px;margin:14px 0}
+.toc>summary{cursor:pointer;font-weight:700;padding:11px 0;font-size:15px}
+.toc-part{margin:2px 0;border-top:1px solid var(--line)}
+.toc-part>summary{cursor:pointer;padding:9px 2px;font-weight:600;font-size:14px}
+.toc-part ul{margin:.1em 0 .7em;padding-left:1.1em}
+.toc-part li{margin:.22em 0;font-size:13.5px;line-height:1.4}
+.toc-part a,.toc-flat a{text-decoration:none}
+.toc-flat{margin:.1em 0 .8em;padding-left:1.1em}
+.toc-flat li{margin:.25em 0;font-size:14px;line-height:1.4;break-inside:avoid}
+.toc-flat li.sub{margin-left:1.1em;font-size:13px}
+.toc-flat a:hover{text-decoration:underline}
+.toc-part a:hover{text-decoration:underline}
+.part{margin:30px 0}
+.part-title{font-size:1.45rem;line-height:1.25;border-bottom:2px solid var(--accent);
+  padding-bottom:8px;margin:18px 0 10px}
+.badge{display:inline-block;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;
+  vertical-align:middle;padding:3px 7px;border-radius:6px;margin-right:8px}
+.badge.spec,.badge.plan{background:var(--chip);color:var(--accent)}
+.badge.workspace{background:var(--chip);color:var(--accent2)}
+/* Two heading levels, told apart by size, weight and a rule: a ## section opens
+   with a full-width rule; a ### section sits indented under it on a side rule. */
+.sec{scroll-margin-top:72px}
+.sec.l2{padding:22px 0 6px;border-top:1px solid var(--line);margin-top:18px}
+.part>.sec.l2:first-of-type{border-top:none;margin-top:0}
+.sec.l3{margin:6px 0 6px 2px;padding:2px 0 2px 14px;border-left:3px solid var(--line)}
+.sec-h{margin:6px 0 8px;line-height:1.3}
+h3.sec-h{font-size:1.3rem;font-weight:750}
+h4.sec-h{font-size:1.08rem;font-weight:650;color:var(--fg)}
+.sec.bare>.sec-h{margin-bottom:2px}
+.chip{display:inline-block;font-family:ui-monospace,Menlo,monospace;font-size:12px;font-weight:700;
+  color:var(--accent);background:var(--chip);border-radius:6px;padding:2px 7px;margin-right:8px;vertical-align:middle}
+h4 .chip{font-size:11px;color:var(--muted)}
+.sec-title{vertical-align:middle}
+.sec-body{margin:.2em 0 .4em}
+.sec-body p,.sec-body li,.sec-body blockquote{max-width:var(--measure)}
+.sec-body p{margin:.6em 0}
+.sec-body ul,.sec-body ol{margin:.5em 0;padding-left:1.35em}
+.sec-body li{margin:.3em 0}
+.sec-body h4,.sec-body h5,.sec-body h6{font-size:1em;margin:1em 0 .3em}
+.sec-body blockquote{margin:.7em 0;padding:.5em .9em;border-left:3px solid var(--accent);
+  background:var(--code);border-radius:0 8px 8px 0;color:var(--fg)}
+.sec-body blockquote p{margin:.3em 0}
+.sec-body figure.drawspec{margin:.8em 0;overflow-x:auto}
+.sec-body figure.drawspec svg{display:block;max-width:100%;height:auto;margin:0 auto}
+.sec-body table{border-collapse:separate;border-spacing:0;font-size:14px;line-height:1.45;margin:.8em 0;
+  display:block;width:max-content;max-width:100%;overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--card)}
+.sec-body th,.sec-body td{border-bottom:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+.sec-body tr:last-child td{border-bottom:none}
+.sec-body tbody tr:nth-child(even) td{background:color-mix(in srgb,var(--chip) 45%,transparent)}
+.sec-body th{background:var(--chip);font-weight:700;font-size:12.5px;letter-spacing:.02em}
+.sec-body strong{font-weight:700}
+/* The note field: the one thing on the page that is the reviewer's, so it must
+   not read as more document — but an empty one must not shout over the text
+   either. Empty: a quiet dashed margin slip. Focused: it opens into a writing
+   card. Written in: a solid amber card that stands out on a skim. */
+.note{max-width:var(--measure);background:transparent;border:1.5px dashed var(--note-line);
+  border-radius:10px;padding:6px 12px;margin:14px 0 20px;opacity:.78;
+  transition:background .15s,box-shadow .15s,opacity .15s,padding .15s}
+.note:hover{opacity:1}
+.note:focus-within,.note.filled{opacity:1;background:var(--note);border-style:solid;
+  border-left:4px solid var(--note-line);padding:10px 14px}
+.note:focus-within{box-shadow:0 0 0 3px color-mix(in srgb,var(--note-line) 28%,transparent),0 6px 20px #0000000f}
+.note-head{display:flex;align-items:center;gap:8px;cursor:text}
+.note-ico{color:var(--note-fg);font-weight:800}
+.note-label{font-size:11px;font-weight:800;color:var(--note-fg);text-transform:uppercase;letter-spacing:.07em}
+.note-ref{margin-left:auto;font-family:ui-monospace,Menlo,monospace;font-size:10.5px;color:var(--muted);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+/* While empty the label row collapses into the placeholder line beside the icon. */
+.note:not(.filled):not(:focus-within){display:flex;align-items:center;gap:8px}
+.note:not(.filled):not(:focus-within) .note-label,
+.note:not(.filled):not(:focus-within) .note-ref{display:none}
+.note:focus-within .note-head,.note.filled .note-head{margin-bottom:4px}
+.note-ta{display:block;width:100%;border:none;background:transparent;color:var(--fg);font:inherit;font-size:16px;
+  resize:none;outline:none;line-height:1.55;padding:2px 0;overflow:hidden;min-height:1.6em}
+.note:focus-within .note-ta{min-height:4.8em}
+.note-ta::placeholder{color:var(--muted);opacity:1;font-style:italic}
+.fab{position:fixed;right:14px;bottom:16px;z-index:40;display:flex;flex-direction:column;gap:8px;align-items:flex-end}
+.fab .btn{box-shadow:0 4px 14px #0003}
+.modal{position:fixed;inset:0;z-index:60;background:#0008;display:none;align-items:center;justify-content:center;padding:16px}
+.modal.open{display:flex}
+.modal-card{background:var(--card);border:1px solid var(--line);border-radius:14px;max-width:680px;width:100%;
+  max-height:86vh;display:flex;flex-direction:column;padding:16px}
+.modal-card h3{margin:.1em 0 .5em}
+.modal-card p{color:var(--muted);font-size:13.5px;margin:.2em 0 .6em}
+.modal-card textarea{width:100%;flex:1;min-height:220px;border:1px solid var(--line);border-radius:8px;
+  background:var(--bg);color:var(--fg);font:13px/1.5 ui-monospace,Menlo,monospace;padding:10px;resize:vertical}
+.modal-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.hidden-input{display:none}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:84px;z-index:70;background:#111;color:#fff;
+  padding:9px 14px;border-radius:9px;font-size:13px;opacity:0;transition:opacity .25s;pointer-events:none}
+.toast.show{opacity:.96}
+/* Phone width: smaller type, no floating column over the text, the hint dropped. */
+@media(max-width:600px){
+  body{font-size:16px;padding-bottom:76px}
+  .hero h1{font-size:1.45rem}
+  .part-title{font-size:1.25rem}
+  h3.sec-h{font-size:1.15rem}
+  h4.sec-h{font-size:1rem}
+  .sec.l3{padding-left:10px}
+  .statusbar .hint{display:none}
+  .fab{left:0;right:0;bottom:0;flex-direction:row;justify-content:flex-end;gap:6px;padding:8px 10px;
+    flex-wrap:wrap;background:var(--bg);border-top:1px solid var(--line)}
+  .fab .btn{box-shadow:none;padding:7px 9px}
+  .toast{bottom:64px}
+}
+@media print{.topbar,.statusbar,.fab,.help,.note:not(.filled){display:none}}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="wrap">
+    <div class="brand">Glossmark — Specification<small>annotatable reader · 2026-10-26</small></div>
+    <span class="savestate ok" id="savestate">✓ Auto-saving</span>
+    <button class="btn primary" id="btn-export">Save / Export</button>
+  </div>
+</div>
+<div class="statusbar"><div class="wrap"><span class="count" id="count">0 / 14 notes</span><span class="hint"> · notes save automatically; <strong>Save / Export</strong> keeps a file you can send back</span></div></div>
+<div id="warnbar"><div class="wrap"><strong>Heads up —</strong> this browser isn't storing your notes automatically (private/incognito mode or restricted file view). Tap <strong>Save / Export</strong> regularly.</div></div>
+
+<div class="wrap">
+  <div class="hero">
+    <h1>Glossmark — Specification</h1>
+    <p>Read at your own pace and leave a note on any point you want to discuss.</p>
+  </div>
+  <details class="help">
+    <summary>How to annotate (tap)</summary>
+    <ul>
+      <li>Tap the note field under any section and type. Each note is tagged so your feedback maps to an exact point.</li>
+      <li><strong>Notes save automatically</strong> in this browser as you type.</li>
+      <li><strong>Save / Export</strong> downloads a Markdown file of your notes — the copy to send back. Tap whenever you pause, especially on a phone.</li>
+      <li><strong>Import</strong> reloads notes from a file you exported earlier (after clearing the browser or switching devices).</li>
+      <li><strong>Clear</strong> erases every note in this browser. Export first.</li>
+    </ul>
+  </details>
+  <details class="toc" open><summary>Contents</summary>
+<ul class="toc-flat">
+<li><a href="#s-spec-intro">Preamble &amp; scope</a></li>
+<li><a href="#s-spec-1">§1 Problem statement</a></li>
+<li><a href="#s-spec-2">§2 Systems &amp; Impact</a></li>
+<li><a href="#s-spec-3">§3 Options</a></li>
+<li class="sub"><a href="#s-spec-option-a-render-in-rust-with-com">Option A: Render in Rust with comrak (Conservative)</a></li>
+<li class="sub"><a href="#s-spec-option-b-render-in-the-webview-w">Option B: Render in the webview with markdown-it (Recommended)</a></li>
+<li class="sub"><a href="#s-spec-option-c-bundle-pandoc">Option C: Bundle Pandoc</a></li>
+<li class="sub"><a href="#s-spec-comparison">Comparison</a></li>
+<li><a href="#s-spec-4">§4 Recommendation</a></li>
+<li><a href="#s-spec-5">§5 Contracts</a></li>
+<li class="sub"><a href="#s-spec-api-contracts">API contracts</a></li>
+<li class="sub"><a href="#s-spec-inter-service-contracts">Inter-service contracts</a></li>
+<li class="sub"><a href="#s-spec-database-migrations">Database migrations</a></li>
+<li><a href="#s-spec-6">§6 Risks &amp; Validation</a></li>
+</ul>
+</details>
+  <section class="part">
+<article class="sec l2" id="s-spec-intro">
+<h3 class="sec-h"><span class="chip">overview</span><span class="sec-title">Preamble &amp; scope</span></h3>
+<div class="sec-body"><p><strong>Date</strong>: 2026-10-26<br />
+<strong>Ticket / PR</strong>: S-1 in <code>status/ideas.md</code><br />
+<strong>Author</strong>: nuncaeslupus, with Claude<br />
+<strong>Revision</strong>: 3<br />
+<strong>Status</strong>: approved (2026-10-26, revision 3) — without annotations<br />
+<strong>Revision log</strong>:
+- r1 — first draft
+- r2 — applied <code>glossmark-spec-v1-2026-10-26-2236-notes.md</code>: simplicity as the signature (D-11), open questions answered (D-12 to D-15), themed SVG images, distribution channels
+- r3 — owner approved r2 in chat with one clarification: "simple" means like Chrome's PDF viewer, only those few items; the Chrome bullet now follows that layout</p>
+<blockquote>
+<p>Review record. Each round of reviewer notes makes a new revision: bump
+<strong>Revision</strong>, add a log line naming the export it applied
+(<code>- r2 — applied `&lt;repo&gt;-spec-v1-&lt;date&gt;-notes.md`</code>), and commit that
+export beside this file in the same commit. On approval set
+<strong>Status</strong> to <code>approved (YYYY-MM-DD, revision N)</code> and, when the reviewer sent
+no notes for that revision, add <code>— without annotations</code>.</p>
+</blockquote></div>
+<div class="note" data-for="s-spec-intro"><label class="note-head" for="n-s-spec-intro"><span class="note-ico" aria-hidden="true">✎</span><span class="note-label">Your note</span><span class="note-ref">SPEC · intro</span></label><textarea class="note-ta" data-key="s-spec-intro" id="n-s-spec-intro" data-label="Preamble &amp; scope" data-part="Specification" rows="1" placeholder="Add a note on this section…"></textarea></div>
+</article>
+<article class="sec l2" id="s-spec-1">
+<h3 class="sec-h"><span class="chip">§1</span><span class="sec-title">Problem statement</span></h3>
+<div class="sec-body"><p>On Linux, Markdown files are read either as raw text or through tools that render them
+poorly. Okular, for example, shows plain styling, no syntax highlighting, no math and no
+diagrams. Meanwhile the same file looks polished on GitHub. Most desktop Markdown apps
+are editors with a preview pane, not readers. Glossmark v1 is a free, open-source,
+<strong>read-only</strong> desktop viewer that opens a <code>.md</code> file and presents it the way a PDF
+reader presents a PDF: a typeset paper sheet with menus, a small toolbar, an outline and
+tabs. It must render everything GitHub renders plus a set of common extensions. It ships
+on Linux first (D-4), built on Tauri v2 (D-2) so the Windows and macOS releases (S-4)
+reuse the same code. Editing is out of scope (D-3, S-3). There is no outage behind this;
+it is a planned new product.</p>
+<p><strong>Ideas covered</strong>: I-1, I-2, I-3, I-4, I-5, I-6, I-7, I-8, I-9, I-10, I-11, I-15, I-16, I-17, I-18, I-19, I-21, I-23 (strings ready for it).
+Recorded for later, not built in v1: I-20 (folder sidebar), I-22 (theme picker).</p>
+<p><strong>Design principle — simplicity is the signature (D-11).</strong> Glossmark's identity is a UI
+that gets out of the way: the document is the interface. Nothing on screen competes with
+the page. Every feature is one click or one shortcut away, and reading never raises a
+question or a dialog. When a feature cannot be added without making the window busier,
+it waits.</p>
+<p><strong>v1 scope at a glance</strong></p>
+<ul>
+<li><strong>Rendering (D-7)</strong>: CommonMark and GFM (tables, task lists, strikethrough, autolinks), footnotes,
+  GitHub alerts (<code>&gt; [!NOTE]</code> and the other four), emoji shortcodes, KaTeX math (<code>$…$</code>, <code>$$…$$</code>),
+  Mermaid (D-5), front matter shown as a compact metadata block, and the extras:
+  <code>==highlight==</code>, <code>^sup^</code>, <code>~sub~</code>, <code>[[wiki links]]</code>, abbreviations, definition lists.
+  Code blocks get syntax highlighting and a copy button. Headings get anchor links.
+  Safe raw HTML is kept, as GitHub does (<code>&lt;details&gt;</code>, <code>&lt;kbd&gt;</code>, <code>&lt;img&gt;</code>, <code>&lt;sub&gt;</code>, tables…);
+  everything else is stripped (D-15). Remote images load by default (D-12).</li>
+<li><strong>Images</strong>: local and remote images display normally. Local <code>.svg</code> files are inlined into the
+  page after sanitising, so SVGs drawn to inherit the text colour (for example drawspec's
+  <code>--profile inline</code> output) follow the theme in light and dark (D-13). <code>```drawspec</code> source
+  fences are shown as code; documents include drawspec diagrams as rendered SVG/PNG files.</li>
+<li><strong>Layout (D-6)</strong>: a fixed-width paper sheet on a grey canvas with continuous scroll.
+  Printing uses the same styling, minus the canvas and the app's controls.</li>
+<li><strong>Look (D-9)</strong>: one signature theme (book-style serif body, sans-serif headings, monospace code,
+  fonts bundled) in light and dark, following the system setting by default. A user CSS file is
+  loaded last if present. Themes are plain stylesheets.</li>
+<li><strong>Navigation (D-8)</strong>: tabs, each with its own back/forward history. A link to a local <code>.md</code> file
+  opens in the current tab; Ctrl-click or middle-click opens a new tab. <code>#anchor</code> links scroll
+  within the page. External links open in the system browser.</li>
+<li><strong>Reading tools</strong>: an outline sidebar built from the headings (click to jump, current section
+  highlighted); find in page (Ctrl+F); zoom (Ctrl +/−/0 and fit-width); live reload that keeps the
+  scroll position; print / save as PDF; recent files.</li>
+<li><strong>Language</strong>: the UI is in English. Every UI string lives in one file, so translations
+  can be added later without touching the code (D-14, I-23).</li>
+<li><strong>Distribution</strong>: v1 builds a <code>.deb</code> and an AppImage. Flathub, Snap, the Microsoft Store
+  and macOS (DMG / Homebrew / App Store) come with S-4. PyPI is not a channel:
+  it serves Python packages, and Glossmark is a native app.</li>
+<li><strong>Opening files (I-19)</strong>: File › Open, drag-and-drop, <code>glossmark &lt;file&gt;…</code> from a terminal, and
+  the desktop file association for <code>.md</code> / <code>.markdown</code>. A second launch opens its files as tabs in
+  the running window (single instance).</li>
+<li><strong>Chrome (I-10, D-11)</strong>: the reference is Chrome's built-in PDF viewer: one slim bar and
+  nothing else, adapted to Markdown. Above it the tab strip; in it, left to right: the Outline
+  toggle, the document title, the menus (File, View, Go, Help), Back and Forward, zoom
+  (− , percentage, +), Find and Print. Open and Theme live in the menus. No second toolbar,
+  no status bar, no side panels besides the outline. With no file open, the window shows a single
+  "Open or drop a Markdown file" area and the recent files. Every toolbar action also has a keyboard
+  shortcut. Settings are limited to what a viewer needs: theme, default zoom, remote
+  images on/off (default on), and the remembered window size and recent files.</li>
+</ul>
+<figure class="drawspec"><svg xmlns="http://www.w3.org/2000/svg" viewBox="-1.25 -1.25 666.5 579.85" role="img"><path d="M 309.26 66.85 L 309.26 114.85" fill="none" stroke="currentColor" stroke-width="1.5"/><polygon points="309.26,114.85 305.66,106.85 312.86,106.85" fill="currentColor" stroke="none"/><path d="M 309.26 181.4 L 309.26 229.4" fill="none" stroke="currentColor" stroke-width="1.5"/><polygon points="309.26,229.4 305.66,221.4 312.86,221.4" fill="currentColor" stroke="none"/><path d="M 309.26 281.1 L 309.26 329.1" fill="none" stroke="currentColor" stroke-width="1.5"/><polygon points="309.26,329.1 305.66,321.1 312.86,321.1" fill="currentColor" stroke="none"/><path d="M 309.26 380.8 L 309.26 428.8" fill="none" stroke="currentColor" stroke-width="1.5"/><polygon points="309.26,428.8 305.66,420.8 312.86,420.8" fill="currentColor" stroke="none"/><path d="M 309.26 480.5 L 309.26 528.5" fill="none" stroke="currentColor" stroke-width="1.5"/><polygon points="309.26,528.5 305.66,520.5 312.86,520.5" fill="currentColor" stroke="none"/><rect x="213.755" y="329.1" width="191.009" height="51.7" rx="4" fill="none" stroke="currentColor" stroke-width="1.5"/><text x="309.26" y="350.333" font-family="'DejaVu Sans', sans-serif" font-size="11" fill="currentColor" text-anchor="middle"><tspan>DOMPurify: strip scripts</tspan></text><text x="309.26" y="365.183" font-family="'DejaVu Sans', sans-serif" font-size="11" fill="currentColor" text-anchor="middle"><tspan>and unsafe HTML</tspan></text><rect x="213.755" y="114.85" width="191.009" height="66.55" rx="4" fill="none" stroke="currentColor" stroke-width="1.5"/><text x="309.26" y="136.083" font-family="'DejaVu Sans', sans-serif" font-size="11" fill="currentColor" text-anchor="middle"><tspan>Rust core: read file,</tspan></text><text x="309.26" y="150.933" font-family="'DejaVu Sans', sans-serif" font-size="11" fill="currentColor" text-anchor="middle"><tspan>watch for changes, CLI</tspan></text><text x="309.26" y="165.783" font-family="'DejaVu Sans', sans-serif" font-size="11" fill="currentColor" text-anchor="middle"><tspan>and file association</tspan></text><rect x="213.755" y="428.8" width="191.009" height="51.7" rx="4" fill="none" stroke="currentColor" stroke-width="1.5"/><text x="309.26" y="450.033" font-family="'DejaVu Sans', sans-serif" font-size="11" fill="currentColor" text-anchor="middle"><tspan>Enhance: highlight code,</tspan></text><text x="309.26" y="464.883" font-family="'DejaVu Sans', sans-serif" font-size="11" fill="currentColor" text-anchor="middle"><tspan>KaTeX, Mermaid (lazy), outline</tspan></text><polygon points="255.121,18 255.584,17.217 256.965,16.447 259.242,15.704 262.374,15 266.308,14.347 270.978,13.757 276.302,13.24 282.19,12.804 288.541,12.457 295.247,12.204 302.193,12.051 309.26,12 316.326,12.051 323.272,12.204 329.978,12.457 336.329,12.804 342.217,13.24 347.542,13.757 352.211,14.347 356.145,15 359.277,15.704 361.554,16.447 362.935,17.217 363.398,18 363.398,60.85 362.935,61.633 361.554,62.403 359.277,63.146 356.145,63.85 352.211,64.503 347.542,65.093 342.217,65.61 336.329,66.046 329.978,66.393 323.272,66.646 316.326,66.799 309.26,66.85 302.193,66.799 295.247,66.646 288.541,66.393 282.19,66.046 276.302,65.61 270.978,65.093 266.308,64.503 262.374,63.85 259.242,63.146 256.965,62.403 255.584,61.633 255.121,60.85" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M 363.398 18 L 362.935 18.783 L 361.554 19.553 L 359.277 20.296 L 356.145 21 L 352.211 21.653 L 347.542 22.243 L 342.217 22.76 L 336.329 23.196 L 329.978 23.543 L 323.272 23.796 L 316.326 23.949 L 309.26 24 L 302.193 23.949 L 295.247 23.796 L 288.541 23.543 L 282.19 23.196 L 276.302 22.76 L 270.978 22.243 L 266.308 21.653 L 262.374 21 L 259.242 20.296 L 256.965 19.553 L 255.584 18.783 L 255.121 18" fill="none" stroke="currentColor" stroke-width="1.5"/><text x="309.26" y="45.233" font-family="'DejaVu Sans', sans-serif" font-size="11" fill="currentColor" text-anchor="middle"><tspan>.md file on disk</tspan></text><rect x="213.755" y="229.4" width="191.009" height="51.7" rx="4" fill="none" stroke="currentColor" stroke-width="1.5"/><text x="309.26" y="250.633" font-family="'DejaVu Sans', sans-serif" font-size="11" fill="currentColor" text-anchor="middle"><tspan>markdown-it + plugins:</tspan></text><text x="309.26" y="265.483" font-family="'DejaVu Sans', sans-serif" font-size="11" fill="currentColor" text-anchor="middle"><tspan>Markdown to HTML</tspan></text><rect x="216.329" y="528.5" width="185.862" height="36.85" rx="18.425" fill="none" stroke="currentColor" stroke-width="2.5"/><text x="309.26" y="549.733" font-family="'DejaVu Sans', sans-serif" font-size="11" fill="currentColor" text-anchor="middle"><tspan>Paper sheet in the active tab</tspan></text><text x="314.01" y="208.862" font-family="'DejaVu Sans', sans-serif" font-size="10" fill="currentColor">on open and on every save</text></svg></figure>
+<p><strong>Success criteria (measurable)</strong>:</p>
+<p>Measured on the reference machine (the owner's Ubuntu laptop) with release builds, unless stated otherwise.</p>
+<ul>
+<li>[ ] <code>commonmark_spec_pass_rate == 1.0</code>: the renderer passes every example of the CommonMark spec test suite.</li>
+<li>[ ] <code>gfm_extension_examples_pass_rate == 1.0</code>: every example in the GFM spec's extension sections (tables, task lists, strikethrough, autolinks) passes.</li>
+<li>[ ] <code>feature_fixture_constructs_rendered == 100%</code>: <code>docs/fixtures/all-features.md</code> holds one example of every construct in the v1 scope above, and a snapshot test asserts the expected element for each (e.g. <code>mark</code>, <code>sup</code>, <code>sub</code>, <code>abbr</code>, <code>dl</code>, <code>.katex</code>, an alert box, an emoji character, a Mermaid <code>svg</code>).</li>
+<li>[ ] <code>script_execution_from_document == 0</code>: a fixture containing <code>&lt;script&gt;</code>, <code>onerror=</code>, <code>javascript:</code> links and an <code>&lt;iframe&gt;</code> renders with none of them active (automated test).</li>
+<li>[ ] <code>themed_svg_fill_matches_text_colour == true</code>: a fixture SVG that uses <code>currentColor</code> is drawn in the theme's text colour, in both light and dark (automated test).</li>
+<li>[ ] <code>toolbar_buttons &lt;= 8</code>, <code>settings &lt;= 4</code>, <code>dialogs_while_reading == 0</code> (only Open and Print show a dialog; checked against the UI definition in a test).</li>
+<li>[ ] Simplicity, <strong>judged by the owner</strong>: a first-time user can open, read, navigate and print a document without looking anything up, and the window shows nothing they would call clutter.</li>
+<li>[ ] <code>network_requests_with_remote_images_off == 0</code>: with remote images off, opening the fixture makes no network request; with them on, only image URLs are requested.</li>
+<li>[ ] <code>first_paint_ms_100KB &lt;= 500</code>: from launching <code>glossmark big.md</code> (100 KB, ~2,500 lines) to the sheet being visible.</li>
+<li>[ ] <code>render_ms_1MB &lt;= 1500</code>: a 1 MB document is fully rendered (all Mermaid included, at most 20 diagrams) without the window freezing for more than 200 ms at a time.</li>
+<li>[ ] <code>live_reload_ms &lt;= 500</code>: from saving the file in another editor to the change appearing; the scroll offset changes by less than one screen.</li>
+<li>[ ] <code>deb_package_mb &lt;= 20</code> for the Linux <code>.deb</code>. The AppImage is also built, but it bundles WebKitGTK, so its size is reported, not gated.</li>
+<li>[ ] <code>idle_rss_mb &lt;= 250</code> with three 100 KB documents open in tabs.</li>
+<li>[ ] Visual parity with GitHub, <strong>judged by the owner</strong>: <code>all-features.md</code> and three real-world READMEs (to be named in the plan) are rendered side by side with GitHub. Every construct GitHub renders must appear in Glossmark with the same meaning, and the owner signs off that Glossmark looks at least as good. Differences in style are expected; missing or broken constructs fail.</li>
+<li>[ ] Print parity, <strong>judged by the owner</strong>: printing <code>all-features.md</code> to PDF gives the same typography as the screen, with no app controls, code and tables not cut mid-line, and math and diagrams present.</li>
+<li>[ ] Keyboard completeness: every toolbar action is reachable by a shortcut, listed in Help › Keyboard Shortcuts (checked against a list in the test suite).</li>
+<li>[ ] Linux packaging: CI builds <code>.deb</code> and AppImage on every PR to <code>main</code>. A fresh Ubuntu 24.04 VM can install the <code>.deb</code>, double-click a <code>.md</code> file and see Glossmark open it.</li>
+</ul></div>
+<div class="note" data-for="s-spec-1"><label class="note-head" for="n-s-spec-1"><span class="note-ico" aria-hidden="true">✎</span><span class="note-label">Your note</span><span class="note-ref">SPEC §1</span></label><textarea class="note-ta" data-key="s-spec-1" id="n-s-spec-1" data-label="§1 Problem statement" data-part="Specification" rows="1" placeholder="Add a note on this section…"></textarea></div>
+</article>
+<article class="sec l2" id="s-spec-2">
+<h3 class="sec-h"><span class="chip">§2</span><span class="sec-title">Systems &amp; Impact</span></h3>
+<div class="sec-body"><p>Glossmark is a new repository, so nothing existing changes. The table lists the parts v1
+creates and the outside systems it depends on.</p>
+<table>
+<thead>
+<tr>
+<th>System</th>
+<th>Type</th>
+<th>Role</th>
+<th>Needs changes?</th>
+<th>Impact</th>
+<th>Severity</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Rust core (<code>src-tauri/</code>)</td>
+<td>Primary</td>
+<td>Tauri v2 app: window, menus, single-instance, CLI args, file read, file watching, recent files, settings file</td>
+<td>Yes (new)</td>
+<td>Kept small: no parsing in Rust. Owns every filesystem access, scoped to the files the user opened and their folders (for images and linked <code>.md</code>).</td>
+<td>Med</td>
+</tr>
+<tr>
+<td>Web frontend (<code>src/</code>)</td>
+<td>Primary</td>
+<td>Plain TypeScript + Vite: tabs, toolbar, outline, find, zoom; the render pipeline (markdown-it → DOMPurify → enhancers)</td>
+<td>Yes (new)</td>
+<td>All rendering lives here, so one language covers every Markdown feature. No UI framework: the chrome is a few components.</td>
+<td>High</td>
+</tr>
+<tr>
+<td>Themes (<code>src/themes/</code>)</td>
+<td>Primary</td>
+<td>Signature theme as CSS, light and dark; bundled fonts; print stylesheet; user CSS hook</td>
+<td>Yes (new)</td>
+<td>This is where "beautiful" is won or lost; it gets its own tasks and the owner's review.</td>
+<td>High</td>
+</tr>
+<tr>
+<td>System webview</td>
+<td>Dependent</td>
+<td>WebKitGTK on Linux (WebView2 on Windows, WKWebView on macOS later)</td>
+<td>No, validate</td>
+<td>Rendering differences between engines; WebKitGTK printing and <code>window.find</code> behaviour must be checked early.</td>
+<td>Med</td>
+</tr>
+<tr>
+<td>npm plugins</td>
+<td>Dependent</td>
+<td>markdown-it and its plugins, DOMPurify, highlight.js, KaTeX, Mermaid</td>
+<td>No, validate</td>
+<td>Versions pinned with a lockfile; Mermaid (~2 MB) is loaded only when a document contains a diagram.</td>
+<td>Low</td>
+</tr>
+<tr>
+<td>Desktop integration</td>
+<td>Infrastructure</td>
+<td><code>.desktop</code> file, MIME association for <code>text/markdown</code>, icon</td>
+<td>Yes (new)</td>
+<td>Needed for double-click to open.</td>
+<td>Low</td>
+</tr>
+<tr>
+<td>CI (GitHub Actions)</td>
+<td>Infrastructure</td>
+<td>Lint, type-check, tests, build <code>.deb</code> / AppImage on PRs</td>
+<td>Yes (new)</td>
+<td>Also gives the arsenal its <code>host-gate</code> and lets <code>merge-policy</code> stay <code>after-ci</code>.</td>
+<td>Med</td>
+</tr>
+<tr>
+<td>Project docs (<code>docs/</code>)</td>
+<td>Dependent</td>
+<td>README, user guide, fixtures; diagrams as <code>drawspec</code> fences (I-15)</td>
+<td>Yes (new)</td>
+<td>No runtime impact.</td>
+<td>Low</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Impact dimensions</strong></p>
+<ul>
+<li><strong>Data</strong>: Low. The app is read-only on documents; it writes only its own settings and recent-files list.</li>
+<li><strong>API contracts</strong>: none public. The only internal contract is the set of Tauri commands between the frontend and the core; <code>design</code> defines it.</li>
+<li><strong>Performance</strong>: Medium. Large documents and many Mermaid diagrams are the stress cases; the criteria above bound them.</li>
+<li><strong>User-facing</strong>: High. This is the product.</li>
+<li><strong>Security</strong>: Medium. A Markdown file can embed raw HTML. Sanitising, a strict content-security policy, a scoped filesystem and opening external links outside the app keep a hostile document from running code or reading files.</li>
+<li><strong>Operational</strong>: Low. There is no server; releases are packages.</li>
+<li><strong>Risk of inaction</strong>: Low. Nothing breaks, but the product does not exist.</li>
+</ul></div>
+<div class="note" data-for="s-spec-2"><label class="note-head" for="n-s-spec-2"><span class="note-ico" aria-hidden="true">✎</span><span class="note-label">Your note</span><span class="note-ref">SPEC §2</span></label><textarea class="note-ta" data-key="s-spec-2" id="n-s-spec-2" data-label="§2 Systems &amp; Impact" data-part="Specification" rows="1" placeholder="Add a note on this section…"></textarea></div>
+</article>
+<article class="sec l2" id="s-spec-3">
+<h3 class="sec-h"><span class="chip">§3</span><span class="sec-title">Options</span></h3>
+<div class="sec-body"><p>D-2 fixes the shell as Tauri v2. The open choice is <strong>where Markdown becomes HTML</strong>, which
+decides how much of D-7 comes from existing plugins and how much has to be written.</p></div>
+<div class="note" data-for="s-spec-3"><label class="note-head" for="n-s-spec-3"><span class="note-ico" aria-hidden="true">✎</span><span class="note-label">Your note</span><span class="note-ref">SPEC §3</span></label><textarea class="note-ta" data-key="s-spec-3" id="n-s-spec-3" data-label="§3 Options" data-part="Specification" rows="1" placeholder="Add a note on this section…"></textarea></div>
+</article>
+<article class="sec l3" id="s-spec-option-a-render-in-rust-with-com">
+<h4 class="sec-h"><span class="chip">▸</span><span class="sec-title">Option A: Render in Rust with comrak (Conservative)</span></h4>
+<div class="sec-body"><ul>
+<li><strong>Description</strong>: The Rust core parses Markdown with <code>comrak</code> (GFM-compatible, with footnotes, front matter, alerts, wiki links, superscript, subscript and description lists built in) and sends HTML to the webview. The frontend only adds highlighting, KaTeX and Mermaid.</li>
+<li><strong>Scope</strong>: <code>src-tauri/</code> does the parsing; <code>src/</code> does display and the enhancers.</li>
+<li><strong>Effort</strong>: Medium.</li>
+<li><strong>Tradeoffs</strong>: + fast native parsing, + HTML is sanitised before it reaches the webview. − <code>==highlight==</code>, abbreviations, emoji shortcodes and line-accurate outline/source mapping need custom Rust code or are missing. − Rendering is split across two languages, so each feature touches both.</li>
+<li><strong>Compatibility</strong>: N/A (greenfield).</li>
+</ul></div>
+<div class="note" data-for="s-spec-option-a-render-in-rust-with-com"><label class="note-head" for="n-s-spec-option-a-render-in-rust-with-com"><span class="note-ico" aria-hidden="true">✎</span><span class="note-label">Your note</span><span class="note-ref">SPEC › Option A: Render in Rust with comrak (Conservative)</span></label><textarea class="note-ta" data-key="s-spec-option-a-render-in-rust-with-com" id="n-s-spec-option-a-render-in-rust-with-com" data-label="Option A: Render in Rust with comrak (Conservative)" data-part="Specification" rows="1" placeholder="Add a note on this section…"></textarea></div>
+</article>
+<article class="sec l3" id="s-spec-option-b-render-in-the-webview-w">
+<h4 class="sec-h"><span class="chip">▸</span><span class="sec-title">Option B: Render in the webview with markdown-it (Recommended)</span></h4>
+<div class="sec-body"><ul>
+<li><strong>Description</strong>: The core only reads and watches files. The webview turns Markdown into HTML with <code>markdown-it</code>, the parser behind many GitHub-style renderers, plus maintained plugins for every construct in scope: footnote, deflist, abbr, mark, sub, sup, emoji, task-lists, GitHub alerts, front matter, KaTeX math and wiki links. DOMPurify sanitises the output before it is inserted. Enhancers then add highlighting, Mermaid and the outline.</li>
+<li><strong>Scope</strong>: <code>src/render/</code> holds the whole pipeline; <code>src-tauri/</code> stays a thin file and OS layer.</li>
+<li><strong>Effort</strong>: Medium.</li>
+<li><strong>Tradeoffs</strong>: + every D-7 feature is an existing plugin, so the work is configuration, not parsers. + One language for rendering, testable with fast unit tests outside the app. + The same pipeline can later power an editor's preview (S-3). − Parsing large files runs on the UI thread; a 1 MB document must stay within the <code>render_ms_1MB</code> bound, moving parsing to a Web Worker if it does not. − Plugin quality varies, so each one is pinned and covered by the feature fixture.</li>
+<li><strong>Compatibility</strong>: N/A (greenfield).</li>
+</ul></div>
+<div class="note" data-for="s-spec-option-b-render-in-the-webview-w"><label class="note-head" for="n-s-spec-option-b-render-in-the-webview-w"><span class="note-ico" aria-hidden="true">✎</span><span class="note-label">Your note</span><span class="note-ref">SPEC › Option B: Render in the webview with markdown-it (Recommended)</span></label><textarea class="note-ta" data-key="s-spec-option-b-render-in-the-webview-w" id="n-s-spec-option-b-render-in-the-webview-w" data-label="Option B: Render in the webview with markdown-it (Recommended)" data-part="Specification" rows="1" placeholder="Add a note on this section…"></textarea></div>
+</article>
+<article class="sec l3" id="s-spec-option-c-bundle-pandoc">
+<h4 class="sec-h"><span class="chip">▸</span><span class="sec-title">Option C: Bundle Pandoc</span></h4>
+<div class="sec-body"><ul>
+<li><strong>Description</strong>: Call the Pandoc binary from the core to convert Markdown to HTML.</li>
+<li><strong>Scope</strong>: <code>src-tauri/</code> plus a bundled Pandoc for each OS.</li>
+<li><strong>Effort</strong>: Medium.</li>
+<li><strong>Tradeoffs</strong>: + the widest syntax coverage of all. − Adds about 150 MB per platform. − Its dialect is not GitHub's, so D-7's parity yardstick would drift. − An external process for every render, and harder app-store review.</li>
+<li><strong>Compatibility</strong>: N/A (greenfield).</li>
+</ul></div>
+<div class="note" data-for="s-spec-option-c-bundle-pandoc"><label class="note-head" for="n-s-spec-option-c-bundle-pandoc"><span class="note-ico" aria-hidden="true">✎</span><span class="note-label">Your note</span><span class="note-ref">SPEC › Option C: Bundle Pandoc</span></label><textarea class="note-ta" data-key="s-spec-option-c-bundle-pandoc" id="n-s-spec-option-c-bundle-pandoc" data-label="Option C: Bundle Pandoc" data-part="Specification" rows="1" placeholder="Add a note on this section…"></textarea></div>
+</article>
+<article class="sec l3" id="s-spec-comparison">
+<h4 class="sec-h"><span class="chip">▸</span><span class="sec-title">Comparison</span></h4>
+<div class="sec-body"><table>
+<thead>
+<tr>
+<th></th>
+<th>Option A (comrak)</th>
+<th>Option B (markdown-it)</th>
+<th>Option C (Pandoc)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Effort</td>
+<td>Medium, plus custom work for missing extras</td>
+<td>Medium</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td>Risk</td>
+<td>Medium: split pipeline</td>
+<td>Low: proven plugins, one place</td>
+<td>High: size, dialect drift</td>
+</tr>
+<tr>
+<td>Completeness vs D-7</td>
+<td>Partial without custom code</td>
+<td>Full from existing plugins</td>
+<td>Full, but not GitHub-flavoured</td>
+</tr>
+<tr>
+<td>Package size</td>
+<td>Small</td>
+<td>Small (+2 MB Mermaid)</td>
+<td>Very large</td>
+</tr>
+<tr>
+<td>Maintenance</td>
+<td>Two languages per feature</td>
+<td>One pipeline</td>
+<td>External binary per OS</td>
+</tr>
+</tbody>
+</table></div>
+<div class="note" data-for="s-spec-comparison"><label class="note-head" for="n-s-spec-comparison"><span class="note-ico" aria-hidden="true">✎</span><span class="note-label">Your note</span><span class="note-ref">SPEC › Comparison</span></label><textarea class="note-ta" data-key="s-spec-comparison" id="n-s-spec-comparison" data-label="Comparison" data-part="Specification" rows="1" placeholder="Add a note on this section…"></textarea></div>
+</article>
+<article class="sec l2" id="s-spec-4">
+<h3 class="sec-h"><span class="chip">§4</span><span class="sec-title">Recommendation</span></h3>
+<div class="sec-body"><p><strong>Recommended option</strong>: Option B (markdown-it in the webview). It covers every construct in
+D-7 with maintained plugins. It keeps rendering in one testable place, keeps the Rust core
+thin, and the same pipeline can serve the editor later (S-3). If the 1 MB bound fails,
+parsing moves to a Web Worker; that fix stays within Option B.</p>
+<p><strong>Immediate next action</strong>: after this spec is approved, run <code>design</code>. It defines the Tauri
+command contract and the module layout, then splits the work into tasks. The first task
+scaffolds Tauri v2 + Vite + TypeScript with CI, so the arsenal's <code>host-gate</code> and
+<code>preflight-gate</code> can be set to real commands (<code>make lint test</code>, and its change-scoped
+slice).</p>
+<p><strong>Open questions</strong>: none. The four raised in r1 were answered in review and are recorded
+as D-12 to D-15.</p>
+<ul>
+<li>[x] <strong>Remote images</strong>: loaded by default, with a setting to turn them off (D-12).</li>
+<li>[x] <strong>drawspec</strong>: documents embed drawspec's rendered SVG/PNG; Glossmark only themes inlinable SVGs (D-13).</li>
+<li>[x] <strong>UI language</strong>: English in v1; translations later (D-14).</li>
+<li>[x] <strong>Raw HTML</strong>: safe tags kept, as on GitHub (D-15).</li>
+</ul>
+<p><strong>Decisions log</strong> (carried unchanged from <code>explore-idea</code>):</p>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Decision</th>
+<th>Status</th>
+<th>Date</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>D-1</td>
+<td>Name: Glossmark</td>
+<td>agreed</td>
+<td>2026-10-26</td>
+</tr>
+<tr>
+<td>D-2</td>
+<td>Stack: Tauri v2 (system webview, small Rust backend)</td>
+<td>agreed</td>
+<td>2026-10-26</td>
+</tr>
+<tr>
+<td>D-3</td>
+<td>v1 is a viewer only; editing comes later (S-3)</td>
+<td>agreed</td>
+<td>2026-10-26</td>
+</tr>
+<tr>
+<td>D-4</td>
+<td>Linux first, then Windows and macOS</td>
+<td>agreed</td>
+<td>2026-10-26</td>
+</tr>
+<tr>
+<td>D-5</td>
+<td>Mermaid is in v1, lazy-loaded (S-2 folded into S-1)</td>
+<td>agreed</td>
+<td>2026-10-26</td>
+</tr>
+<tr>
+<td>D-6</td>
+<td>Page layout: a fixed-width paper sheet on a grey canvas, continuous scroll; print uses the same styling</td>
+<td>agreed</td>
+<td>2026-10-26</td>
+</tr>
+<tr>
+<td>D-7</td>
+<td>Feature yardstick: GitHub parity (GFM, footnotes, alerts, emoji, KaTeX, Mermaid) plus extras (highlight, sup/sub, wiki links, abbreviations, definition lists)</td>
+<td>agreed</td>
+<td>2026-10-26</td>
+</tr>
+<tr>
+<td>D-8</td>
+<td>Navigation: tabs, with back/forward per tab; links to <code>.md</code> open in place, external links open in the browser; folder sidebar later</td>
+<td>agreed</td>
+<td>2026-10-26</td>
+</tr>
+<tr>
+<td>D-9</td>
+<td>Look: one signature theme (light + dark) plus optional user CSS; themes are plain swappable stylesheets so a remembered theme picker can follow</td>
+<td>agreed</td>
+<td>2026-10-26</td>
+</tr>
+<tr>
+<td>D-10</td>
+<td>Licence: MIT</td>
+<td>agreed</td>
+<td>2026-10-26</td>
+</tr>
+<tr>
+<td>D-11</td>
+<td>Simplicity is the signature: the document is the interface; no feature may make the window busier. Reference: Chrome's PDF viewer, one slim bar</td>
+<td>agreed</td>
+<td>2026-10-26</td>
+</tr>
+<tr>
+<td>D-12</td>
+<td>Remote images load by default, with a setting to turn them off</td>
+<td>agreed</td>
+<td>2026-10-26</td>
+</tr>
+<tr>
+<td>D-13</td>
+<td>drawspec diagrams arrive as rendered SVG/PNG files; local SVGs are inlined so they follow the theme; drawspec fences show as code</td>
+<td>agreed</td>
+<td>2026-10-26</td>
+</tr>
+<tr>
+<td>D-14</td>
+<td>UI in English for v1, all strings in one file; translations later</td>
+<td>agreed</td>
+<td>2026-10-26</td>
+</tr>
+<tr>
+<td>D-15</td>
+<td>Safe raw HTML is kept, as on GitHub; everything else is stripped</td>
+<td>agreed</td>
+<td>2026-10-26</td>
+</tr>
+</tbody>
+</table></div>
+<div class="note" data-for="s-spec-4"><label class="note-head" for="n-s-spec-4"><span class="note-ico" aria-hidden="true">✎</span><span class="note-label">Your note</span><span class="note-ref">SPEC §4</span></label><textarea class="note-ta" data-key="s-spec-4" id="n-s-spec-4" data-label="§4 Recommendation" data-part="Specification" rows="1" placeholder="Add a note on this section…"></textarea></div>
+</article>
+<article class="sec l2" id="s-spec-5">
+<h3 class="sec-h"><span class="chip">§5</span><span class="sec-title">Contracts</span></h3>
+<div class="sec-body"><p>Glossmark has no network API. Its one internal contract is the Tauri IPC between the web
+frontend and the Rust core: commands (frontend calls core) and events (core notifies
+frontend). Every command returns <code>Result&lt;T, IpcError&gt;</code>; the frontend shows an error inside the
+tab's sheet, never a dialog (D-11).</p>
+<pre><code class="language-json">{&quot;kind&quot;: &quot;not_found&quot; | &quot;not_permitted&quot; | &quot;too_large&quot; | &quot;io&quot;, &quot;message&quot;: &quot;human-readable, English&quot;}
+</code></pre></div>
+<div class="note" data-for="s-spec-5"><label class="note-head" for="n-s-spec-5"><span class="note-ico" aria-hidden="true">✎</span><span class="note-label">Your note</span><span class="note-ref">SPEC §5</span></label><textarea class="note-ta" data-key="s-spec-5" id="n-s-spec-5" data-label="§5 Contracts" data-part="Specification" rows="1" placeholder="Add a note on this section…"></textarea></div>
+</article>
+<article class="sec l3" id="s-spec-api-contracts">
+<h4 class="sec-h"><span class="chip">▸</span><span class="sec-title">API contracts</span></h4>
+<div class="sec-body"><h4>Command <code>read_document(path: string)</code></h4>
+<ul>
+<li><strong>Auth</strong>: internal only. <code>path</code> must be a file the user opened (CLI, Open dialog, drop, file
+  association, recent files) or a <code>.md</code> file under the folder of one; anything else is
+  <code>not_permitted</code>.</li>
+<li><strong>Request</strong>: <code>{"path": "/home/u/notes/readme.md"}</code></li>
+<li><strong>Response</strong>: <code>{"path": "/home/u/notes/readme.md", "text": "# Title\n…", "mtime_ms": 1792000000000}</code>.
+  Invalid UTF-8 is decoded lossily (U+FFFD), not refused.</li>
+<li><strong>Errors</strong>: <code>not_found</code>, <code>not_permitted</code>, <code>too_large</code> (over 20 MB), <code>io</code>.</li>
+<li><strong>Backwards compatible</strong>: n/a (new).</li>
+</ul>
+<h4>Command <code>read_svg(path: string)</code></h4>
+<ul>
+<li><strong>Auth</strong>: internal only. <code>path</code> must end in <code>.svg</code> and sit under the folder of an opened document.</li>
+<li><strong>Request</strong>: <code>{"path": "/home/u/notes/diagrams/flow.svg"}</code></li>
+<li><strong>Response</strong>: <code>{"svg": "&lt;svg …&gt;…&lt;/svg&gt;"}</code>. The frontend sanitises it (DOMPurify SVG profile) before inlining.</li>
+<li><strong>Errors</strong>: <code>not_found</code>, <code>not_permitted</code>, <code>too_large</code> (over 2 MB; the image then falls back to <code>&lt;img&gt;</code>), <code>io</code>.</li>
+</ul>
+<h4>Commands <code>watch(path: string)</code> / <code>unwatch(path: string)</code></h4>
+<ul>
+<li><strong>Request</strong>: <code>{"path": "…"}</code>; <strong>Response</strong>: <code>null</code>. Watching is reference-counted per path, so two tabs on one file share a watcher.</li>
+<li><strong>Event <code>document-changed</code></strong>: <code>{"path": "…", "mtime_ms": 1792000000500}</code>, debounced 100 ms. A deleted file emits <code>{"path": "…", "deleted": true}</code>; the tab keeps the last render and shows a one-line notice.</li>
+</ul>
+<h4>Event <code>open-files</code></h4>
+<ul>
+<li><strong>Payload</strong>: <code>{"paths": ["/abs/a.md", "/abs/b.md"]}</code>, emitted for CLI arguments, a second launch (single instance), and the file association. Each path opens in a new tab; already-open paths are focused. Drag-and-drop arrives through Tauri's own drag-drop event and goes through the same handler.</li>
+</ul>
+<h4>Commands <code>get_config()</code> / <code>set_config(config)</code></h4>
+<ul>
+<li><strong>Response / request</strong>, stored as <code>$XDG_CONFIG_HOME/glossmark/config.json</code>:
+  <code>json
+  {"version": 1, "theme": "system", "defaultZoom": 100, "remoteImages": true,
+   "recentFiles": ["/abs/a.md"]}</code>
+  <code>theme</code> is <code>system</code> | <code>light</code> | <code>dark</code>; <code>defaultZoom</code> is 50–300; <code>recentFiles</code> holds at most 10 entries, newest first.
+  Those are the three settings (<code>settings &lt;= 4</code>). Window size and position come from
+  <code>tauri-plugin-window-state</code>, not this file. An unreadable or unknown-version file is renamed <code>config.json.bak</code> and the defaults are used.</li>
+</ul>
+<h4>Command <code>read_user_css()</code></h4>
+<ul>
+<li><strong>Response</strong>: <code>{"css": "…"}</code> from <code>$XDG_CONFIG_HOME/glossmark/user.css</code>, or <code>{"css": null}</code> when it is absent. Loaded last, after the theme.</li>
+</ul>
+<h4>Command <code>open_external(url: string)</code></h4>
+<ul>
+<li>Opens <code>http:</code>, <code>https:</code> and <code>mailto:</code> URLs in the system handler (<code>tauri-plugin-opener</code>); other schemes are <code>not_permitted</code>.</li>
+</ul></div>
+<div class="note" data-for="s-spec-api-contracts"><label class="note-head" for="n-s-spec-api-contracts"><span class="note-ico" aria-hidden="true">✎</span><span class="note-label">Your note</span><span class="note-ref">SPEC › API contracts</span></label><textarea class="note-ta" data-key="s-spec-api-contracts" id="n-s-spec-api-contracts" data-label="API contracts" data-part="Specification" rows="1" placeholder="Add a note on this section…"></textarea></div>
+</article>
+<article class="sec l3" id="s-spec-inter-service-contracts">
+<h4 class="sec-h"><span class="chip">▸</span><span class="sec-title">Inter-service contracts</span></h4>
+<div class="sec-body"><table>
+<thead>
+<tr>
+<th>Caller</th>
+<th>Callee</th>
+<th>Protocol</th>
+<th>Contract</th>
+<th>Failure handling</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Web frontend</td>
+<td>Rust core</td>
+<td>Tauri IPC command</td>
+<td><code>read_document</code>, <code>read_svg</code>, <code>watch</code>, <code>unwatch</code>, <code>get_config</code>, <code>set_config</code>, <code>read_user_css</code>, <code>open_external</code></td>
+<td><code>IpcError</code> rendered in the tab, no dialog</td>
+</tr>
+<tr>
+<td>Rust core</td>
+<td>Web frontend</td>
+<td>Tauri IPC event</td>
+<td><code>open-files</code>, <code>document-changed</code></td>
+<td>Frontend ignores events for paths with no tab</td>
+</tr>
+<tr>
+<td>Web frontend</td>
+<td>Local images</td>
+<td>Tauri asset protocol (<code>convertFileSrc</code>)</td>
+<td>Scope widened at runtime to the folder of each opened document</td>
+<td>Broken-image placeholder</td>
+</tr>
+<tr>
+<td>Web frontend</td>
+<td>Remote images</td>
+<td>HTTPS from the webview</td>
+<td>Allowed only when <code>remoteImages</code> is true; CSP <code>img-src</code> is rebuilt on change</td>
+<td>Broken-image placeholder</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Content-security policy</strong> (in <code>tauri.conf.json</code>): <code>default-src 'self'; script-src 'self';
+style-src 'self' 'unsafe-inline'; img-src 'self' asset: http://asset.localhost data: https:;
+font-src 'self' data:; connect-src ipc: http://ipc.localhost; frame-src 'none'; object-src 'none'</code>.
+<code>style-src 'unsafe-inline'</code> is needed by KaTeX and Mermaid output; scripts stay <code>'self'</code> only.</p></div>
+<div class="note" data-for="s-spec-inter-service-contracts"><label class="note-head" for="n-s-spec-inter-service-contracts"><span class="note-ico" aria-hidden="true">✎</span><span class="note-label">Your note</span><span class="note-ref">SPEC › Inter-service contracts</span></label><textarea class="note-ta" data-key="s-spec-inter-service-contracts" id="n-s-spec-inter-service-contracts" data-label="Inter-service contracts" data-part="Specification" rows="1" placeholder="Add a note on this section…"></textarea></div>
+</article>
+<article class="sec l3" id="s-spec-database-migrations">
+<h4 class="sec-h"><span class="chip">▸</span><span class="sec-title">Database migrations</span></h4>
+<div class="sec-body"><p>None. The only stored state is <code>config.json</code> (versioned, see above) and the window-state
+plugin's file; both are recreated with defaults when missing.</p>
+<table>
+<thead>
+<tr>
+<th>Service</th>
+<th>Database</th>
+<th>Change</th>
+<th>Reversible</th>
+<th>Forward-compatible</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Rust core</td>
+<td><code>config.json</code> (v1)</td>
+<td>Create</td>
+<td>yes (delete the file)</td>
+<td>yes (<code>version</code> field; unknown versions fall back to defaults)</td>
+</tr>
+</tbody>
+</table></div>
+<div class="note" data-for="s-spec-database-migrations"><label class="note-head" for="n-s-spec-database-migrations"><span class="note-ico" aria-hidden="true">✎</span><span class="note-label">Your note</span><span class="note-ref">SPEC › Database migrations</span></label><textarea class="note-ta" data-key="s-spec-database-migrations" id="n-s-spec-database-migrations" data-label="Database migrations" data-part="Specification" rows="1" placeholder="Add a note on this section…"></textarea></div>
+</article>
+<article class="sec l2" id="s-spec-6">
+<h3 class="sec-h"><span class="chip">§6</span><span class="sec-title">Risks &amp; Validation</span></h3>
+<div class="sec-body"><table>
+<thead>
+<tr>
+<th>Risk</th>
+<th>Likelihood</th>
+<th>Impact</th>
+<th>Mitigation</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>WebKitGTK printing cuts code blocks or tables, or drops fonts, KaTeX or Mermaid</td>
+<td>Med</td>
+<td>High</td>
+<td>Print stylesheet with <code>break-inside: avoid</code> on code, tables, figures; fonts bundled locally; Mermaid rendered before print; checked in T10, before most UI work</td>
+<td>manual (owner judges print parity) + Playwright WebKit <code>emulateMedia('print')</code> snapshot</td>
+</tr>
+<tr>
+<td>A hostile document runs script or reads files</td>
+<td>Med</td>
+<td>High</td>
+<td>DOMPurify with an explicit allowlist, strict CSP, Mermaid <code>securityLevel: 'strict'</code>, filesystem scope limited to opened files' folders, external links handed to the OS</td>
+<td>security: XSS fixture (<code>script_execution_from_document == 0</code>) + Rust test refusing paths outside scope</td>
+</tr>
+<tr>
+<td>A markdown-it plugin is unmaintained or misrenders against GitHub</td>
+<td>Med</td>
+<td>Med</td>
+<td>Pin exact versions; the feature fixture covers each construct; a broken plugin is vendored into <code>src/render/plugins/</code> and fixed there</td>
+<td>unit (fixture snapshot)</td>
+</tr>
+<tr>
+<td>GFM spec examples fail on markdown-it's linkify or tag-filter behaviour</td>
+<td>Med</td>
+<td>Low</td>
+<td>Configure linkify to GFM's rules; add a small tag-filter rule; any example still failing is listed and justified in the test file, not silently skipped</td>
+<td>unit (<code>gfm_extension_examples_pass_rate == 1.0</code>)</td>
+</tr>
+<tr>
+<td>A 1 MB document or 20 Mermaid diagrams freeze the window</td>
+<td>Med</td>
+<td>Med</td>
+<td>Mermaid lazy-loaded and rendered one diagram per animation frame; parsing moves to a Web Worker if <code>render_ms_1MB</code> fails</td>
+<td>perf benchmark (T15)</td>
+</tr>
+<tr>
+<td>Find in page: <code>window.find</code> is unreliable in WebKitGTK</td>
+<td>High</td>
+<td>Low</td>
+<td>Own find: text search over a <code>TreeWalker</code>, matches wrapped in <code>&lt;mark&gt;</code>, Enter / Shift+Enter cycle</td>
+<td>unit + Playwright WebKit</td>
+</tr>
+<tr>
+<td>The AppImage misbehaves on some GPUs or distros (known WebKitGTK/EGL issues)</td>
+<td>Med</td>
+<td>Low</td>
+<td><code>.deb</code> is the gated package; AppImage size reported, issues documented in the README</td>
+<td>manual on Ubuntu 24.04 VM</td>
+</tr>
+<tr>
+<td>Local SVG inlining lets an SVG's styles leak into the page</td>
+<td>Low</td>
+<td>Low</td>
+<td>Sanitised with DOMPurify's SVG profile; IDs prefixed per image; <code>&lt;style&gt;</code> inside SVGs stripped</td>
+<td>unit</td>
+</tr>
+<tr>
+<td>Theme looks plain and fails the "beautiful" goal</td>
+<td>Med</td>
+<td>High</td>
+<td>Theme work gets its own tasks and the owner's side-by-side review against GitHub</td>
+<td>manual (owner) + contrast ratio test</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Rollback</strong>: there is no deployed service. Each task is one PR that can be reverted; a bad
+release is withdrawn by deleting its GitHub release assets and re-tagging the previous one.</p></div>
+<div class="note" data-for="s-spec-6"><label class="note-head" for="n-s-spec-6"><span class="note-ico" aria-hidden="true">✎</span><span class="note-label">Your note</span><span class="note-ref">SPEC §6</span></label><textarea class="note-ta" data-key="s-spec-6" id="n-s-spec-6" data-label="§6 Risks &amp; Validation" data-part="Specification" rows="1" placeholder="Add a note on this section…"></textarea></div>
+</article>
+</section>
+</div>
+
+<div class="fab">
+  <button class="btn" id="btn-top" title="Back to top">↑ Top</button>
+  <button class="btn" id="btn-import">Import</button>
+  <button class="btn" id="btn-clear">Clear</button>
+  <button class="btn primary" id="btn-export2">💾 Save / Export</button>
+</div>
+<input type="file" id="file-import" class="hidden-input" accept=".md,.markdown,.json,text/markdown,application/json">
+
+<div class="modal" id="modal">
+  <div class="modal-card">
+    <h3>Your notes</h3>
+    <p>Downloaded as a Markdown file. You can also copy the text below and paste it back.</p>
+    <textarea id="modal-ta" readonly></textarea>
+    <div class="modal-actions">
+      <button class="btn primary" id="modal-copy">Copy</button>
+      <button class="btn" id="modal-dl">Download again</button>
+      <button class="btn" id="modal-close">Close</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<script>var SPEC_SEED_NOTES={};</script>
+<script>
+(function(){
+  var NS = 'glossmark-spec-v3:';
+  var tas = Array.prototype.slice.call(document.querySelectorAll('.note-ta'));
+
+  function autoGrow(t){t.style.height='auto';t.style.height=(t.scrollHeight)+'px';}
+  function setFilled(t){var box=t.closest('.note');if(box){box.classList.toggle('filled',t.value.trim()!=='');}}
+  function updateCount(){
+    var n=0;tas.forEach(function(t){if(t.value.trim()!=='')n++;});
+    var el=document.getElementById('count');if(el){el.textContent=n+' / '+tas.length+' notes';}
+    return n;
+  }
+  var lsOK=true,dirty=false;
+  try{localStorage.setItem('__vs__','1');localStorage.removeItem('__vs__');}catch(e){lsOK=false;}
+  var WARN='⚠ Not saving — tap Save / Export';
+  function nowStamp(){var d=new Date();return pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds());}
+  function setState(txt,cls){var el=document.getElementById('savestate');if(el){el.textContent=txt;el.className='savestate '+(cls||'');}}
+  window.addEventListener('beforeunload',function(e){if(!lsOK&&dirty){e.preventDefault();e.returnValue='';}});
+
+  var saveTimers={};
+  function save(t){
+    if(!lsOK){dirty=true;setState(WARN,'warn');return;}
+    var k=NS+t.dataset.key;
+    try{
+      // An empty note is stored as "", not removed: a missing key means "never
+      // touched" and the loader falls back to the seed, so removing it brought a
+      // seeded note back after the reviewer had deliberately cleared it (#477).
+      localStorage.setItem(k,t.value.trim()===''?'':t.value);
+      dirty=true;setState('✓ Saved '+nowStamp(),'ok');
+    }catch(e){dirty=true;lsOK=false;document.getElementById('warnbar').style.display='block';setState(WARN,'warn');}
+  }
+  var SEED=(typeof SPEC_SEED_NOTES!=='undefined')?SPEC_SEED_NOTES:{};
+  tas.forEach(function(t){
+    // Seed first, then let storage override it. With the read inside the same
+    // try as the seed, a throwing localStorage skipped the seed too and the
+    // reader came up empty exactly when it could save nothing (#477).
+    if(Object.prototype.hasOwnProperty.call(SEED,t.dataset.key)){
+      var sv=SEED[t.dataset.key];if(typeof sv==='string'){t.value=sv;}}
+    try{var v=localStorage.getItem(NS+t.dataset.key);if(v!=null){t.value=v;}}catch(e){}
+    autoGrow(t);setFilled(t);
+    t.addEventListener('input',function(){
+      autoGrow(t);setFilled(t);updateCount();
+      clearTimeout(saveTimers[t.dataset.key]);
+      saveTimers[t.dataset.key]=setTimeout(function(){save(t);},350);
+    });
+    t.addEventListener('blur',function(){save(t);});
+  });
+  updateCount();
+  if(lsOK){setState('✓ Auto-saving','ok');}else{document.getElementById('warnbar').style.display='block';setState(WARN,'warn');}
+
+  function toast(msg){var el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');setTimeout(function(){el.classList.remove('show');},1900);}
+  function pad(n){return n<10?'0'+n:''+n;}
+  function today(){var d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
+  function stamp(){var d=new Date();return today()+'-'+pad(d.getHours())+pad(d.getMinutes());}
+  // Named like the reader, <repo>-<doc>-v<N>-<YYYY-MM-DD-HHMM>-notes.md, stamped at export.
+  function exportName(){return 'glossmark-spec-v3-'+stamp()+'-notes.md';}
+
+  function buildExport(){
+    var byPart={},order=[],data={},n=0;
+    tas.forEach(function(t){
+      var v=t.value.trim();if(v==='')return;n++;
+      data[t.dataset.key]=t.value;
+      var part=t.dataset.part||'Other';
+      if(!byPart[part]){byPart[part]=[];order.push(part);}
+      byPart[part].push({label:t.dataset.label,ref:keyFromDom(t.dataset.key,t),note:t.value});
+    });
+    var lines=['# Specification notes','','_Exported '+today()+' · '+n+' note'+(n===1?'':'s')+'._','',
+      '> Send this file back to continue the review. Notes are embedded as data at the bottom','> so importing this file restores them in the reader.',''];
+    order.forEach(function(part){
+      lines.push('## '+part,'');
+      byPart[part].forEach(function(it){
+        lines.push('**'+it.label+'**  `'+it.ref+'`');
+        it.note.split('\n').forEach(function(ln){lines.push('> '+ln);});
+        lines.push('');
+      });
+    });
+    lines.push('<!-- SPEC-NOTES-DATA');
+    lines.push(JSON.stringify(data));
+    lines.push('-->');
+    return{text:lines.join('\n'),n:n};
+  }
+  function keyFromDom(domkey,t){var box=t.closest('.note');var r=box?box.querySelector('.note-ref'):null;return r?r.textContent:domkey;}
+
+  function download(name,text){
+    try{var blob=new Blob([text],{type:'text/markdown'});var url=URL.createObjectURL(blob);
+        var a=document.createElement('a');a.href=url;a.download=name;
+        document.body.appendChild(a);a.click();
+        setTimeout(function(){URL.revokeObjectURL(url);a.remove();},1500);return true;}catch(e){return false;}
+  }
+
+  var modal=document.getElementById('modal');
+  var modalTa=document.getElementById('modal-ta');
+  function openModal(text){modalTa.value=text;modal.classList.add('open');}
+  function closeModal(){modal.classList.remove('open');}
+
+  document.getElementById('btn-export').addEventListener('click',function(){
+    var r=buildExport();
+    if(r.n===0){toast('No notes yet — add some first.');return;}
+    var saved=download(exportName(),r.text);openModal(r.text);
+    // download() returning only means the download was REQUESTED; a browser can
+    // still block or drop it. So `dirty` — what arms the unload warning — is
+    // cleared only on a confirmed copy: the clipboard promise fulfilling.
+    var cp=null;
+    try{if(navigator.clipboard&&navigator.clipboard.writeText){cp=navigator.clipboard.writeText(r.text);}}catch(e){cp=null;}
+    if(cp&&typeof cp.then==='function'){cp.then(function(){dirty=false;setState('✓ Copied to clipboard '+nowStamp(),'ok');},function(){});}
+    if(!saved){setState('⚠ Download blocked — copy the notes from this box','warn');
+               toast('Download blocked — copy the notes before leaving');return;}
+    setState('Download requested '+nowStamp(),'ok');
+    toast('Download requested — '+r.n+' note'+(r.n===1?'':'s'));
+  });
+  document.getElementById('btn-export2').addEventListener('click',function(){document.getElementById('btn-export').click();});
+
+  document.getElementById('modal-copy').addEventListener('click',function(){
+    // Success is reported only once a copy actually happened: the legacy
+    // execCommand returned true, or the clipboard promise fulfilled. Claiming it
+    // before writeText settled told the reviewer a rejected copy had worked (#477).
+    function report(ok){if(ok){dirty=false;setState('✓ Copied to clipboard '+nowStamp(),'ok');}
+                        toast(ok?'Copied to clipboard':'Select the text and copy');}
+    modalTa.select();var legacy=false;try{legacy=document.execCommand('copy')===true;}catch(e){}
+    if(legacy){report(true);return;}
+    var p=null;
+    try{if(navigator.clipboard&&navigator.clipboard.writeText){p=navigator.clipboard.writeText(modalTa.value);}}catch(e){p=null;}
+    if(p&&typeof p.then==='function'){p.then(function(){report(true);},function(){report(false);});}
+    else{report(false);}
+  });
+  document.getElementById('modal-dl').addEventListener('click',function(){download(exportName(),modalTa.value);toast('Download requested');});
+  document.getElementById('modal-close').addEventListener('click',closeModal);
+  modal.addEventListener('click',function(e){if(e.target===modal)closeModal();});
+
+  // buildExport only ever writes strings, but an import takes whatever the file
+  // holds: an object arrives as "[object Object]", an array joins on commas,
+  // null becomes "null" — each then persisted over notes the reviewer wrote.
+  // The realistic trigger is a hand-edited or truncated export, not an attack;
+  // it just fails in the least useful way, silently and destructively. Skip
+  // anything that is not a string and say how many were skipped.
+  function applyData(obj){
+    var applied=0,skipped=0;
+    tas.forEach(function(t){
+      if(!Object.prototype.hasOwnProperty.call(obj,t.dataset.key))return;
+      var v=obj[t.dataset.key];
+      if(typeof v!=='string'){skipped++;return;}
+      t.value=v;save(t);autoGrow(t);setFilled(t);applied++;
+    });
+    updateCount();return{applied:applied,skipped:skipped};
+  }
+  document.getElementById('file-import').addEventListener('change',function(e){
+    var f=e.target.files[0];if(!f)return;
+    var rd=new FileReader();
+    rd.onload=function(){
+      var txt=String(rd.result||'');var obj=null;
+      // Last LINE-ANCHORED marker. A plain lastIndexOf lands inside the JSON
+      // string of a note that mentions the marker, and the import then reads as
+      // a corrupt file — the same defect the Python seeder had (#239).
+      var mk=/^[ \t]*<!--[ \t]*SPEC-NOTES-DATA/gm,mm=null,mx;
+      while((mx=mk.exec(txt))!==null){mm=mx;}
+      try{
+        if(mm){var after=txt.slice(mm.index+mm[0].length);var jstart=after.indexOf('{');var jend=after.lastIndexOf('}');
+                  if(jstart>=0&&jend>jstart){obj=JSON.parse(after.slice(jstart,jend+1));}}
+        else{obj=JSON.parse(txt);}
+      }catch(err){obj=null;}
+      if(!obj){toast('Could not read notes from that file');return;}
+      var r=applyData(obj);
+      toast('Imported '+r.applied+' note'+(r.applied===1?'':'s')+
+            (r.skipped?' ('+r.skipped+' skipped — not text)':''));
+    };
+    rd.readAsText(f);e.target.value='';
+  });
+  document.getElementById('btn-import').addEventListener('click',function(){document.getElementById('file-import').click();});
+
+  document.getElementById('btn-clear').addEventListener('click',function(){
+    if(!confirm('Clear ALL notes from this browser? Export first if you want to keep them.'))return;
+    tas.forEach(function(t){t.value='';save(t);autoGrow(t);setFilled(t);});
+    updateCount();toast('All notes cleared');
+  });
+
+  document.getElementById('btn-top').addEventListener('click',function(){window.scrollTo({top:0,behavior:'smooth'});});
+})();
+</script>
+</body>
+</html>
