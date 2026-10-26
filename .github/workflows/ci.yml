@@ -15,14 +15,13 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
-      # man-db's trigger can stall apt on ubuntu-24.04 runners, and the mirror is sometimes
-      # slow; the packages are cached so only a cold run downloads them.
-      - run: sudo rm -f /var/lib/man-db/auto-update
-      - uses: awalsh128/cache-apt-pkgs-action@v1
-        timeout-minutes: 20
-        with:
-          packages: libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
-          version: 1
+      # man-db's trigger can stall apt on ubuntu-24.04 runners, and the mirror is sometimes slow.
+      # ponytail: no apt cache; cache-apt-pkgs-action drops the -dev .so links and linking fails.
+      - timeout-minutes: 20
+        run: |
+          sudo rm -f /var/lib/man-db/auto-update
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
       - uses: actions/setup-node@v4
         with:
           node-version: 22
