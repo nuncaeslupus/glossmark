@@ -1,0 +1,61 @@
+# Ideas backlog
+
+## Groups
+
+### A. Reading experience
+- Open a `.md` file and see it as a beautifully typeset page, like a PDF reader  (I-1)
+- Render every common Markdown feature correctly: CommonMark + GFM (tables, task lists, strikethrough, autolinks)  (I-2)
+- Syntax-highlighted code blocks  (I-3)
+- Math with KaTeX  (I-4)
+- Footnotes, definition lists, front-matter display  (I-5)
+- Outline / table-of-contents sidebar built from the headings  (I-6)
+- Live reload when the file changes on disk  (I-7)
+- Light and dark themes, zoom  (I-8)
+- Print / export to PDF  (I-9)
+- A signature theme: book-like serif body, sans headings, bundled fonts, light + dark, optional user CSS file  (I-21)
+- Later: a theme picker — choose once, remembered  (I-22)
+- Recent files, menus and a simple toolbar  (I-10)
+- Tabs: several documents per window; links to `.md` open in the current tab, Ctrl/middle-click opens a new one; back/forward per tab  (I-18)
+- Open by file association, drag-and-drop and `glossmark <file>` from a terminal  (I-19)
+- Later: a folder sidebar to browse a directory of `.md` files  (I-20)
+
+### B. Diagrams
+- Render Mermaid diagrams inside documents  (I-11)
+
+### F. Syntax beyond GitHub
+- GitHub alerts (`> [!NOTE]`), emoji shortcodes  (I-16)
+- Extras: `==highlight==`, `^sup^` / `~sub~`, `[[wiki links]]`, abbreviations, definition lists  (I-17)
+
+### C. Editing
+- Edit Markdown files in the app, later  (I-12)
+
+### D. Distribution
+- Free, public GitHub repo, open-source licence  (I-13)
+- Packages for Linux (AppImage/deb/Flatpak/Snap), Windows (.msi / Microsoft Store) and macOS (.dmg / App Store)  (I-14)
+
+### E. Project documentation
+- Diagrams in the project's own docs drawn with the owner's drawspec  (I-15)
+
+## Sub-projects
+
+| ID  | Name                 | Groups | Status    | Spec section |
+|-----|----------------------|--------|-----------|--------------|
+| S-1 | Viewer v1            | A, B, E, F | exploring |          |
+| S-2 | Diagram rendering    | B      | dropped   |              |
+| S-3 | Editing              | C      | parked    |              |
+| S-4 | Packaging and stores | D      | parked    |              |
+
+## Decision log
+
+| ID  | Decision                                                     | Status | Date       | Sub-project |
+|-----|--------------------------------------------------------------|--------|------------|-------------|
+| D-1 | Name: Glossmark                                              | agreed | 2026-10-26 | S-1         |
+| D-2 | Stack: Tauri v2 (system webview, small Rust backend)         | agreed | 2026-10-26 | S-1         |
+| D-3 | v1 is a viewer only; editing comes later (S-3)               | agreed | 2026-10-26 | S-1         |
+| D-4 | Linux first, then Windows and macOS                          | agreed | 2026-10-26 | S-1         |
+| D-5 | Mermaid is in v1, lazy-loaded (S-2 folded into S-1)          | agreed | 2026-10-26 | S-1         |
+| D-6 | Page layout: a fixed-width paper sheet on a grey canvas, continuous scroll; print uses the same styling | agreed | 2026-10-26 | S-1 |
+| D-7 | Feature yardstick: GitHub parity (GFM, footnotes, alerts, emoji, KaTeX, Mermaid) plus extras (highlight, sup/sub, wiki links, abbreviations, definition lists) | agreed | 2026-10-26 | S-1 |
+| D-8 | Navigation: tabs, with back/forward per tab; links to `.md` open in place, external links open in the browser; folder sidebar later | agreed | 2026-10-26 | S-1 |
+| D-9 | Look: one signature theme (light + dark) plus optional user CSS; themes are plain swappable stylesheets so a remembered theme picker can follow | agreed | 2026-10-26 | S-1 |
+| D-10 | Licence: MIT                                                | agreed | 2026-10-26 | S-4         |
