@@ -12,7 +12,7 @@
 **Specification**: `status/specification.md` (approved, revision 3)
 **Author**: nuncaeslupus, with Claude
 **Revision**: 1
-**Status**: draft
+**Status**: approved (2026-10-26, revision 1) — without annotations
 **Revision log**:
 - r1 — first draft
 
