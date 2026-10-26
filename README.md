@@ -7,8 +7,8 @@
 **Markdown, beautifully printed.** A free, open-source Markdown viewer for Linux, Windows and macOS
 that makes `.md` files read like a well-typeset document instead of plain text.
 
-> Status: early design. The direction is in [`status/ideas.md`](status/ideas.md); the specification
-> is being written.
+> Status: building v1. The specification is [`status/specification.md`](status/specification.md) and
+> the task plan [`status/plan.md`](status/plan.md). `make dev` runs the app; `make lint test` is the gate.
 
 ## Planned for v1
 
