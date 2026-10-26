@@ -11,10 +11,11 @@
 **Date**: 2026-10-26
 **Ticket / PR**: S-1 in `status/ideas.md`
 **Author**: nuncaeslupus, with Claude
-**Revision**: 1
+**Revision**: 2
 **Status**: draft
 **Revision log**:
 - r1 — first draft
+- r2 — applied `glossmark-spec-v1-2026-10-26-2236-notes.md`: simplicity as the signature (D-11), open questions answered (D-12 to D-15), themed SVG images, distribution channels
 
 > Review record. Each round of reviewer notes makes a new revision: bump
 > **Revision**, add a log line naming the export it applied
@@ -41,8 +42,14 @@ on Linux first (D-4), built on Tauri v2 (D-2) so the Windows and macOS releases 
 reuse the same code. Editing is out of scope (D-3, S-3). There is no outage behind this;
 it is a planned new product.
 
-**Ideas covered**: I-1, I-2, I-3, I-4, I-5, I-6, I-7, I-8, I-9, I-10, I-11, I-15, I-16, I-17, I-18, I-19, I-21.
+**Ideas covered**: I-1, I-2, I-3, I-4, I-5, I-6, I-7, I-8, I-9, I-10, I-11, I-15, I-16, I-17, I-18, I-19, I-21, I-23 (strings ready for it).
 Recorded for later, not built in v1: I-20 (folder sidebar), I-22 (theme picker).
+
+**Design principle — simplicity is the signature (D-11).** Glossmark's identity is a UI
+that gets out of the way: the document is the interface. Nothing on screen competes with
+the page. Every feature is one click or one shortcut away, and reading never raises a
+question or a dialog. When a feature cannot be added without making the window busier,
+it waits.
 
 **v1 scope at a glance**
 
@@ -51,6 +58,12 @@ Recorded for later, not built in v1: I-20 (folder sidebar), I-22 (theme picker).
   Mermaid (D-5), front matter shown as a compact metadata block, and the extras:
   `==highlight==`, `^sup^`, `~sub~`, `[[wiki links]]`, abbreviations, definition lists.
   Code blocks get syntax highlighting and a copy button. Headings get anchor links.
+  Safe raw HTML is kept, as GitHub does (`<details>`, `<kbd>`, `<img>`, `<sub>`, tables…);
+  everything else is stripped (D-15). Remote images load by default (D-12).
+- **Images**: local and remote images display normally. Local `.svg` files are inlined into the
+  page after sanitising, so SVGs drawn to inherit the text colour (for example drawspec's
+  `--profile inline` output) follow the theme in light and dark (D-13). ` ```drawspec ` source
+  fences are shown as code; documents include drawspec diagrams as rendered SVG/PNG files.
 - **Layout (D-6)**: a fixed-width paper sheet on a grey canvas with continuous scroll.
   Printing uses the same styling, minus the canvas and the app's controls.
 - **Look (D-9)**: one signature theme (book-style serif body, sans-serif headings, monospace code,
@@ -62,13 +75,19 @@ Recorded for later, not built in v1: I-20 (folder sidebar), I-22 (theme picker).
 - **Reading tools**: an outline sidebar built from the headings (click to jump, current section
   highlighted); find in page (Ctrl+F); zoom (Ctrl +/−/0 and fit-width); live reload that keeps the
   scroll position; print / save as PDF; recent files.
+- **Language**: the UI is in English. Every UI string lives in one file, so translations
+  can be added later without touching the code (D-14, I-23).
+- **Distribution**: v1 builds a `.deb` and an AppImage. Flathub, Snap, the Microsoft Store
+  and macOS (DMG / Homebrew / App Store) come with S-4. PyPI is not a channel:
+  it serves Python packages, and Glossmark is a native app.
 - **Opening files (I-19)**: File › Open, drag-and-drop, `glossmark <file>…` from a terminal, and
   the desktop file association for `.md` / `.markdown`. A second launch opens its files as tabs in
   the running window (single instance).
-- **Chrome (I-10)**: a menu bar (File, View, Go, Help) and one slim toolbar (Open, Back,
-  Forward, Outline, Zoom, Theme, Find, Print). Every toolbar action also has a keyboard
+- **Chrome (I-10, D-11)**: a menu bar (File, View, Go, Help) and one slim toolbar (Open, Back,
+  Forward, Outline, Zoom, Theme, Find, Print). With no file open, the window shows a single
+  "Open or drop a Markdown file" area and the recent files. Every toolbar action also has a keyboard
   shortcut. Settings are limited to what a viewer needs: theme, default zoom, remote
-  images on/off, and the remembered window size and recent files.
+  images on/off (default on), and the remembered window size and recent files.
 
 ```drawspec
 {"version": 1, "kind": "flow",
@@ -97,6 +116,9 @@ Measured on the reference machine (the owner's Ubuntu laptop) with release build
 - [ ] `gfm_extension_examples_pass_rate == 1.0`: every example in the GFM spec's extension sections (tables, task lists, strikethrough, autolinks) passes.
 - [ ] `feature_fixture_constructs_rendered == 100%`: `docs/fixtures/all-features.md` holds one example of every construct in the v1 scope above, and a snapshot test asserts the expected element for each (e.g. `mark`, `sup`, `sub`, `abbr`, `dl`, `.katex`, an alert box, an emoji character, a Mermaid `svg`).
 - [ ] `script_execution_from_document == 0`: a fixture containing `<script>`, `onerror=`, `javascript:` links and an `<iframe>` renders with none of them active (automated test).
+- [ ] `themed_svg_fill_matches_text_colour == true`: a fixture SVG that uses `currentColor` is drawn in the theme's text colour, in both light and dark (automated test).
+- [ ] `toolbar_buttons <= 8`, `settings <= 4`, `dialogs_while_reading == 0` (only Open and Print show a dialog; checked against the UI definition in a test).
+- [ ] Simplicity, **judged by the owner**: a first-time user can open, read, navigate and print a document without looking anything up, and the window shows nothing they would call clutter.
 - [ ] `network_requests_with_remote_images_off == 0`: with remote images off, opening the fixture makes no network request; with them on, only image URLs are requested.
 - [ ] `first_paint_ms_100KB <= 500`: from launching `glossmark big.md` (100 KB, ~2,500 lines) to the sheet being visible.
 - [ ] `render_ms_1MB <= 1500`: a 1 MB document is fully rendered (all Mermaid included, at most 20 diagrams) without the window freezing for more than 200 ms at a time.
@@ -221,12 +243,13 @@ scaffolds Tauri v2 + Vite + TypeScript with CI, so the arsenal's `host-gate` and
 `preflight-gate` can be set to real commands (`make lint test`, and its change-scoped
 slice).
 
-**Open questions**:
+**Open questions**: none. The four raised in r1 were answered in review and are recorded
+as D-12 to D-15.
 
-- [ ] **Remote images.** Load images from the internet by default, as GitHub does (proposed: on, with a setting to turn it off), or block them by default for privacy?
-- [ ] **drawspec fences in documents.** Should Glossmark render ` ```drawspec ` blocks like it renders Mermaid? drawspec is a Python tool, so this would need a JavaScript port or a bundled runtime. Proposed: not in v1; show them as code blocks.
-- [ ] **UI language.** English only in v1, with all strings kept in one file so translations can be added later (proposed), or Spanish and English from the start?
-- [ ] **Raw HTML.** Keep safe HTML tags (`<details>`, `<kbd>`, `<img>`, `<sub>`, tables…) as GitHub does (proposed), or drop all raw HTML?
+- [x] **Remote images**: loaded by default, with a setting to turn them off (D-12).
+- [x] **drawspec**: documents embed drawspec's rendered SVG/PNG; Glossmark only themes inlinable SVGs (D-13).
+- [x] **UI language**: English in v1; translations later (D-14).
+- [x] **Raw HTML**: safe tags kept, as on GitHub (D-15).
 
 **Decisions log** (carried unchanged from `explore-idea`):
 
@@ -242,6 +265,11 @@ slice).
 | D-8 | Navigation: tabs, with back/forward per tab; links to `.md` open in place, external links open in the browser; folder sidebar later | agreed | 2026-10-26 |
 | D-9 | Look: one signature theme (light + dark) plus optional user CSS; themes are plain swappable stylesheets so a remembered theme picker can follow | agreed | 2026-10-26 |
 | D-10 | Licence: MIT | agreed | 2026-10-26 |
+| D-11 | Simplicity is the signature: the document is the interface; no feature may make the window busier | agreed | 2026-10-26 |
+| D-12 | Remote images load by default, with a setting to turn them off | agreed | 2026-10-26 |
+| D-13 | drawspec diagrams arrive as rendered SVG/PNG files; local SVGs are inlined so they follow the theme; drawspec fences show as code | agreed | 2026-10-26 |
+| D-14 | UI in English for v1, all strings in one file; translations later | agreed | 2026-10-26 |
+| D-15 | Safe raw HTML is kept, as on GitHub; everything else is stripped | agreed | 2026-10-26 |
 
 
 > Sections 5–6 (contracts, risks) are appended by `design`.
