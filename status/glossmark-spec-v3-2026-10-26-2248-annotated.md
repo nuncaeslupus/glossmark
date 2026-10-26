@@ -275,11 +275,132 @@ as D-12 to D-15.
 | D-14 | UI in English for v1, all strings in one file; translations later | agreed | 2026-10-26 |
 | D-15 | Safe raw HTML is kept, as on GitHub; everything else is stripped | agreed | 2026-10-26 |
 
-
-> Sections 5–6 (contracts, risks) are appended by `design`.
-
 <!-- -->
 
 > **✎ Notes** · `SPEC §4`
+> _(your notes here — replace this line)_
+
+## §5 Contracts
+
+Glossmark has no network API. Its one internal contract is the Tauri IPC between the web
+frontend and the Rust core: commands (frontend calls core) and events (core notifies
+frontend). Every command returns `Result<T, IpcError>`; the frontend shows an error inside the
+tab's sheet, never a dialog (D-11).
+
+```json
+{"kind": "not_found" | "not_permitted" | "too_large" | "io", "message": "human-readable, English"}
+```
+
+<!-- -->
+
+> **✎ Notes** · `SPEC §5`
+> _(your notes here — replace this line)_
+
+### API contracts
+
+#### Command `read_document(path: string)`
+
+- **Auth**: internal only. `path` must be a file the user opened (CLI, Open dialog, drop, file
+  association, recent files) or a `.md` file under the folder of one; anything else is
+  `not_permitted`.
+- **Request**: `{"path": "/home/u/notes/readme.md"}`
+- **Response**: `{"path": "/home/u/notes/readme.md", "text": "# Title\n…", "mtime_ms": 1792000000000}`.
+  Invalid UTF-8 is decoded lossily (U+FFFD), not refused.
+- **Errors**: `not_found`, `not_permitted`, `too_large` (over 20 MB), `io`.
+- **Backwards compatible**: n/a (new).
+
+#### Command `read_svg(path: string)`
+
+- **Auth**: internal only. `path` must end in `.svg` and sit under the folder of an opened document.
+- **Request**: `{"path": "/home/u/notes/diagrams/flow.svg"}`
+- **Response**: `{"svg": "<svg …>…</svg>"}`. The frontend sanitises it (DOMPurify SVG profile) before inlining.
+- **Errors**: `not_found`, `not_permitted`, `too_large` (over 2 MB; the image then falls back to `<img>`), `io`.
+
+#### Commands `watch(path: string)` / `unwatch(path: string)`
+
+- **Request**: `{"path": "…"}`; **Response**: `null`. Watching is reference-counted per path, so two tabs on one file share a watcher.
+- **Event `document-changed`**: `{"path": "…", "mtime_ms": 1792000000500}`, debounced 100 ms. A deleted file emits `{"path": "…", "deleted": true}`; the tab keeps the last render and shows a one-line notice.
+
+#### Event `open-files`
+
+- **Payload**: `{"paths": ["/abs/a.md", "/abs/b.md"]}`, emitted for CLI arguments, a second launch (single instance), and the file association. Each path opens in a new tab; already-open paths are focused. Drag-and-drop arrives through Tauri's own drag-drop event and goes through the same handler.
+
+#### Commands `get_config()` / `set_config(config)`
+
+- **Response / request**, stored as `$XDG_CONFIG_HOME/glossmark/config.json`:
+  ```json
+  {"version": 1, "theme": "system", "defaultZoom": 100, "remoteImages": true,
+   "recentFiles": ["/abs/a.md"]}
+  ```
+  `theme` is `system` | `light` | `dark`; `defaultZoom` is 50–300; `recentFiles` holds at most 10 entries, newest first.
+  Those are the three settings (`settings <= 4`). Window size and position come from
+  `tauri-plugin-window-state`, not this file. An unreadable or unknown-version file is renamed `config.json.bak` and the defaults are used.
+
+#### Command `read_user_css()`
+
+- **Response**: `{"css": "…"}` from `$XDG_CONFIG_HOME/glossmark/user.css`, or `{"css": null}` when it is absent. Loaded last, after the theme.
+
+#### Command `open_external(url: string)`
+
+- Opens `http:`, `https:` and `mailto:` URLs in the system handler (`tauri-plugin-opener`); other schemes are `not_permitted`.
+
+<!-- -->
+
+> **✎ Notes** · `SPEC › API contracts`
+> _(your notes here — replace this line)_
+
+### Inter-service contracts
+
+| Caller | Callee | Protocol | Contract | Failure handling |
+|--------|--------|----------|----------|-----------------|
+| Web frontend | Rust core | Tauri IPC command | `read_document`, `read_svg`, `watch`, `unwatch`, `get_config`, `set_config`, `read_user_css`, `open_external` | `IpcError` rendered in the tab, no dialog |
+| Rust core | Web frontend | Tauri IPC event | `open-files`, `document-changed` | Frontend ignores events for paths with no tab |
+| Web frontend | Local images | Tauri asset protocol (`convertFileSrc`) | Scope widened at runtime to the folder of each opened document | Broken-image placeholder |
+| Web frontend | Remote images | HTTPS from the webview | Allowed only when `remoteImages` is true; CSP `img-src` is rebuilt on change | Broken-image placeholder |
+
+**Content-security policy** (in `tauri.conf.json`): `default-src 'self'; script-src 'self';
+style-src 'self' 'unsafe-inline'; img-src 'self' asset: http://asset.localhost data: https:;
+font-src 'self' data:; connect-src ipc: http://ipc.localhost; frame-src 'none'; object-src 'none'`.
+`style-src 'unsafe-inline'` is needed by KaTeX and Mermaid output; scripts stay `'self'` only.
+
+<!-- -->
+
+> **✎ Notes** · `SPEC › Inter-service contracts`
+> _(your notes here — replace this line)_
+
+### Database migrations
+
+None. The only stored state is `config.json` (versioned, see above) and the window-state
+plugin's file; both are recreated with defaults when missing.
+
+| Service | Database | Change | Reversible | Forward-compatible |
+|---------|----------|--------|------------|-------------------|
+| Rust core | `config.json` (v1) | Create | yes (delete the file) | yes (`version` field; unknown versions fall back to defaults) |
+
+<!-- -->
+
+> **✎ Notes** · `SPEC › Database migrations`
+> _(your notes here — replace this line)_
+
+## §6 Risks & Validation
+
+| Risk | Likelihood | Impact | Mitigation | Validation |
+|------|-----------|--------|------------|------------|
+| WebKitGTK printing cuts code blocks or tables, or drops fonts, KaTeX or Mermaid | Med | High | Print stylesheet with `break-inside: avoid` on code, tables, figures; fonts bundled locally; Mermaid rendered before print; checked in T10, before most UI work | manual (owner judges print parity) + Playwright WebKit `emulateMedia('print')` snapshot |
+| A hostile document runs script or reads files | Med | High | DOMPurify with an explicit allowlist, strict CSP, Mermaid `securityLevel: 'strict'`, filesystem scope limited to opened files' folders, external links handed to the OS | security: XSS fixture (`script_execution_from_document == 0`) + Rust test refusing paths outside scope |
+| A markdown-it plugin is unmaintained or misrenders against GitHub | Med | Med | Pin exact versions; the feature fixture covers each construct; a broken plugin is vendored into `src/render/plugins/` and fixed there | unit (fixture snapshot) |
+| GFM spec examples fail on markdown-it's linkify or tag-filter behaviour | Med | Low | Configure linkify to GFM's rules; add a small tag-filter rule; any example still failing is listed and justified in the test file, not silently skipped | unit (`gfm_extension_examples_pass_rate == 1.0`) |
+| A 1 MB document or 20 Mermaid diagrams freeze the window | Med | Med | Mermaid lazy-loaded and rendered one diagram per animation frame; parsing moves to a Web Worker if `render_ms_1MB` fails | perf benchmark (T15) |
+| Find in page: `window.find` is unreliable in WebKitGTK | High | Low | Own find: text search over a `TreeWalker`, matches wrapped in `<mark>`, Enter / Shift+Enter cycle | unit + Playwright WebKit |
+| The AppImage misbehaves on some GPUs or distros (known WebKitGTK/EGL issues) | Med | Low | `.deb` is the gated package; AppImage size reported, issues documented in the README | manual on Ubuntu 24.04 VM |
+| Local SVG inlining lets an SVG's styles leak into the page | Low | Low | Sanitised with DOMPurify's SVG profile; IDs prefixed per image; `<style>` inside SVGs stripped | unit |
+| Theme looks plain and fails the "beautiful" goal | Med | High | Theme work gets its own tasks and the owner's side-by-side review against GitHub | manual (owner) + contrast ratio test |
+
+**Rollback**: there is no deployed service. Each task is one PR that can be reverted; a bad
+release is withdrawn by deleting its GitHub release assets and re-tagging the previous one.
+
+<!-- -->
+
+> **✎ Notes** · `SPEC §6`
 > _(your notes here — replace this line)_
 
