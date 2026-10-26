@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<meta name="arsenal-source-sha256" content="1ab51f0412acf8642a89abed0769c394d4d3028c96d543fb0e657193385e673b">
+<meta name="arsenal-source-sha256" content="e049a97a41c0969d8f638ac86e254a47a684f6212f7333d53e36ea3a09b17e61">
 <title>Glossmark — Specification (annotatable)</title>
 <style>
 :root{
@@ -222,11 +222,12 @@ h4 .chip{font-size:11px;color:var(--muted)}
 <div class="sec-body"><p><strong>Date</strong>: 2026-10-26<br />
 <strong>Ticket / PR</strong>: S-1 in <code>status/ideas.md</code><br />
 <strong>Author</strong>: nuncaeslupus, with Claude<br />
-<strong>Revision</strong>: 2<br />
-<strong>Status</strong>: draft<br />
+<strong>Revision</strong>: 3<br />
+<strong>Status</strong>: approved (2026-10-26, revision 3) — without annotations<br />
 <strong>Revision log</strong>:
 - r1 — first draft
-- r2 — applied <code>glossmark-spec-v1-2026-10-26-2236-notes.md</code>: simplicity as the signature (D-11), open questions answered (D-12 to D-15), themed SVG images, distribution channels</p>
+- r2 — applied <code>glossmark-spec-v1-2026-10-26-2236-notes.md</code>: simplicity as the signature (D-11), open questions answered (D-12 to D-15), themed SVG images, distribution channels
+- r3 — owner approved r2 in chat with one clarification: "simple" means like Chrome's PDF viewer, only those few items; the Chrome bullet now follows that layout</p>
 <blockquote>
 <p>Review record. Each round of reviewer notes makes a new revision: bump
 <strong>Revision</strong>, add a log line naming the export it applied
@@ -288,8 +289,11 @@ it waits.</p>
 <li><strong>Opening files (I-19)</strong>: File › Open, drag-and-drop, <code>glossmark &lt;file&gt;…</code> from a terminal, and
   the desktop file association for <code>.md</code> / <code>.markdown</code>. A second launch opens its files as tabs in
   the running window (single instance).</li>
-<li><strong>Chrome (I-10, D-11)</strong>: a menu bar (File, View, Go, Help) and one slim toolbar (Open, Back,
-  Forward, Outline, Zoom, Theme, Find, Print). With no file open, the window shows a single
+<li><strong>Chrome (I-10, D-11)</strong>: the reference is Chrome's built-in PDF viewer: one slim bar and
+  nothing else, adapted to Markdown. Above it the tab strip; in it, left to right: the Outline
+  toggle, the document title, the menus (File, View, Go, Help), Back and Forward, zoom
+  (− , percentage, +), Find and Print. Open and Theme live in the menus. No second toolbar,
+  no status bar, no side panels besides the outline. With no file open, the window shows a single
   "Open or drop a Markdown file" area and the recent files. Every toolbar action also has a keyboard
   shortcut. Settings are limited to what a viewer needs: theme, default zoom, remote
   images on/off (default on), and the remembered window size and recent files.</li>
@@ -589,7 +593,7 @@ as D-12 to D-15.</p>
 </tr>
 <tr>
 <td>D-11</td>
-<td>Simplicity is the signature: the document is the interface; no feature may make the window busier</td>
+<td>Simplicity is the signature: the document is the interface; no feature may make the window busier. Reference: Chrome's PDF viewer, one slim bar</td>
 <td>agreed</td>
 <td>2026-10-26</td>
 </tr>
@@ -651,7 +655,7 @@ as D-12 to D-15.</p>
 <script>var SPEC_SEED_NOTES={};</script>
 <script>
 (function(){
-  var NS = 'glossmark-spec-v2:';
+  var NS = 'glossmark-spec-v3:';
   var tas = Array.prototype.slice.call(document.querySelectorAll('.note-ta'));
 
   function autoGrow(t){t.style.height='auto';t.style.height=(t.scrollHeight)+'px';}
@@ -704,7 +708,7 @@ as D-12 to D-15.</p>
   function today(){var d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
   function stamp(){var d=new Date();return today()+'-'+pad(d.getHours())+pad(d.getMinutes());}
   // Named like the reader, <repo>-<doc>-v<N>-<YYYY-MM-DD-HHMM>-notes.md, stamped at export.
-  function exportName(){return 'glossmark-spec-v2-'+stamp()+'-notes.md';}
+  function exportName(){return 'glossmark-spec-v3-'+stamp()+'-notes.md';}
 
   function buildExport(){
     var byPart={},order=[],data={},n=0;

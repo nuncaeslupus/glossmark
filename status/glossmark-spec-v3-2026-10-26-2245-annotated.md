@@ -11,11 +11,12 @@
 **Date**: 2026-10-26
 **Ticket / PR**: S-1 in `status/ideas.md`
 **Author**: nuncaeslupus, with Claude
-**Revision**: 2
-**Status**: draft
+**Revision**: 3
+**Status**: approved (2026-10-26, revision 3) — without annotations
 **Revision log**:
 - r1 — first draft
 - r2 — applied `glossmark-spec-v1-2026-10-26-2236-notes.md`: simplicity as the signature (D-11), open questions answered (D-12 to D-15), themed SVG images, distribution channels
+- r3 — owner approved r2 in chat with one clarification: "simple" means like Chrome's PDF viewer, only those few items; the Chrome bullet now follows that layout
 
 > Review record. Each round of reviewer notes makes a new revision: bump
 > **Revision**, add a log line naming the export it applied
@@ -83,8 +84,11 @@ it waits.
 - **Opening files (I-19)**: File › Open, drag-and-drop, `glossmark <file>…` from a terminal, and
   the desktop file association for `.md` / `.markdown`. A second launch opens its files as tabs in
   the running window (single instance).
-- **Chrome (I-10, D-11)**: a menu bar (File, View, Go, Help) and one slim toolbar (Open, Back,
-  Forward, Outline, Zoom, Theme, Find, Print). With no file open, the window shows a single
+- **Chrome (I-10, D-11)**: the reference is Chrome's built-in PDF viewer: one slim bar and
+  nothing else, adapted to Markdown. Above it the tab strip; in it, left to right: the Outline
+  toggle, the document title, the menus (File, View, Go, Help), Back and Forward, zoom
+  (− , percentage, +), Find and Print. Open and Theme live in the menus. No second toolbar,
+  no status bar, no side panels besides the outline. With no file open, the window shows a single
   "Open or drop a Markdown file" area and the recent files. Every toolbar action also has a keyboard
   shortcut. Settings are limited to what a viewer needs: theme, default zoom, remote
   images on/off (default on), and the remembered window size and recent files.
@@ -265,7 +269,7 @@ as D-12 to D-15.
 | D-8 | Navigation: tabs, with back/forward per tab; links to `.md` open in place, external links open in the browser; folder sidebar later | agreed | 2026-10-26 |
 | D-9 | Look: one signature theme (light + dark) plus optional user CSS; themes are plain swappable stylesheets so a remembered theme picker can follow | agreed | 2026-10-26 |
 | D-10 | Licence: MIT | agreed | 2026-10-26 |
-| D-11 | Simplicity is the signature: the document is the interface; no feature may make the window busier | agreed | 2026-10-26 |
+| D-11 | Simplicity is the signature: the document is the interface; no feature may make the window busier. Reference: Chrome's PDF viewer, one slim bar | agreed | 2026-10-26 |
 | D-12 | Remote images load by default, with a setting to turn them off | agreed | 2026-10-26 |
 | D-13 | drawspec diagrams arrive as rendered SVG/PNG files; local SVGs are inlined so they follow the theme; drawspec fences show as code | agreed | 2026-10-26 |
 | D-14 | UI in English for v1, all strings in one file; translations later | agreed | 2026-10-26 |

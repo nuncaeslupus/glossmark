@@ -60,7 +60,7 @@
 | D-8 | Navigation: tabs, with back/forward per tab; links to `.md` open in place, external links open in the browser; folder sidebar later | agreed | 2026-10-26 | S-1 |
 | D-9 | Look: one signature theme (light + dark) plus optional user CSS; themes are plain swappable stylesheets so a remembered theme picker can follow | agreed | 2026-10-26 | S-1 |
 | D-10 | Licence: MIT                                                | agreed | 2026-10-26 | S-4         |
-| D-11 | Simplicity is the signature: the document is the interface; no feature may make the window busier | agreed | 2026-10-26 | S-1 |
+| D-11 | Simplicity is the signature: the document is the interface; no feature may make the window busier. Reference: Chrome's PDF viewer, one slim bar | agreed | 2026-10-26 | S-1 |
 | D-12 | Remote images load by default, with a setting to turn them off | agreed | 2026-10-26 | S-1 |
 | D-13 | drawspec diagrams arrive as rendered SVG/PNG; local SVGs are inlined so they follow the theme; drawspec fences show as code | agreed | 2026-10-26 | S-1 |
 | D-14 | UI in English for v1, all strings in one file; translations later | agreed | 2026-10-26 | S-1 |
