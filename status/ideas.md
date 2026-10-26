@@ -40,7 +40,7 @@
 
 | ID  | Name                 | Groups | Status    | Spec section |
 |-----|----------------------|--------|-----------|--------------|
-| S-1 | Viewer v1            | A, B, E, F | exploring |          |
+| S-1 | Viewer v1            | A, B, E, F | specified | status/specification.md |
 | S-2 | Diagram rendering    | B      | dropped   |              |
 | S-3 | Editing              | C      | parked    |              |
 | S-4 | Packaging and stores | D      | parked    |              |

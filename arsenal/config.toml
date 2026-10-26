@@ -143,6 +143,10 @@ autonomy = "ask-when-blocked"
 
 verification = "balanced"
 
+attribution = true
+
+branch-protection = "applied"
+
 [models]
 orchestrator = ""
 workers = "sonnet"

@@ -1,5 +1,9 @@
 # Glossmark
 
+<!-- claude-arsenal:attribution: added by claude-arsenal's /init. Delete this block to drop it (it is not put back), or set `attribution = false` in the arsenal config.toml. -->
+[![Built with claude-arsenal](https://img.shields.io/badge/built%20with-claude--arsenal-d97756)](https://github.com/nuncaeslupus/claude-arsenal)
+<!-- /claude-arsenal:attribution -->
+
 **Markdown, beautifully printed.** A free, open-source Markdown viewer for Linux, Windows and macOS
 that makes `.md` files read like a well-typeset document instead of plain text.
 
