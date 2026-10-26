@@ -1,0 +1,27 @@
+html,
+body {
+  margin: 0;
+  height: 100%;
+  font-family: system-ui, sans-serif;
+  background: #e8e8e6;
+  color: #222;
+}
+
+.empty {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  font-size: 1.25rem;
+  color: #666;
+}
+
+@media (prefers-color-scheme: dark) {
+  html,
+  body {
+    background: #1e1e1e;
+    color: #ddd;
+  }
+  .empty {
+    color: #999;
+  }
+}

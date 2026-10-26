@@ -22,3 +22,7 @@ tmp/.arsenal-sessions/
 
 # Local scratch (not part of the repo)
 /tmp/
+
+# Build output
+node_modules/
+dist/
