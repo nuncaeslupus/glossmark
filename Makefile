@@ -24,12 +24,12 @@ build:
 	npm run tauri build
 
 lint: dist
-	npx biome check .
+	npm exec -- biome check .
 	$(CARGO) fmt --check
 	$(call rust,$(CARGO) clippy --all-targets -- -D warnings)
 
 format:
-	npx biome check --write .
+	npm exec -- biome check --write .
 	$(CARGO) fmt
 
 test: dist
