@@ -15,8 +15,9 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
-      # man-db's trigger can stall apt for many minutes on ubuntu-24.04 runners.
-      - timeout-minutes: 8
+      # man-db's trigger can stall apt on ubuntu-24.04 runners, and the mirror is sometimes slow.
+      # ponytail: no apt cache; cache-apt-pkgs-action drops the -dev .so links and linking fails.
+      - timeout-minutes: 20
         run: |
           sudo rm -f /var/lib/man-db/auto-update
           sudo apt-get update
