@@ -25,8 +25,19 @@ test("test_print_media_hides_app_controls", async ({ page }) => {
   for (const selector of [".bar", ".tabs", ".outline", ".find"]) {
     expect(await display(page, selector), `${selector} on screen`).not.toBe("none");
   }
+  // A zoomed diagram prints unzoomed, without its view controls.
+  await page.locator(".sheet .mermaid-controls > button").first().click();
   await page.emulateMedia({ media: "print" });
-  for (const selector of [".bar", ".tabs", ".outline", ".find", ".sheet .code-block > .copy"]) {
+  const svg = page.locator(".sheet .mermaid > svg");
+  expect(await svg.evaluate((el) => getComputedStyle(el).transform)).toBe("none");
+  for (const selector of [
+    ".bar",
+    ".tabs",
+    ".outline",
+    ".find",
+    ".sheet .code-block > .copy",
+    ".sheet .mermaid-controls",
+  ]) {
     expect(await display(page, selector), `${selector} in print`).toBe("none");
   }
   // The sheet alone, without the grey canvas, its margins or its shadow.

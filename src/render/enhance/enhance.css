@@ -55,7 +55,36 @@
 }
 
 .mermaid {
+  position: relative;
+  overflow: hidden;
   text-align: center;
+}
+
+/* Dragged to pan; a drag on a diagram never selects its text or scrolls the page. */
+.mermaid > svg {
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.mermaid-controls {
+  position: absolute;
+  right: 0.5em;
+  bottom: 0.5em;
+  display: flex;
+  gap: 0.25em;
+  opacity: 0;
+}
+
+.mermaid:hover > .mermaid-controls,
+.mermaid-controls:focus-within {
+  opacity: 1;
+}
+
+.mermaid-controls > button {
+  font: inherit;
+  min-width: 2em;
+  cursor: pointer;
 }
 
 /* A piece of a large document, until it is laid out (render/document.ts). */

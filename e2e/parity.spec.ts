@@ -118,3 +118,37 @@ test("front matter renders one row per key", async ({ page }) => {
   await expect(rows.nth(0).locator("th")).toHaveText("title");
   await expect(rows.nth(0).locator("td")).toHaveCount(1);
 });
+
+test("mermaid diagram zooms and pans", async ({ page }) => {
+  // GitHub's controls on a diagram: zoom in and out, reset, and dragging to pan.
+  await page.goto("/e2e/theme.html?gantt");
+  const figure = page.locator(".sheet .mermaid").first();
+  const svg = figure.locator("svg");
+  await expect(svg).toHaveCount(1);
+  const box = async () => {
+    const b = await svg.boundingBox();
+    if (!b) throw new Error("diagram has no box");
+    return b;
+  };
+  const start = await box();
+
+  await figure.hover();
+  await figure.getByRole("button", { name: "Zoom in" }).click();
+  const zoomed = await box();
+  expect(zoomed.width).toBeGreaterThan(start.width * 1.1);
+
+  const fig = await figure.boundingBox();
+  if (!fig) throw new Error("figure has no box");
+  await page.mouse.move(fig.x + fig.width / 2, fig.y + fig.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(fig.x + fig.width / 2 + 40, fig.y + fig.height / 2 + 20, { steps: 4 });
+  await page.mouse.up();
+  const panned = await box();
+  expect(panned.x - zoomed.x).toBeCloseTo(40, 0);
+  expect(panned.y - zoomed.y).toBeCloseTo(20, 0);
+
+  await figure.getByRole("button", { name: "Zoom out" }).click();
+  expect((await box()).width).toBeLessThan(panned.width);
+  await figure.getByRole("button", { name: "Reset view" }).click();
+  expect(await box()).toEqual(start);
+});
