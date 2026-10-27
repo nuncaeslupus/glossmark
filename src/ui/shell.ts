@@ -111,6 +111,8 @@ export class Shell {
         back();
       }),
     closeTab: () => this.active && this.close(this.active),
+    nextTab: () => this.cycleTab(1),
+    previousTab: () => this.cycleTab(-1),
     outline: () => {
       this.outlineOpen = !this.outlineOpen;
       this.update();
@@ -649,6 +651,14 @@ export class Shell {
   private activate(tab: Tab): void {
     this.active = tab;
     this.update();
+  }
+
+  /** Ctrl+Tab and Ctrl+Shift+Tab, wrapping at the ends. */
+  private cycleTab(step: number): void {
+    if (!this.active) return;
+    const n = this.tabs.length;
+    const tab = this.tabs[(this.tabs.indexOf(this.active) + step + n) % n];
+    if (tab) this.activate(tab);
   }
 
   private close(tab: Tab): void {

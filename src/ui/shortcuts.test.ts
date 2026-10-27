@@ -44,4 +44,29 @@ describe("keyboard shortcuts", () => {
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
     expect(root.querySelector(".shortcuts")).toBeNull();
   });
+
+  it("test_ctrl_tab_cycles_tabs", async () => {
+    const files = { "/n/a.md": "# A", "/n/b.md": "# B", "/n/c.md": "# C" };
+    const { backend } = fakeBackend(files, Object.keys(files));
+    const root = document.createElement("div");
+    document.body.replaceChildren(root);
+    shell = new Shell(root, backend);
+    await shell.start();
+
+    const press = (shiftKey: boolean) =>
+      document.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Tab", ctrlKey: true, shiftKey, bubbles: true }),
+      );
+    const active = () => root.querySelector(".bar .title")?.textContent;
+    const labels = [...root.querySelectorAll<HTMLElement>(".tab-label")];
+    expect(labels.map((l) => l.textContent)).toEqual(["a.md", "b.md", "c.md"]);
+    labels[2]?.click();
+    expect(active()).toBe("c.md");
+    press(false);
+    expect(active()).toBe("a.md");
+    press(true);
+    expect(active()).toBe("c.md");
+    press(true);
+    expect(active()).toBe("b.md");
+  });
 });

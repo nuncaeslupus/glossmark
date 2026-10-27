@@ -36,6 +36,13 @@ export const actions: Record<ActionId, Action> = {
     key: "Ctrl+W",
     needsDocument: true,
   },
+  nextTab: { id: "nextTab", label: a.nextTab, key: "Ctrl+Tab", needsDocument: true },
+  previousTab: {
+    id: "previousTab",
+    label: a.previousTab,
+    key: "Ctrl+Shift+Tab",
+    needsDocument: true,
+  },
   outline: { id: "outline", label: a.outline, icon: i.outline, key: "Ctrl+B", needsDocument: true },
   back: { id: "back", label: a.back, icon: i.back, key: "Alt+ArrowLeft", needsDocument: true },
   forward: {
@@ -118,7 +125,7 @@ export const menus: Menu[] = [
       "remoteImages",
     ],
   },
-  { id: "go", label: strings.menus.go, items: ["back", "forward"] },
+  { id: "go", label: strings.menus.go, items: ["back", "forward", "nextTab", "previousTab"] },
   { id: "help", label: strings.menus.help, items: ["shortcuts"] },
 ];
 
