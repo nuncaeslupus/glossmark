@@ -1,5 +1,4 @@
 import hljs from "highlight.js/lib/common";
-import "highlight.js/styles/github.css";
 import { strings } from "../../strings";
 
 const LANGUAGE = /(?:^|\s)language-(\S+)/;

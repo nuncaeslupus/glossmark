@@ -8,7 +8,7 @@ export default defineConfig(({ mode }) => ({
   ...(mode === "e2e" && {
     build: {
       outDir: "dist-e2e",
-      rollupOptions: { input: ["e2e/harness.html", "e2e/shell.html"] },
+      rollupOptions: { input: ["e2e/harness.html", "e2e/shell.html", "e2e/theme.html"] },
     },
     preview: { port: 4317, strictPort: true },
   }),

@@ -1,0 +1,423 @@
+/* The signature theme (D-9): a book-style serif page, sans-serif headings, monospace code, on a
+ * paper sheet over a grey canvas, in light and dark. A plain stylesheet: every colour and face is
+ * a custom property, and the user's CSS, loaded after it, may override any of them. */
+
+@import "@fontsource-variable/source-serif-4/opsz.css";
+@import "@fontsource-variable/source-serif-4/opsz-italic.css";
+@import "@fontsource-variable/inter";
+@import "@fontsource-variable/jetbrains-mono";
+@import "@fontsource-variable/jetbrains-mono/wght-italic.css";
+
+:root {
+  --font-body: "Source Serif 4 Variable", "Source Serif 4", Georgia, serif;
+  --font-heading: "Inter Variable", Inter, system-ui, sans-serif;
+  --font-code: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, monospace;
+
+  --canvas: #e8e8e6;
+  --paper: #fff;
+  --ink: #1f2328;
+  --muted: #59636e;
+  --link: #0969da;
+  --rule: #d1d9e0;
+  --code-bg: #f6f8fa;
+  --highlight: #fff8c5;
+  --note: #0969da;
+  --tip: #1a7f37;
+  --important: #8250df;
+  --warning: #9a6700;
+  --caution: #cf222e;
+  --hl-keyword: #cf222e;
+  --hl-title: #8250df;
+  --hl-string: #0a3069;
+  --hl-number: #0550ae;
+  --hl-built-in: #953800;
+  --hl-tag: #116329;
+  --hl-comment: #59636e;
+}
+
+/* Dark: View › Theme's System follows the OS; Light and Dark set `data-theme` on the root. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --canvas: #181818;
+    --paper: #242424;
+    --ink: #e3e3e3;
+    --muted: #a3a3a3;
+    --link: #6cb6ff;
+    --rule: #3d3d3d;
+    --code-bg: #1c1c1c;
+    --highlight: #5c4a00;
+    --note: #4493f8;
+    --tip: #3fb950;
+    --important: #ab7df8;
+    --warning: #d29922;
+    --caution: #f85149;
+    --hl-keyword: #ff7b72;
+    --hl-title: #d2a8ff;
+    --hl-string: #a5d6ff;
+    --hl-number: #79c0ff;
+    --hl-built-in: #ffa657;
+    --hl-tag: #7ee787;
+    --hl-comment: #9198a1;
+  }
+}
+
+:root[data-theme="dark"] {
+  --canvas: #181818;
+  --paper: #242424;
+  --ink: #e3e3e3;
+  --muted: #a3a3a3;
+  --link: #6cb6ff;
+  --rule: #3d3d3d;
+  --code-bg: #1c1c1c;
+  --highlight: #5c4a00;
+  --note: #4493f8;
+  --tip: #3fb950;
+  --important: #ab7df8;
+  --warning: #d29922;
+  --caution: #f85149;
+  --hl-keyword: #ff7b72;
+  --hl-title: #d2a8ff;
+  --hl-string: #a5d6ff;
+  --hl-number: #79c0ff;
+  --hl-built-in: #ffa657;
+  --hl-tag: #7ee787;
+  --hl-comment: #9198a1;
+}
+
+/* The page: a measure of about 70 characters inside the sheet's margins */
+.sheet {
+  font-family: var(--font-body);
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  color: var(--ink);
+  font-optical-sizing: auto;
+  font-kerning: normal;
+  text-rendering: optimizeLegibility;
+  overflow-wrap: break-word;
+}
+
+.sheet > :first-child {
+  margin-top: 0;
+}
+
+.sheet > :last-child {
+  margin-bottom: 0;
+}
+
+.sheet :is(p, ul, ol, dl, blockquote, table, pre, details, .code-block, .math-display, .mermaid) {
+  margin: 0 0 1em;
+}
+
+.sheet :is(h1, h2, h3, h4, h5, h6) {
+  margin: 1.6em 0 0.6em;
+  font-family: var(--font-heading);
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+
+.sheet h1 {
+  font-size: 2em;
+  font-weight: 700;
+}
+
+.sheet h2 {
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid var(--rule);
+  font-size: 1.45em;
+}
+
+.sheet h3 {
+  font-size: 1.2em;
+}
+
+.sheet h4 {
+  font-size: 1em;
+}
+
+.sheet :is(h5, h6) {
+  font-size: 0.875em;
+}
+
+.sheet h6 {
+  color: var(--muted);
+}
+
+.sheet a {
+  color: var(--link);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.15em;
+}
+
+.sheet :is(h1, h2, h3, h4, h5, h6) > .anchor {
+  color: var(--muted);
+}
+
+.sheet :is(ul, ol) {
+  padding-left: 1.75em;
+}
+
+.sheet li > :is(ul, ol, p) {
+  margin: 0.25em 0;
+}
+
+.sheet li:has(> input[type="checkbox"]) {
+  list-style: none;
+}
+
+.sheet li > input[type="checkbox"] {
+  margin: 0 0.4em 0 -1.4em;
+  vertical-align: -0.05em;
+}
+
+.sheet hr {
+  height: 1px;
+  margin: 2em 0;
+  border: 0;
+  background: var(--rule);
+}
+
+.sheet blockquote {
+  padding: 0 1em;
+  border-left: 0.25em solid var(--rule);
+  color: var(--muted);
+}
+
+.sheet img,
+.sheet svg[role="img"] {
+  max-width: 100%;
+  height: auto;
+}
+
+.sheet mark {
+  color: inherit;
+  background: var(--highlight);
+}
+
+.sheet abbr[title] {
+  text-decoration: underline dotted;
+  cursor: help;
+}
+
+.sheet dt {
+  font-weight: 600;
+}
+
+.sheet dd {
+  margin: 0 0 0.5em 1.5em;
+}
+
+.sheet summary {
+  cursor: pointer;
+}
+
+/* Code */
+.sheet :is(code, kbd, samp, pre) {
+  font-family: var(--font-code);
+  font-size: 0.85em;
+  font-variant-ligatures: none;
+}
+
+.sheet :not(pre) > code {
+  padding: 0.15em 0.35em;
+  border-radius: 4px;
+  background: var(--code-bg);
+}
+
+.sheet pre {
+  padding: 1em 1.15em;
+  overflow-x: auto;
+  border-radius: 6px;
+  background: var(--code-bg);
+  line-height: 1.5;
+  tab-size: 4;
+}
+
+.sheet pre > code {
+  font-size: inherit;
+}
+
+.sheet .code-block > pre {
+  margin: 0;
+}
+
+.sheet .code-block > .copy {
+  padding: 0.2em 0.6em;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  color: var(--muted);
+  background: var(--paper);
+}
+
+.sheet kbd {
+  padding: 0.1em 0.4em;
+  border: 1px solid var(--rule);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  background: var(--code-bg);
+}
+
+.hljs-keyword,
+.hljs-doctag,
+.hljs-meta .hljs-keyword,
+.hljs-template-tag,
+.hljs-type,
+.hljs-variable.language_ {
+  color: var(--hl-keyword);
+}
+
+.hljs-title,
+.hljs-title.class_,
+.hljs-title.function_ {
+  color: var(--hl-title);
+}
+
+.hljs-string,
+.hljs-regexp,
+.hljs-meta .hljs-string {
+  color: var(--hl-string);
+}
+
+.hljs-number,
+.hljs-literal,
+.hljs-attr,
+.hljs-attribute,
+.hljs-variable,
+.hljs-operator,
+.hljs-selector-attr,
+.hljs-selector-class,
+.hljs-selector-id,
+.hljs-meta {
+  color: var(--hl-number);
+}
+
+.hljs-built_in,
+.hljs-symbol,
+.hljs-params {
+  color: var(--hl-built-in);
+}
+
+.hljs-name,
+.hljs-selector-tag,
+.hljs-section,
+.hljs-addition,
+.hljs-quote {
+  color: var(--hl-tag);
+}
+
+.hljs-comment,
+.hljs-code {
+  color: var(--hl-comment);
+  font-style: italic;
+}
+
+.hljs-deletion {
+  color: var(--caution);
+}
+
+.hljs-emphasis {
+  font-style: italic;
+}
+
+.hljs-strong,
+.hljs-section {
+  font-weight: 600;
+}
+
+/* Tables, the front-matter block among them */
+.sheet table {
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.sheet :is(th, td) {
+  padding: 0.35em 0.8em;
+  border: 1px solid var(--rule);
+}
+
+.sheet th {
+  font-weight: 600;
+}
+
+.sheet tbody tr:nth-child(2n) {
+  background: var(--code-bg);
+}
+
+.sheet .front-matter {
+  font-family: var(--font-heading);
+  font-size: 0.8125em;
+  color: var(--muted);
+}
+
+/* Footnotes */
+.sheet .footnote-ref {
+  font-size: 0.75em;
+}
+
+.sheet .footnotes-sep {
+  margin-top: 3em;
+}
+
+.sheet .footnotes {
+  font-size: 0.875em;
+  color: var(--muted);
+}
+
+/* GitHub alerts */
+.sheet .markdown-alert {
+  --alert: var(--note);
+  margin: 0 0 1em;
+  padding: 0.5em 1em;
+  border-left: 0.25em solid var(--alert);
+}
+
+.sheet .markdown-alert > :last-child {
+  margin-bottom: 0;
+}
+
+.sheet .markdown-alert-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  margin-bottom: 0.25em;
+  font-family: var(--font-heading);
+  font-weight: 600;
+  color: var(--alert);
+}
+
+.sheet .markdown-alert-title svg {
+  fill: currentColor;
+}
+
+.sheet .markdown-alert-tip {
+  --alert: var(--tip);
+}
+
+.sheet .markdown-alert-important {
+  --alert: var(--important);
+}
+
+.sheet .markdown-alert-warning {
+  --alert: var(--warning);
+}
+
+.sheet .markdown-alert-caution {
+  --alert: var(--caution);
+}
+
+/* Math and diagrams */
+.sheet .math-display {
+  display: block;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.sheet .mermaid svg {
+  max-width: 100%;
+  height: auto;
+}

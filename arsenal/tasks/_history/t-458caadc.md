@@ -5,6 +5,7 @@ label: "Signature theme"
 priority: 1
 deps: [t-a9b25b23, t-c8683796]
 tags: [S-1]
+status: merged
 ---
 
 Signature theme: paper sheet on grey canvas, typography, light and dark, bundled fonts, user CSS loaded last
@@ -19,6 +20,7 @@ themes
 Metric: `themed_svg_fill_matches_text_colour == true` (from `status/plan.md`).
 
 ```bash
-# arsenal:gate-placeholder — replace with the real check; it may land in this task's own PR
-false
+# themed_svg_fill_matches_text_colour == true: the fixture's currentColor SVG takes the body text
+# colour in light and dark (System and View › Theme), and body text keeps AA contrast in both.
+npm run build && npm exec -- vitest run src/themes && npm exec -- playwright test e2e/theme.spec.ts
 ```

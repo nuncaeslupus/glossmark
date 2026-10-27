@@ -1,8 +1,6 @@
+/* The window's chrome. The document's colours and type (`--canvas`, `--paper`, `--ink`,
+ * `--muted`…) come from the theme, src/themes/; the fallbacks keep the chrome legible without one. */
 :root {
-  --canvas: #e8e8e6;
-  --paper: #fff;
-  --ink: #222;
-  --muted: #666;
   --chrome: #323639;
   --chrome-ink: #f1f3f4;
   --chrome-hover: #4a4e51;
@@ -19,10 +17,6 @@
 /* View › Theme: System follows the OS; Light and Dark set `data-theme` on the root. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --canvas: #1e1e1e;
-    --paper: #2a2a2a;
-    --ink: #ddd;
-    --muted: #999;
     --menu: #303134;
     --menu-ink: #e8eaed;
     --menu-hover: #45474a;
@@ -33,10 +27,6 @@
 }
 
 :root[data-theme="dark"] {
-  --canvas: #1e1e1e;
-  --paper: #2a2a2a;
-  --ink: #ddd;
-  --muted: #999;
   --menu: #303134;
   --menu-ink: #e8eaed;
   --menu-hover: #45474a;
@@ -50,8 +40,8 @@ body {
   margin: 0;
   height: 100%;
   font-family: system-ui, sans-serif;
-  background: var(--canvas);
-  color: var(--ink);
+  background: var(--canvas, #e8e8e6);
+  color: var(--ink, #222);
 }
 
 #app {
@@ -232,7 +222,7 @@ button:disabled {
   max-width: 816px;
   margin: 0 auto;
   padding: 72px 80px;
-  background: var(--paper);
+  background: var(--paper, #fff);
   box-shadow: 0 1px 4px rgb(0 0 0 / 20%);
 }
 
@@ -306,9 +296,9 @@ button:disabled {
   width: 14rem;
   padding: 4px 8px;
   font: inherit;
-  color: var(--ink);
-  background: var(--paper);
-  border: 1px solid var(--muted);
+  color: var(--ink, #222);
+  background: var(--paper, #fff);
+  border: 1px solid var(--muted, #666);
   border-radius: 4px;
 }
 
@@ -370,15 +360,15 @@ mark.find-match.current {
 }
 
 .doc-error {
-  color: var(--muted);
+  color: var(--muted, #666);
 }
 
 .file-notice {
   margin: 0 0 1.5rem;
   padding: 6px 12px;
   border-radius: 4px;
-  background: var(--canvas);
-  color: var(--muted);
+  background: var(--canvas, #e8e8e6);
+  color: var(--muted, #666);
   font-size: 0.875rem;
 }
 
@@ -390,7 +380,7 @@ mark.find-match.current {
   justify-content: center;
   gap: 2rem;
   height: 100%;
-  color: var(--muted);
+  color: var(--muted, #666);
 }
 
 .drop {
@@ -414,7 +404,7 @@ mark.find-match.current {
 
 .recent-file {
   padding: 4px 0;
-  color: var(--ink);
+  color: var(--ink, #222);
 }
 
 .recent-file:hover {

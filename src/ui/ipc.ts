@@ -33,6 +33,8 @@ export interface Backend {
   imageUrl(path: string): string;
   getConfig(): Promise<Config>;
   setConfig(config: Config): Promise<void>;
+  /** `$XDG_CONFIG_HOME/glossmark/user.css`, or `null` when there is none. */
+  readUserCss(): Promise<string | null>;
   openExternal(url: string): Promise<void>;
   /** Watching is reference-counted in the core: each `watch` needs its own `unwatch`. */
   watch(path: string): Promise<void>;
@@ -54,6 +56,7 @@ export const tauriBackend: Backend = {
   imageUrl: (path) => convertFileSrc(path, "image"),
   getConfig: () => invoke<Config>("get_config"),
   setConfig: (config) => invoke<void>("set_config", { config }),
+  readUserCss: () => invoke<{ css: string | null }>("read_user_css").then((r) => r.css),
   openExternal: (url) => invoke<void>("open_external", { url }),
   watch: (path) => invoke<void>("watch", { path }),
   unwatch: (path) => invoke<void>("unwatch", { path }),
