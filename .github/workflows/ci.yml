@@ -113,7 +113,10 @@ jobs:
     timeout-minutes: 20
     # Browsers and their system deps come preinstalled, so this job never touches the slow apt mirror.
     # The tag must match the @playwright/test version pinned in package.json.
-    container: mcr.microsoft.com/playwright:v1.63.0-noble
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
+      # Playwright's Docker guidance: Chromium needs the host's IPC/shared memory to run at speed.
+      options: --ipc=host
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
