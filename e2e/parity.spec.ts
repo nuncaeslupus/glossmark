@@ -52,3 +52,25 @@ test("img height attribute sizes the image", async ({ page }) => {
   expect(wide?.width).toBeLessThan(4000);
   expect(wide?.height).toBeCloseTo((wide?.width ?? 0) / 2, 0);
 });
+
+test("gantt chart keeps its natural height", async ({ page }) => {
+  // Mermaid lays a Gantt chart out at its container's width: laid out wider than the sheet,
+  // it is then shrunk to fit, and its bars squashed.
+  await page.goto("/e2e/theme.html?gantt");
+  const svg = page.locator(".sheet .mermaid > svg[aria-roledescription=gantt]");
+  await expect(svg).toHaveCount(1);
+  const { drawn, natural } = await svg.evaluate((el) => ({
+    drawn: el.getBoundingClientRect().width,
+    natural: (el as SVGSVGElement).viewBox.baseVal.width,
+  }));
+  expect(drawn / natural).toBeGreaterThan(0.95);
+
+  // Redrawn for a new theme while its tab is hidden, it keeps its width.
+  const id = await svg.getAttribute("id");
+  await page.evaluate(() => {
+    (document.querySelector(".canvas") as HTMLElement).hidden = true;
+    document.documentElement.dataset.theme = "dark";
+  });
+  await expect(svg).not.toHaveAttribute("id", id ?? "");
+  expect(await svg.evaluate((el) => (el as SVGSVGElement).viewBox.baseVal.width)).toBe(natural);
+});

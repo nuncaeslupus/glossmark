@@ -1,6 +1,6 @@
 // The shell over the in-memory core with the all-features fixture open, styled as the app is.
 // `?theme=light|dark` is the saved View › Theme; without it, System. `&far` adds a second
-// diagram far below the first. Built only in `--mode e2e`.
+// diagram far below the first, `&gantt` a Gantt chart. Built only in `--mode e2e`.
 import fixture from "../docs/fixtures/all-features.md?raw";
 import svg from "../docs/fixtures/currentcolor.svg?raw";
 import { fakeBackend } from "../src/ui/fake-backend";
@@ -12,7 +12,10 @@ const params = new URLSearchParams(location.search);
 const theme = params.get("theme") ?? "system";
 const filler = Array.from({ length: 200 }, (_, i) => `Filler paragraph ${i + 1}.`).join("\n\n");
 const far = "```mermaid\ngraph LR\n  Far --> Below\n```\n";
-const text = params.has("far") ? `${fixture}\n\n${filler}\n\n${far}` : fixture;
+const gantt =
+  "```mermaid\ngantt\n  dateFormat YYYY-MM-DD\n  A task :a1, 2026-01-01, 30d\n  Another :after a1, 20d\n```\n";
+let text = params.has("far") ? `${fixture}\n\n${filler}\n\n${far}` : fixture;
+if (params.has("gantt")) text = `${gantt}\n${text}`;
 const { backend, state } = fakeBackend({ [DOC]: text, "/fixtures/currentcolor.svg": svg }, [DOC]);
 state.config.theme = theme as Config["theme"];
 void new Shell(document.getElementById("app") as HTMLElement, backend).start();
