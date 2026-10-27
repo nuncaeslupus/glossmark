@@ -63,7 +63,7 @@
 | S-1 | Viewer v1            | A, B, E, F | specified | status/specification.md |
 | S-2 | Diagram rendering    | B      | dropped   |              |
 | S-3 | Editing              | C      | parked    |              |
-| S-4 | Packaging and stores | D      | parked    |              |
+| S-4 | Packaging and stores | D      | exploring |              |
 
 ## Decision log
 
@@ -90,3 +90,5 @@
 | D-21 | Find and Print use the familiar icons, Material Symbols as in Chrome's PDF viewer (I-27) | agreed | 2026-10-28 | S-1 |
 | D-22 | Ctrl+Tab / Ctrl+Shift+Tab switch to the next / previous tab (I-28) | agreed | 2026-10-28 | S-1 |
 | D-23 | A simple SVG logo, the app icons generated from it, and a README hero screenshot (I-38); owner approves the look | agreed | 2026-10-28 | S-4 |
+| D-24 | First release through GitHub Releases: a version tag builds .deb/AppImage, .msi/.exe and .dmg on CI runners; the free channels follow; no paid signing or Apple Developer program (owner: a free app) | agreed | 2026-10-28 | S-4 |
+| D-25 | Windows ships unsigned at first (SmartScreen "Run anyway"); apply to SignPath Foundation's free open-source signing in parallel and turn it on once approved | agreed | 2026-10-28 | S-4 |
