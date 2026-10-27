@@ -5,6 +5,7 @@ label: "logo and README hero"
 priority: 5
 requires: [access:human]
 tags: [DOCS]
+status: merged
 ---
 
 Draw a simple SVG mark (`logo.svg` at the repo root) for Glossmark (for example a page with a gloss highlight), generate every icon Tauri's bundle lists from it (`npm run tauri icon`), and add a README hero screenshot of a document open in the app (D-23, status/ideas.md I-38). The owner approves the look in the PR before it merges.
