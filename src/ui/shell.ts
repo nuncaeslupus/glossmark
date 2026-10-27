@@ -1,9 +1,7 @@
-import { enhance } from "../render/enhance";
+import { renderDocument } from "../render/document";
 import { blockRemoteImages, imagePolicy } from "../render/enhance/images";
 import { diagramsForPaper } from "../render/enhance/mermaid";
 import { inlineSvgs } from "../render/enhance/svg";
-import { render } from "../render/pipeline";
-import { sanitize } from "../render/sanitize";
 import { strings } from "../strings";
 import { applyUserCss } from "../themes/user-css";
 import { type ActionId, actions, bar, matchesKey, menus } from "./definition";
@@ -295,11 +293,25 @@ export class Shell {
       const anchor = reload ? scrollAnchor(tab.canvas, tab.sheet) : undefined;
       const remoteImages = this.config?.remoteImages ?? true;
       const { readSvg, imageUrl } = this.backend;
-      tab.sheet.innerHTML = sanitize(
-        render(doc.text),
-        imagePolicy(doc.path, remoteImages, (path) => imageUrl(path)),
-      );
-      const { outline } = enhance(tab.sheet);
+      const { outline, settled } = await renderDocument(tab.sheet, doc.text, {
+        current: live,
+        images: imagePolicy(doc.path, remoteImages, (path) => imageUrl(path)),
+      });
+      if (!live()) return;
+      // Back and forward return to where the user was; the fragment is for the first visit.
+      const fragment = !anchor && !entry.visited ? entry.fragment : "";
+      const place = anchor ?? (fragment ? undefined : entry.anchor);
+      // A plain offset (the top, mostly) is taken at once, so a reader scrolling while the
+      // rest settles is not sent back.
+      if (!place && !fragment) tab.canvas.scrollTop = entry.scroll;
+      if (!anchor) {
+        this.remember(doc.path);
+        entry.visited = true;
+      }
+      // A large document shows at once but is laid out by estimate off screen until it
+      // settles (after its diagrams); a heading or fragment is found on the real layout.
+      await settled;
+      if (!live()) return;
       // Before the scroll is restored, since inlined SVGs take their own height.
       await inlineSvgs(
         tab.sheet,
@@ -312,15 +324,8 @@ export class Shell {
       // ponytail: watching starts after a successful read, so a missing file adds no second
       // notice; a save in the moment between the two is not seen.
       this.watch(tab, entry.path);
-      if (anchor) {
-        restoreScroll(tab.canvas, tab.sheet, anchor);
-      } else {
-        this.remember(doc.path);
-        // Back and forward return to where the user was; the fragment is for the first visit.
-        if (entry.fragment && !entry.visited) this.land(tab, entry.fragment);
-        else tab.canvas.scrollTop = entry.scroll;
-        entry.visited = true;
-      }
+      if (place) restoreScroll(tab.canvas, tab.sheet, place);
+      else if (fragment) this.land(tab, fragment);
     } catch (err) {
       if (!live()) return;
       if (reload) return this.fileNotice(tab, strings.fileNotices.reloadFailed);
@@ -350,19 +355,24 @@ export class Shell {
     throw first;
   }
 
+  /** Records where the reader is in `entry`: the offset, and the heading at the top, which
+   * survives a large document's boxes being laid out after it comes back. */
+  private leave(tab: Tab, entry: Entry): void {
+    entry.scroll = tab.canvas.scrollTop;
+    entry.anchor = scrollAnchor(tab.canvas, tab.sheet);
+  }
+
   /** Follows a link in place: a new history entry in the same tab. */
   private navigate(tab: Tab, entry: Entry): void {
-    tab.history.current.scroll = tab.canvas.scrollTop;
+    this.leave(tab, tab.history.current);
     tab.history.push(entry);
     this.update();
     void this.load(tab);
   }
 
   private go(tab: Tab, direction: "back" | "forward"): void {
-    const leaving = tab.history.current;
-    const scroll = tab.canvas.scrollTop;
+    this.leave(tab, tab.history.current);
     if (!tab.history[direction]()) return;
-    leaving.scroll = scroll;
     this.update();
     void this.load(tab);
   }

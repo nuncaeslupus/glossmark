@@ -1,4 +1,4 @@
-import type { MarkdownIt, StateBlock, StateInline } from "markdown-it";
+import type { MarkdownIt, StateBlock, StateCore, StateInline, Token } from "markdown-it";
 import abbr from "markdown-it-abbr";
 import deflist from "markdown-it-deflist";
 import { full as emoji } from "markdown-it-emoji";
@@ -175,4 +175,29 @@ export function extras(md: MarkdownIt): void {
     `<div class="math math-display">${md.utils.escapeHtml(tokens[idx].content)}</div>\n`;
 
   md.inline.ruler.before("link", "wikilink", wikiLink(md));
+  linearFootnoteTail(md);
+}
+
+const footnoteBody = new WeakMap<StateCore, Token[]>();
+
+/** The footnote plugin's tail rule copies the whole token list once per footnote, which is
+ * quadratic in a long document. It only drops the definitions and appends the list, so it
+ * is handed the definitions alone and the body is put back in front afterwards. */
+export function linearFootnoteTail(md: MarkdownIt): void {
+  md.core.ruler.before("footnote_tail", "footnote_split", (state) => {
+    const body: Token[] = [];
+    const defs: Token[] = [];
+    let inside = false;
+    for (const token of state.tokens) {
+      if (token.type === "footnote_reference_open") inside = true;
+      (inside ? defs : body).push(token);
+      if (token.type === "footnote_reference_close") inside = false;
+    }
+    footnoteBody.set(state, body);
+    state.tokens = defs;
+  });
+  md.core.ruler.after("footnote_tail", "footnote_join", (state) => {
+    state.tokens = (footnoteBody.get(state) ?? []).concat(state.tokens);
+    footnoteBody.delete(state);
+  });
 }

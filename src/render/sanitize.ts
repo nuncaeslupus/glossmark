@@ -50,17 +50,28 @@ purify.addHook("afterSanitizeAttributes", (node) => {
   }
 });
 
-/** Strip everything outside the allowlist from rendered HTML; `policy` rewrites image sources. */
-export function sanitize(html: string, policy?: ImagePolicy): string {
+const CONFIG = {
+  ALLOWED_TAGS: TAGS,
+  ALLOWED_ATTR: ATTRS,
+  ALLOWED_URI_REGEXP: URI,
+  ALLOW_DATA_ATTR: false,
+};
+
+function withPolicy<T>(policy: ImagePolicy | undefined, run: () => T): T {
   images = policy;
   try {
-    return purify.sanitize(html, {
-      ALLOWED_TAGS: TAGS,
-      ALLOWED_ATTR: ATTRS,
-      ALLOWED_URI_REGEXP: URI,
-      ALLOW_DATA_ATTR: false,
-    });
+    return run();
   } finally {
     images = undefined;
   }
+}
+
+/** Strip everything outside the allowlist from rendered HTML; `policy` rewrites image sources. */
+export function sanitize(html: string, policy?: ImagePolicy): string {
+  return withPolicy(policy, () => purify.sanitize(html, CONFIG));
+}
+
+/** `sanitize`, as nodes ready to insert rather than a string to parse again. */
+export function sanitizeFragment(html: string, policy?: ImagePolicy): DocumentFragment {
+  return withPolicy(policy, () => purify.sanitize(html, { ...CONFIG, RETURN_DOM_FRAGMENT: true }));
 }

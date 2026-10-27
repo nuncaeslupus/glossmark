@@ -42,3 +42,24 @@
 .mermaid {
   text-align: center;
 }
+
+/* A piece of a large document, until it is laid out (render/document.ts). */
+.chunk {
+  content-visibility: auto;
+}
+
+@media print {
+  .chunk {
+    content-visibility: visible;
+  }
+}
+
+.mermaid-stage {
+  position: absolute;
+  top: 0;
+  left: -10000px;
+  width: 4000px;
+  height: 4000px;
+  contain: strict;
+  visibility: hidden;
+}
