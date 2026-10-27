@@ -190,6 +190,14 @@
 .sheet img,
 .sheet svg[role="img"] {
   max-width: 100%;
+}
+
+/* A lone height attribute sizes the image, as on GitHub. With both attributes the browser
+   takes the ratio from them, so `height: auto` keeps that height and still scales a too-wide
+   image down undistorted. */
+.sheet img:not([height]),
+.sheet img[width][height],
+.sheet svg[role="img"] {
   height: auto;
 }
 
