@@ -51,7 +51,7 @@ describe("shell", () => {
     expect(zones).toEqual([
       ["outline", "title", "back", "forward"],
       ["zoomOut", "zoom", "zoomIn", "find"],
-      ["print", "menu-button"],
+      ["export", "print", "menu-button"],
     ]);
     // One ⋮ More button replaces the text menus, and lists every one of their commands.
     const more = root.querySelectorAll(".bar .menu-button");
@@ -72,6 +72,21 @@ describe("shell", () => {
       const path = root.querySelector(`.bar [data-action="${id}"] svg path`);
       expect(path?.getAttribute("d")).toMatch(new RegExp(`^${start}`));
     }
+  });
+
+  it("test_export_asks_for_a_path_and_saves_pdf", async () => {
+    const { root, state } = await open({ "/n/notes.md": "# A" }, ["/n/notes.md"]);
+    const exportButton = root.querySelector('.bar [data-action="export"]');
+    // Cancelling the dialog saves nothing.
+    click(exportButton);
+    for (let i = 0; i < 5; i++) await settle();
+    expect(state.saveNames).toEqual(["notes.pdf"]);
+    expect(state.exported).toEqual([]);
+
+    state.savePath = "/out/notes.pdf";
+    click(exportButton);
+    for (let i = 0; i < 5; i++) await settle();
+    expect(state.exported).toEqual(["/out/notes.pdf"]);
   });
 
   it("test_tab_renders_sanitised_document", async () => {

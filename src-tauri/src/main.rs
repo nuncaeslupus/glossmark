@@ -2,6 +2,7 @@ mod commands;
 mod config;
 mod document;
 mod error;
+mod export;
 mod external;
 mod image;
 mod scope;
@@ -47,6 +48,8 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             commands::take_open_files,
             commands::open_dialog,
+            commands::save_dialog,
+            commands::export_pdf,
             commands::read_document,
             commands::read_svg,
             commands::watch,

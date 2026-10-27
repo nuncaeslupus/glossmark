@@ -21,6 +21,10 @@ export function fakeBackend(files: Record<string, string>, launch: string[] = []
     userCss: null as string | null,
     dialogPaths: [] as string[],
     dialogCalls: 0,
+    /** What the save dialog returns; `null` is a cancel. */
+    savePath: null as string | null,
+    saveNames: [] as string[],
+    exported: [] as string[],
     reads: 0,
     unwatchCalls: 0,
     /** When set, the matching call rejects with this error. */
@@ -56,6 +60,13 @@ export function fakeBackend(files: Record<string, string>, launch: string[] = []
       await state.readGate;
       failing("openDialog");
       return state.dialogPaths;
+    },
+    saveDialog: async (name) => {
+      state.saveNames.push(name);
+      return state.savePath;
+    },
+    exportPdf: async (path) => {
+      state.exported.push(path);
     },
     readDocument: async (path) => {
       state.reads++;

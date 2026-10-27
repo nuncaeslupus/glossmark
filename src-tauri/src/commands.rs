@@ -1,6 +1,7 @@
 use crate::config::{self, Config, UserCss};
 use crate::document::{self, Document, Svg};
 use crate::error::{ErrorKind, IpcError};
+use crate::export;
 use crate::external;
 use crate::image;
 use crate::scope::{self, Scope};
@@ -21,6 +22,8 @@ pub struct AppState {
     watched: Arc<Mutex<Registry>>,
     debouncer: Mutex<Debouncer<RecommendedWatcher>>,
     pending: Mutex<Vec<String>>,
+    /// The Export dialog's last answer: the only path `export_pdf` writes.
+    export_path: Mutex<Option<PathBuf>>,
     config_dir: PathBuf,
 }
 
@@ -52,6 +55,7 @@ impl AppState {
             watched,
             debouncer: Mutex::new(debouncer),
             pending: Mutex::new(Vec::new()),
+            export_path: Mutex::new(None),
             config_dir,
         })
     }
@@ -123,6 +127,44 @@ pub async fn open_dialog<R: Runtime>(
     }
     let picked = dialog.blocking_pick_files().unwrap_or_default();
     Ok(picked_files(&mut lock(&state.scope), picked))
+}
+
+/// File › Export. Like Open, the dialog runs here, so the frontend can write only where the
+/// user chose. Cancelling gives `None`.
+#[tauri::command]
+pub async fn save_dialog<R: Runtime>(
+    app: AppHandle<R>,
+    state: State<'_, AppState>,
+    name: String,
+) -> Result<Option<String>, IpcError> {
+    let mut dialog = app
+        .dialog()
+        .file()
+        .add_filter("PDF", &["pdf"])
+        .set_file_name(name);
+    if let Some(window) = app.get_webview_window("main") {
+        dialog = dialog.set_parent(&window);
+    }
+    let picked = dialog
+        .blocking_save_file()
+        .and_then(|p| p.into_path().ok())
+        .map(export::with_pdf_extension);
+    let shown = picked.as_ref().map(|p| p.display().to_string());
+    *lock(&state.export_path) = picked;
+    Ok(shown)
+}
+
+#[tauri::command]
+pub async fn export_pdf<R: Runtime>(
+    app: AppHandle<R>,
+    state: State<'_, AppState>,
+    path: String,
+) -> Result<(), IpcError> {
+    let path = export::target(lock(&state.export_path).take(), &path)?;
+    let window = app
+        .get_webview_window("main")
+        .ok_or_else(|| IpcError::new(ErrorKind::Io, "no window to export"))?;
+    export::print_to_pdf(&window, &path)
 }
 
 /// Brings files into `scope` and returns the canonical paths it accepted.

@@ -1331,6 +1331,7 @@ name = "glossmark"
 version = "0.1.0"
 dependencies = [
  "dirs",
+ "gtk",
  "notify-debouncer-mini",
  "percent-encoding",
  "serde",
@@ -1342,6 +1343,7 @@ dependencies = [
  "tauri-plugin-single-instance",
  "tempfile",
  "url",
+ "webkit2gtk",
 ]
 
 [[package]]

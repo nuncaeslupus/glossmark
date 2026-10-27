@@ -27,9 +27,9 @@ describe("simplicity budget (D-11)", () => {
     expect(root.querySelectorAll(".bar .bar-button")).toHaveLength(toolbarButtons);
     expect(root.querySelectorAll(".bar")).toHaveLength(1);
 
-    // Dialogs while reading: only Open and Print show one, and only when asked for.
+    // Dialogs while reading: only Open, Export (D-20) and Print show one, and only when asked for.
     const dialogs = Object.values(actions).filter((a) => a.dialog);
-    const whileReading = dialogs.filter((a) => a.id !== "open" && a.id !== "print");
+    const whileReading = dialogs.filter((a) => !["open", "export", "print"].includes(a.id));
     expect(whileReading).toEqual([]);
     // Nothing else in the frontend can raise one: no alert/confirm/prompt, no dialog plugin.
     const raising = Object.keys(sources).filter((f) =>
