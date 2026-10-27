@@ -24,7 +24,7 @@ export function fakeBackend(files: Record<string, string>, launch: string[] = []
     reads: 0,
     unwatchCalls: 0,
     /** When set, the matching call rejects with this error. */
-    fail: {} as Partial<Record<"openDialog" | "getConfig" | "setConfig", unknown>>,
+    fail: {} as Partial<Record<"openDialog" | "getConfig" | "setConfig" | "readUserCss", unknown>>,
     /** When set, reads wait for it. */
     readGate: undefined as Promise<void> | undefined,
     /** Watchers per path, as the core counts them. */
@@ -83,7 +83,10 @@ export function fakeBackend(files: Record<string, string>, launch: string[] = []
       failing("setConfig");
       state.config = config;
     },
-    readUserCss: async () => state.userCss,
+    readUserCss: async () => {
+      failing("readUserCss");
+      return state.userCss;
+    },
     openExternal: async (url) => {
       state.external.push(url);
     },

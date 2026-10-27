@@ -50,8 +50,15 @@ function followTheme(): void {
     void enqueue(async () => {
       initialize(m);
       for (const figure of document.querySelectorAll<HTMLElement>(DRAWN)) {
-        const svg = await draw(m, figure.dataset.source ?? "").catch(() => null);
-        if (svg !== null) figure.innerHTML = svg;
+        try {
+          figure.innerHTML = await draw(m, figure.dataset.source ?? "");
+          figure.classList.remove("mermaid-error");
+        } catch (error) {
+          // The old drawing stays, in the other theme, so it is marked as a first draw's would be.
+          figure.classList.add("mermaid-error");
+          figure.title = String(error);
+          console.error(error);
+        }
       }
     });
   };

@@ -174,10 +174,9 @@ export class Shell {
       this.theme = THEMES.includes(this.config.theme) ? this.config.theme : "system";
       this.zoom = clampZoom(this.config.defaultZoom);
     }
-    // ponytail: a user.css that cannot be read is ignored; the theme alone still reads well.
     await this.backend.readUserCss().then(
       (css) => applyUserCss(this.root.ownerDocument, css),
-      () => {},
+      () => this.show(strings.notices.userCssUnavailable),
     );
     this.update();
     await this.openPaths(await this.backend.takeOpenFiles());
