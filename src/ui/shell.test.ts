@@ -50,8 +50,8 @@ describe("shell", () => {
     );
     expect(zones).toEqual([
       ["outline", "title", "back", "forward"],
-      ["zoomOut", "zoom", "zoomIn"],
-      ["find", "print", "menu-button"],
+      ["zoomOut", "zoom", "zoomIn", "find"],
+      ["print", "menu-button"],
     ]);
     // One ⋮ More button replaces the text menus, and lists every one of their commands.
     const more = root.querySelectorAll(".bar .menu-button");

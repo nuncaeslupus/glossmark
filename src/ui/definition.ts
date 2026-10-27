@@ -97,8 +97,13 @@ export const bar: BarItem[][] = [
     { kind: "button", action: "back" },
     { kind: "button", action: "forward" },
   ],
-  [{ kind: "button", action: "zoomOut" }, { kind: "zoom" }, { kind: "button", action: "zoomIn" }],
-  [{ kind: "button", action: "find" }, { kind: "button", action: "print" }, { kind: "more" }],
+  [
+    { kind: "button", action: "zoomOut" },
+    { kind: "zoom" },
+    { kind: "button", action: "zoomIn" },
+    { kind: "button", action: "find" },
+  ],
+  [{ kind: "button", action: "print" }, { kind: "more" }],
 ];
 
 /** ⋮ More's sections, divided by rules; every command keeps its shortcut. */

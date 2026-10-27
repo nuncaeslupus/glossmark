@@ -139,7 +139,7 @@ button:disabled {
   min-width: 0;
 }
 
-.zone:last-child {
+.zone:nth-child(3) {
   justify-content: flex-end;
 }
 

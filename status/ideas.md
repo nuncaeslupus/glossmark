@@ -85,7 +85,7 @@
 | D-14 | UI in English for v1, all strings in one file; translations later | agreed | 2026-10-26 | S-1 |
 | D-15 | Safe raw HTML is kept, as on GitHub; everything else is stripped | agreed | 2026-10-26 | S-1 |
 | D-18 | Zoom scales the whole sheet like a PDF viewer (I-24): already so (`zoom` on `.sheet`), no task | agreed | 2026-10-28 | S-1 |
-| D-19 | One bar in three zones (I-25, I-29): left ☰ outline, title, Back/Forward · centre zoom − % + · right Find, Export, Print, ⋮ More; the File/View/Go/Help menus fold into ⋮ More (Chrome's PDF viewer, D-11) | agreed | 2026-10-28 | S-1 |
+| D-19 | One bar in three zones (I-25, I-29): left ☰ outline, title, Back/Forward · centre zoom − % + and Find · right Export, Print, ⋮ More; the File/View/Go/Help menus fold into ⋮ More (Chrome's PDF viewer, D-11) | agreed | 2026-10-28 | S-1 |
 | D-20 | Export (I-26) saves a PDF of the print styling to a chosen file; no HTML export | agreed | 2026-10-28 | S-1 |
 | D-21 | Find and Print use the familiar icons, Material Symbols as in Chrome's PDF viewer (I-27) | agreed | 2026-10-28 | S-1 |
 | D-22 | Ctrl+Tab / Ctrl+Shift+Tab switch to the next / previous tab (I-28) | agreed | 2026-10-28 | S-1 |
