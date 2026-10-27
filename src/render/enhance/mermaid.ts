@@ -1,3 +1,4 @@
+import { strings } from "../../strings";
 import { scroller } from "./scroll";
 
 const FENCES = "pre > code.language-mermaid";
@@ -6,6 +7,8 @@ const DRAWN = ".mermaid[data-source]";
 const PENDING = "mermaid-pending";
 /** How near the view a diagram is drawn: one view's height above and below. */
 const NEAR = "100% 0px";
+/** How much one click on zoom in or out scales the diagram. */
+const ZOOM_STEP = 1.25;
 /** How long `renderMermaid` waits to learn which diagrams are near the view. */
 const SEEN_MS = 1000;
 
@@ -73,6 +76,66 @@ async function draw(m: Mermaid, source: string, stage: HTMLElement, spot: HTMLEl
   }
 }
 
+/** Puts a drawing in `figure` with GitHub's controls: zoom in, zoom out, reset, and dragging
+ * to pan. A redraw starts the view over. */
+function show(figure: HTMLElement, svg: string): void {
+  figure.innerHTML = svg;
+  const drawing = figure.querySelector("svg");
+  if (!drawing) return;
+  let scale = 1;
+  let x = 0;
+  let y = 0;
+  const apply = () => {
+    drawing.style.transform = `translate(${x}px, ${y}px) scale(${scale})`;
+  };
+  const button = (label: string, glyph: string, act: () => void) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = glyph;
+    b.title = label;
+    b.setAttribute("aria-label", label);
+    b.addEventListener("click", () => {
+      act();
+      apply();
+    });
+    return b;
+  };
+  const controls = document.createElement("div");
+  controls.className = "mermaid-controls";
+  controls.append(
+    button(strings.actions.zoomIn, strings.icons.zoomIn, () => {
+      scale *= ZOOM_STEP;
+    }),
+    button(strings.actions.zoomOut, strings.icons.zoomOut, () => {
+      scale /= ZOOM_STEP;
+    }),
+    button(strings.diagramReset, strings.icons.diagramReset, () => {
+      scale = 1;
+      x = 0;
+      y = 0;
+    }),
+  );
+  figure.append(controls);
+
+  drawing.addEventListener("pointerdown", (down) => {
+    const [x0, y0] = [x - down.clientX, y - down.clientY];
+    const move = (e: PointerEvent) => {
+      x = x0 + e.clientX;
+      y = y0 + e.clientY;
+      apply();
+    };
+    drawing.setPointerCapture(down.pointerId);
+    drawing.addEventListener("pointermove", move);
+    drawing.addEventListener(
+      "lostpointercapture",
+      () => drawing.removeEventListener("pointermove", move),
+      {
+        once: true,
+      },
+    );
+  });
+}
+
 /** Runs `each` on items as `next` hands them out, one per frame, so many diagrams never
  * freeze the window. */
 async function onePerFrame<T>(
@@ -137,7 +200,7 @@ async function drawFence(m: Mermaid, pre: HTMLElement, stage: HTMLElement): Prom
       const figure = document.createElement("div");
       figure.className = "mermaid";
       figure.dataset.source = source;
-      figure.innerHTML = svg;
+      show(figure, svg);
       pre.replaceWith(figure);
     } catch (error) {
       pre.classList.add("mermaid-error");
@@ -185,7 +248,7 @@ function redraw(): Promise<void> {
       () => figures.shift(),
       async (figure, stage) => {
         try {
-          figure.innerHTML = await draw(m, figure.dataset.source ?? "", stage, figure);
+          show(figure, await draw(m, figure.dataset.source ?? "", stage, figure));
           figure.classList.remove("mermaid-error");
         } catch (error) {
           // The old drawing stays, in the other theme, so it is marked as a first draw's would be.

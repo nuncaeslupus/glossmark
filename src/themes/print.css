@@ -14,7 +14,8 @@
   .empty,
   .file-notice,
   .canvas[hidden],
-  .sheet .code-block > .copy {
+  .sheet .code-block > .copy,
+  .sheet .mermaid-controls {
     display: none;
   }
 
@@ -62,6 +63,12 @@
 
   .sheet .math-display {
     overflow: visible;
+  }
+
+  /* A zoomed or panned diagram prints whole, at its drawn size. */
+  .sheet .mermaid > svg {
+    /* biome-ignore lint/complexity/noImportantStyles: it must beat the inline transform */
+    transform: none !important;
   }
 
   /* No page break inside a block that reads as one, nor between a heading and what follows. */
