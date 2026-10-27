@@ -1,3 +1,4 @@
+import { enhance } from "../render/enhance";
 import { render } from "../render/pipeline";
 import { sanitize } from "../render/sanitize";
 import { strings } from "../strings";
@@ -144,7 +145,8 @@ export class Shell {
     await this.openPaths(paths);
   }
 
-  /** `read_document` → render → sanitise → insert. Errors stay in the sheet, never a dialog. */
+  /** `read_document` → render → sanitise → insert → enhance. Errors stay in the sheet, never a
+   * dialog. */
   private async load(tab: Tab): Promise<void> {
     // A tab closed while its read was in flight takes no result.
     const open = () => !this.disposed && this.tabs.includes(tab);
@@ -152,6 +154,8 @@ export class Shell {
       const doc = await this.backend.readDocument(tab.path);
       if (!open()) return;
       tab.sheet.innerHTML = sanitize(render(doc.text));
+      // ponytail: the outline it returns is unused until T13's outline panel.
+      enhance(tab.sheet);
       this.remember(doc.path);
     } catch (err) {
       if (!open()) return;

@@ -112,7 +112,7 @@ describe("shell", () => {
 
     expect(click(links[1]).defaultPrevented).toBe(true);
     expect(scroll).toHaveBeenCalledTimes(1);
-    expect(scroll.mock.contexts[0]).toBe(root.querySelector("#goal"));
+    expect(scroll.mock.contexts[0]).toBe(root.querySelector("#user-content-goal"));
 
     expect(click(links[2]).defaultPrevented).toBe(true);
     expect(state.external).toHaveLength(1);
