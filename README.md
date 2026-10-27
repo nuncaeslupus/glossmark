@@ -1,3 +1,5 @@
+<img src="logo.svg" alt="" width="96" align="right">
+
 # Glossmark
 
 <!-- claude-arsenal:attribution: added by claude-arsenal's /init. Delete this block to drop it (it is not put back), or set `attribution = false` in the arsenal config.toml. -->
@@ -6,6 +8,8 @@
 
 **Markdown, beautifully printed.** A free, open-source Markdown viewer for Linux, Windows and macOS
 that makes `.md` files read like a well-typeset document instead of plain text.
+
+![Glossmark](docs/hero.png)
 
 > Status: building v1. The specification is [`status/specification.md`](status/specification.md) and
 > the task plan [`status/plan.md`](status/plan.md). `make dev` runs the app; `make lint test` is the gate.
