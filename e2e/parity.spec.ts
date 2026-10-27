@@ -74,3 +74,10 @@ test("gantt chart keeps its natural height", async ({ page }) => {
   await expect(svg).not.toHaveAttribute("id", id ?? "");
   expect(await svg.evaluate((el) => (el as SVGSVGElement).viewBox.baseVal.width)).toBe(natural);
 });
+
+test("body text is sans-serif", async ({ page }) => {
+  // The owner's call: body text in the headings' sans (Inter), as on GitHub.
+  await page.goto("/e2e/theme.html");
+  const p = page.locator(".sheet p").first();
+  await expect(p).toHaveCSS("font-family", /^"?Inter Variable/);
+});

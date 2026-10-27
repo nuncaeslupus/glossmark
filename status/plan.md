@@ -92,7 +92,7 @@ and no second toolbar; the menus are drawn in the bar, as Chrome's viewer draws 
 | highlight.js, KaTeX, Mermaid (lazy `import()`) | GitHub-parity enhancers; Mermaid only loaded when used (D-5) |
 | Vitest + jsdom | Fast unit tests for the pipeline, sanitiser, history and strings |
 | Playwright with WebKit | The closest engine to WebKitGTK available in CI, for layout, theme, print and Mermaid tests |
-| Bundled fonts (e.g. Source Serif 4, Inter, JetBrains Mono, all OFL) | Same look on every machine and in print |
+| Bundled fonts (e.g. Inter, JetBrains Mono, all OFL) | Same look on every machine and in print |
 | Makefile: `sync`, `lint`, `format`, `test`, `build`, `clean`, `update-skills` | Owner's convention; also the arsenal `host-gate` (`make lint test`) |
 
 ### Out of scope

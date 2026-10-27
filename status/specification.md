@@ -56,7 +56,7 @@ it waits.
   fences are shown as code; documents include drawspec diagrams as rendered SVG/PNG files.
 - **Layout (D-6)**: a fixed-width paper sheet on a grey canvas with continuous scroll.
   Printing uses the same styling, minus the canvas and the app's controls.
-- **Look (D-9)**: one signature theme (book-style serif body, sans-serif headings, monospace code,
+- **Look (D-9)**: one signature theme (sans-serif body and headings as on GitHub, monospace code,
   fonts bundled) in light and dark, following the system setting by default. A user CSS file is
   loaded last if present. Themes are plain stylesheets.
 - **Navigation (D-8)**: tabs, each with its own back/forward history. A link to a local `.md` file
