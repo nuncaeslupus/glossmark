@@ -18,6 +18,11 @@
   "bundle": {
     "active": true,
     "targets": ["deb", "appimage"],
-    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.png"]
+    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.png"],
+    "category": "Utility",
+    "shortDescription": "A Markdown viewer that reads like a well-typeset document",
+    "linux": {
+      "deb": { "desktopTemplate": "linux/glossmark.desktop" }
+    }
   }
 }

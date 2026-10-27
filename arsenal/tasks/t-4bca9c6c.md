@@ -19,6 +19,7 @@ repo
 Metric: `deb_package_mb <= 20` (from `status/plan.md`).
 
 ```bash
-# arsenal:gate-placeholder — replace with the real check; it may land in this task's own PR
-false
+# The .desktop file declares text/markdown, opens files with %F, and has Name/Icon.
+# deb_package_mb <= 20 is enforced by the `package` job in .github/workflows/ci.yml.
+cd src-tauri && cargo test --test desktop_file
 ```
