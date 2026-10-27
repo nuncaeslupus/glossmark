@@ -130,7 +130,7 @@ function wikiLink(md: MarkdownIt) {
 const PAIR = /^([\w.-]+):[ \t]*(.*)$/;
 const QUOTED = /^(["'])(.*)\1$/;
 
-/** Front matter as GitHub shows it: a one-row table of its keys. YAML that is not a flat
+/** Front matter as GitHub shows it: a table of one row per key. YAML that is not a flat
  * `key: value` list is shown as source instead. */
 // ponytail: flat keys only, no YAML parser; nested or multi-line front matter shows as source.
 function frontMatterHtml(md: MarkdownIt, yaml: string): string {
@@ -141,11 +141,11 @@ function frontMatterHtml(md: MarkdownIt, yaml: string): string {
   if (pairs.some((p) => !p)) {
     return `<pre class="front-matter"><code class="language-yaml">${esc(yaml)}\n</code></pre>\n`;
   }
-  const cells = (tag: string, values: string[]) =>
-    values.map((v) => `<${tag}>${esc(v)}</${tag}>`).join("");
-  const keys = pairs.map((p) => p?.[1] ?? "");
-  const values = pairs.map((p) => (p?.[2] ?? "").replace(QUOTED, "$2"));
-  return `<table class="front-matter"><thead><tr>${cells("th", keys)}</tr></thead><tbody><tr>${cells("td", values)}</tr></tbody></table>\n`;
+  const rows = pairs.map(
+    (p) =>
+      `<tr><th>${esc(p?.[1] ?? "")}</th><td>${esc((p?.[2] ?? "").replace(QUOTED, "$2"))}</td></tr>`,
+  );
+  return `<table class="front-matter"><tbody>${rows.join("")}</tbody></table>\n`;
 }
 
 export function extras(md: MarkdownIt): void {
