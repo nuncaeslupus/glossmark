@@ -95,3 +95,12 @@ test("issues image matches GitHub size", async ({ page }) => {
   expect(drawn / column).toBeGreaterThan(0.95);
   expect(drawn / natural).toBeGreaterThan(0.95);
 });
+
+test("front matter renders one row per key", async ({ page }) => {
+  // GitHub shows front matter as key/value rows, not one row of columns.
+  await page.goto("/e2e/theme.html");
+  const rows = page.locator(".sheet table.front-matter tr");
+  await expect(rows).toHaveCount(3);
+  await expect(rows.nth(0).locator("th")).toHaveText("title");
+  await expect(rows.nth(0).locator("td")).toHaveCount(1);
+});
