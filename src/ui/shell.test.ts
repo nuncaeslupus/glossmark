@@ -38,6 +38,18 @@ function click(el: Element | null, init: MouseEventInit = {}): MouseEvent {
 }
 
 describe("shell", () => {
+  it("test_find_and_print_use_material_icons", async () => {
+    const { root } = await open({ "/d/a.md": "# A" }, ["/d/a.md"]);
+    // Material Symbols' search and print, as in Chrome's PDF viewer (D-21).
+    for (const [id, start] of [
+      ["find", "M784-120 532-372"],
+      ["print", "M640-640v-120H320"],
+    ]) {
+      const path = root.querySelector(`.bar [data-action="${id}"] svg path`);
+      expect(path?.getAttribute("d")).toMatch(new RegExp(`^${start}`));
+    }
+  });
+
   it("test_tab_renders_sanitised_document", async () => {
     const { root } = await open({ "/n/a.md": "# Hi\n\n<script>x()</script><b>ok</b>" }, [
       "/n/a.md",

@@ -58,18 +58,20 @@ export const strings = {
   findCountMore: (current: number, total: number) => `${current} of ${total}+`,
   findNone: "No matches",
   shortcutsHint: "F1 or Esc closes this list.",
-  // Glyphs on the bar buttons; their labels above are the tooltips.
+  // Glyphs on the bar buttons; their labels above are the tooltips. One starting with "M" is
+  // SVG path data on Material Symbols' 960 grid (D-21).
   icons: {
     outline: "☰",
     back: "←",
     forward: "→",
     zoomOut: "−",
     zoomIn: "+",
-    find: "⌕",
+    find: "M784-120 532-372q-30 24-69 38t-83 14q-109 0-184.5-75.5T120-580q0-109 75.5-184.5T380-840q109 0 184.5 75.5T640-580q0 44-14 83t-38 69l252 252-56 56ZM380-400q75 0 127.5-52.5T560-580q0-75-52.5-127.5T380-760q-75 0-127.5 52.5T200-580q0 75 52.5 127.5T380-400Z",
     findNext: "↓",
     findPrevious: "↑",
     findClose: "×",
-    print: "⎙",
+    print:
+      "M640-640v-120H320v120h-80v-200h480v200h-80Zm-480 80h640-640Zm560 100q17 0 28.5-11.5T760-500q0-17-11.5-28.5T720-540q-17 0-28.5 11.5T680-500q0 17 11.5 28.5T720-460Zm-80 260v-160H320v160h320Zm80 80H240v-160H80v-240q0-51 35-85.5t85-34.5h560q51 0 85.5 34.5T880-520v240H720v160Zm80-240v-160q0-17-11.5-28.5T760-560H200q-17 0-28.5 11.5T160-520v160h80v-80h480v80h80Z",
     closeTab: "×",
     diagramReset: "⟲",
   },

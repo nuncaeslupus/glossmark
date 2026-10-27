@@ -677,7 +677,18 @@ export class Shell {
 
   private actionButton(id: ActionId, className: string): HTMLButtonElement {
     const action = actions[id];
-    const button = h("button", className, action.icon ?? action.label);
+    const icon = action.icon ?? action.label;
+    const button = h("button", className, icon.startsWith("M") ? undefined : icon);
+    if (icon.startsWith("M")) {
+      const ns = "http://www.w3.org/2000/svg";
+      const svg = document.createElementNS(ns, "svg");
+      svg.setAttribute("viewBox", "0 -960 960 960");
+      svg.setAttribute("aria-hidden", "true");
+      const path = document.createElementNS(ns, "path");
+      path.setAttribute("d", icon);
+      svg.append(path);
+      button.append(svg);
+    }
     button.title = action.label;
     button.setAttribute("aria-label", action.label);
     button.dataset.action = id;
