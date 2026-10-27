@@ -199,6 +199,15 @@ button:disabled {
   text-align: left;
 }
 
+.menu-item[aria-checked]::after {
+  float: right;
+  margin-left: 1rem;
+}
+
+.menu-item[aria-checked="true"]::after {
+  content: "✓";
+}
+
 .menu-item:hover:enabled {
   background: var(--menu-hover);
 }

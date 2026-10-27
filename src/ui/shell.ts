@@ -15,6 +15,11 @@ import { clampZoom, fitWidth, stepZoom } from "./zoom";
 const MAX_RECENT_FILES = 10;
 const NOTICE_MS = 6000;
 const THEMES = ["system", "light", "dark"] as const;
+const FIND_DEBOUNCE_MS = 100;
+/** Find stops marking here, so a common word in a large document stays quick. */
+const FIND_LIMIT = 1000;
+/** Zoom keys come in bursts; the level is saved once the reader settles on it. */
+const ZOOM_SAVE_MS = 500;
 
 interface Tab {
   history: History;
@@ -80,6 +85,12 @@ export class Shell {
   /** Find in page: the sheet holding the marks, the marks, and the current one. */
   private found = { open: false, root: null as HTMLElement | null, marks: [] as HTMLElement[] };
   private foundIndex = -1;
+  private foundMore = false;
+  private findTimer: ReturnType<typeof setTimeout> | undefined;
+  /** After a click in the outline, the clicked entry stays current until the reader scrolls. */
+  private sectionHeld = false;
+  private saveTimer: ReturnType<typeof setTimeout> | undefined;
+  private remoteItem: HTMLElement | null = null;
   private shortcutsPanel: HTMLElement | null = null;
   private themeItem: HTMLElement | null = null;
   private theme: Config["theme"] = "system";
@@ -111,6 +122,9 @@ export class Shell {
     theme: () => {
       this.theme = THEMES[(THEMES.indexOf(this.theme) + 1) % THEMES.length];
       this.saveSettings();
+    },
+    remoteImages: () => {
+      void this.setRemoteImages(!(this.config?.remoteImages ?? true)).then(() => this.update());
     },
     shortcuts: () => this.toggleShortcuts(),
   };
@@ -170,6 +184,8 @@ export class Shell {
     for (const stop of this.unlisten) stop();
     for (const tab of this.tabs) this.watch(tab, null);
     clearTimeout(this.noticeTimer);
+    clearTimeout(this.findTimer);
+    if (this.saveTimer !== undefined) this.writeSettings();
   }
 
   /** A one-line message in the bar that fades on its own: never a dialog (D-11). */
@@ -377,14 +393,22 @@ export class Shell {
       : undefined;
   }
 
-  /** Theme and zoom: applied at once, kept in the config when it could be read. */
-  private saveSettings(): void {
+  /** Theme and zoom: applied at once, kept in the config (when it could be read) after `delay`.
+   * The zoom last used is the default zoom: with no settings dialog (D-11), it is how one is set. */
+  private saveSettings(delay = 0): void {
     this.update();
+    clearTimeout(this.saveTimer);
+    this.saveTimer = setTimeout(() => this.writeSettings(), delay);
+  }
+
+  private writeSettings(): void {
+    clearTimeout(this.saveTimer);
+    this.saveTimer = undefined;
     if (!this.config) return;
     this.config = { ...this.config, theme: this.theme, defaultZoom: this.zoom };
     void this.backend
       .setConfig(this.config)
-      .catch(() => this.show(strings.notices.settingsNotSaved));
+      .catch(() => this.show(strings.notices.settingNotSaved));
   }
 
   /** Zooms the sheets; the active tab keeps the heading the reader is at. */
@@ -392,7 +416,7 @@ export class Shell {
     const tab = this.active;
     const anchor = tab && scrollAnchor(tab.canvas, tab.sheet);
     this.zoom = clampZoom(percent);
-    this.saveSettings();
+    this.saveSettings(ZOOM_SAVE_MS);
     if (tab && anchor) restoreScroll(tab.canvas, tab.sheet, anchor);
   }
 
@@ -404,11 +428,12 @@ export class Shell {
     this.view.classList.toggle("with-outline", open);
     if (!open) return;
     if (this.drawnSections !== tab.sections) this.listSections(tab.sections);
-    this.markSection(currentSection(tab.canvas, tab.sections));
+    if (!this.sectionHeld) this.markSection(currentSection(tab.canvas, tab.sections));
   }
 
   private listSections(list: Section[]): void {
     this.drawnSections = list;
+    this.sectionHeld = false;
     if (list.length === 0) {
       this.outlinePanel.replaceChildren(h("p", "outline-empty", strings.outlineEmpty));
       return;
@@ -420,6 +445,7 @@ export class Shell {
       item.title = heading.text;
       item.style.setProperty("--depth", String(heading.level - top));
       item.addEventListener("click", () => {
+        this.sectionHeld = true;
         node.scrollIntoView?.();
         this.markSection(i);
       });
@@ -439,6 +465,7 @@ export class Shell {
   }
 
   private openFind(): void {
+    clearTimeout(this.findTimer);
     this.found.open = true;
     this.findBox.hidden = false;
     this.findInput.focus();
@@ -448,6 +475,7 @@ export class Shell {
   }
 
   private closeFind(): void {
+    clearTimeout(this.findTimer);
     this.found.open = false;
     this.findBox.hidden = true;
     this.runFind(false);
@@ -463,8 +491,11 @@ export class Shell {
     this.found.marks = [];
     this.found.root = this.found.open && tab ? tab.sheet : null;
     this.foundIndex = -1;
-    const marks = this.found.root ? highlightMatches(this.found.root, this.findInput.value) : [];
+    const { marks, more } = this.found.root
+      ? highlightMatches(this.found.root, this.findInput.value, FIND_LIMIT)
+      : { marks: [], more: false };
     this.found.marks = marks;
+    this.foundMore = more;
     let index = -1;
     if (marks.length > 0 && !jump) index = Math.min(Math.max(keep, 0), marks.length - 1);
     else if (marks.length > 0 && tab) {
@@ -496,8 +527,11 @@ export class Shell {
       }
     }
     const count = this.found.marks.length;
-    if (count > 0) this.findCount.textContent = strings.findCount(index + 1, count);
-    else if (this.found.open && this.findInput.value) this.findCount.textContent = strings.findNone;
+    if (count > 0) {
+      const counted = this.foundMore ? strings.findCountMore : strings.findCount;
+      this.findCount.textContent = counted(index + 1, count);
+    } else if (this.found.open && this.findInput.value)
+      this.findCount.textContent = strings.findNone;
     else this.findCount.replaceChildren();
   }
 
@@ -562,12 +596,22 @@ export class Shell {
     canvas.addEventListener(
       "scroll",
       () => {
-        if (tab === this.active && this.outlineOpen) {
+        if (tab === this.active && this.outlineOpen && !this.sectionHeld) {
           this.markSection(currentSection(canvas, tab.sections));
         }
       },
       { passive: true, signal: this.listeners.signal },
     );
+    // The reader scrolling, not a jump from the outline, releases the clicked entry.
+    for (const type of ["wheel", "touchstart", "mousedown"]) {
+      canvas.addEventListener(
+        type,
+        () => {
+          this.sectionHeld = false;
+        },
+        { passive: true, signal: this.listeners.signal },
+      );
+    }
     // The tab's own close button closes that tab, not the active one.
     close.addEventListener("click", (e) => {
       e.stopPropagation();
@@ -601,6 +645,7 @@ export class Shell {
     if (id === "forward") return this.active?.history.canGoForward === true;
     if (id === "findNext" || id === "findPrevious") return this.found.marks.length > 0;
     if (id === "findClose") return this.found.open;
+    if (id === "remoteImages") return this.config !== null;
     return true;
   }
 
@@ -638,13 +683,21 @@ export class Shell {
     this.findInput.type = "text";
     this.findInput.placeholder = strings.findPlaceholder;
     this.findInput.setAttribute("aria-label", strings.findPlaceholder);
-    this.findInput.addEventListener("input", () => {
+    const search = () => {
+      clearTimeout(this.findTimer);
+      this.findTimer = undefined;
       this.runFind(true);
       this.update();
+    };
+    this.findInput.addEventListener("input", () => {
+      clearTimeout(this.findTimer);
+      this.findTimer = setTimeout(search, FIND_DEBOUNCE_MS);
     });
     this.findInput.addEventListener("keydown", (e) => {
       if (e.key !== "Enter") return;
       e.preventDefault();
+      // Typed and Enter at once: the search runs first, then Enter moves on, as it would have.
+      if (this.findTimer !== undefined) search();
       this.stepFind(e.shiftKey ? -1 : 1);
     });
     this.findCount.setAttribute("aria-live", "polite");
@@ -672,6 +725,10 @@ export class Shell {
         item.setAttribute("role", "menuitem");
         item.dataset.action = id;
         if (id === "theme") this.themeItem = item;
+        if (id === "remoteImages") {
+          this.remoteItem = item;
+          item.setAttribute("role", "menuitemcheckbox");
+        }
         item.addEventListener("click", () => {
           this.closeMenus();
           this.run(id);
@@ -698,6 +755,8 @@ export class Shell {
   }
 
   private onKey(e: KeyboardEvent): void {
+    // A key may scroll the page, which releases a section clicked in the outline.
+    this.sectionHeld = false;
     // Esc closes an open menu or the shortcuts list before it closes find.
     const menuOpen = [...this.menuBar.querySelectorAll<HTMLElement>(".menu")].some(
       (m) => !m.hidden,
@@ -777,6 +836,7 @@ export class Shell {
     this.view.style.setProperty("--zoom", String(this.zoom / 100));
     this.zoomReadout.textContent = strings.zoomPercent(this.zoom);
     if (this.themeItem) this.themeItem.textContent = strings.themes[this.theme];
+    this.remoteItem?.setAttribute("aria-checked", String(this.config?.remoteImages ?? true));
   }
 
   /** "Open or drop a Markdown file", and the recent files under it. */

@@ -24,6 +24,13 @@ async function open(files: Record<string, string>, launch: string[]) {
 const press = (init: KeyboardEventInit) =>
   document.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, ...init }));
 const click = (el: Element | null) => (el as HTMLElement | null)?.click();
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+/** Gives an element the layout jsdom does not compute. */
+const layout = (el: Element, props: Record<string, number>) => {
+  for (const [name, value] of Object.entries(props)) {
+    Object.defineProperty(el, name, { configurable: true, value });
+  }
+};
 
 describe("reading tools", () => {
   it("test_outline_lists_headings_and_follows_reload", async () => {
@@ -58,6 +65,24 @@ describe("reading tools", () => {
     expect(panel?.hidden).toBe(true);
   });
 
+  it("test_outline_click_stays_current_until_reader_scrolls", async () => {
+    const { root } = await open({ "/n/a.md": "# One\n\n## Two\n\n## Three" }, ["/n/a.md"]);
+    press({ key: "b", ctrlKey: true });
+    const items = [...root.querySelectorAll<HTMLElement>(".outline-item")];
+    const canvas = root.querySelector(".canvas") as HTMLElement;
+    // Scrolled to the bottom, where the last section counts as current.
+    layout(canvas, { scrollTop: 400, clientHeight: 600, scrollHeight: 1000 });
+
+    click(items[0]);
+    canvas.dispatchEvent(new Event("scroll"));
+    expect(items[0].getAttribute("aria-current")).toBe("location");
+
+    canvas.dispatchEvent(new Event("wheel"));
+    canvas.dispatchEvent(new Event("scroll"));
+    expect(items[2].getAttribute("aria-current")).toBe("location");
+    expect(items[0].hasAttribute("aria-current")).toBe(false);
+  });
+
   it("test_zoom_keys_step_and_persist_default_zoom", async () => {
     const { root, state } = await open({ "/n/a.md": "# A" }, ["/n/a.md"]);
     const readout = () => root.querySelector(".bar .zoom")?.textContent;
@@ -68,7 +93,10 @@ describe("reading tools", () => {
     expect(scale()).toBe("1.1");
     press({ key: "+", ctrlKey: true, shiftKey: true });
     expect(readout()).toBe(strings.zoomPercent(125));
+    // The zoom last used becomes the default once the keys settle, in one write.
     await settle();
+    expect(state.config.defaultZoom).toBe(100);
+    await wait(600);
     expect(state.config.defaultZoom).toBe(125);
 
     for (let i = 0; i < 3; i++) press({ key: "-", ctrlKey: true });
@@ -81,6 +109,38 @@ describe("reading tools", () => {
     expect(stepZoom(133, -1)).toBe(125);
     expect(fitWidth(864)).toBe(100);
     expect(fitWidth(0)).toBe(50);
+  });
+
+  it("test_ctrl_9_fits_sheet_to_width", async () => {
+    const { root } = await open({ "/n/a.md": "# A" }, ["/n/a.md"]);
+    layout(root.querySelector(".canvas") as Element, { clientWidth: 1680 });
+    press({ key: "9", ctrlKey: true });
+    expect(root.querySelector(".bar .zoom")?.textContent).toBe(strings.zoomPercent(200));
+    expect(root.querySelector<HTMLElement>(".view")?.style.getPropertyValue("--zoom")).toBe("2");
+  });
+
+  it("test_remote_images_menu_toggles_setting", async () => {
+    const fake = fakeBackend({});
+    const root = document.createElement("div");
+    let reloads = 0;
+    const shell = new Shell(root, fake.backend, () => reloads++);
+    shells.push(shell);
+    await shell.start();
+    const item = root.querySelector<HTMLElement>(".menu-item[data-action=remoteImages]");
+    expect(item?.getAttribute("role")).toBe("menuitemcheckbox");
+    expect(item?.getAttribute("aria-checked")).toBe("true");
+
+    click(item);
+    await settle();
+    await settle();
+    expect(fake.state.config.remoteImages).toBe(false);
+    expect(item?.getAttribute("aria-checked")).toBe("false");
+
+    // Turning them back on reloads the window, as the narrowed CSP cannot be lifted.
+    click(item);
+    await settle();
+    expect(fake.state.config.remoteImages).toBe(true);
+    expect(reloads).toBe(1);
   });
 
   it("test_saved_zoom_and_theme_apply_at_start", async () => {
@@ -123,6 +183,9 @@ describe("reading tools", () => {
     input.value = "cat";
     input.dispatchEvent(new Event("input"));
     const count = () => root.querySelector(".find-count")?.textContent;
+    // Typing is debounced.
+    expect(root.querySelectorAll(".sheet mark.find-match")).toHaveLength(0);
+    await wait(150);
     expect(root.querySelectorAll(".sheet mark.find-match")).toHaveLength(4);
     expect(count()).toBe(strings.findCount(1, 4));
 
@@ -142,7 +205,14 @@ describe("reading tools", () => {
 
     input.value = "dog";
     input.dispatchEvent(new Event("input"));
+    await wait(150);
     expect(count()).toBe(strings.findNone);
+
+    // Enter straight after typing runs the search, then moves on.
+    input.value = "cat";
+    input.dispatchEvent(new Event("input"));
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter" }));
+    expect(count()).toBe(strings.findCount(2, 2));
 
     press({ key: "Escape" });
     expect(root.querySelector<HTMLElement>(".find")?.hidden).toBe(true);
@@ -154,11 +224,18 @@ describe("reading tools", () => {
     const root = document.createElement("div");
     root.innerHTML = "<p>a<b>ab</b>a</p><button>a</button><svg><text>a</text></svg>";
     const before = root.innerHTML;
-    expect(highlightMatches(root, "A")).toHaveLength(3);
-    expect(highlightMatches(root, "ab")).toHaveLength(1);
+    expect(highlightMatches(root, "A")).toEqual({ marks: expect.any(Array), more: false });
+    expect(highlightMatches(root, "A").marks).toHaveLength(3);
+    expect(highlightMatches(root, "ab").marks).toHaveLength(1);
+    // A capped search says there is more.
+    const capped = highlightMatches(root, "a", 2);
+    expect(capped.marks).toHaveLength(2);
+    expect(capped.more).toBe(true);
+    expect(root.querySelectorAll("mark")).toHaveLength(2);
+    expect(highlightMatches(root, "a", 3).more).toBe(false);
     clearMatches(root);
     expect(root.innerHTML).toBe(before);
-    expect(highlightMatches(root, "")).toEqual([]);
+    expect(highlightMatches(root, "").marks).toEqual([]);
   });
 
   it("test_ctrl_plus_matches_zoom_in", () => {

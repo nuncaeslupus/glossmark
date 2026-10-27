@@ -14,7 +14,6 @@ export const strings = {
     sectionNotFound: "That section is not in this document.",
     notMarkdown: "Only Markdown files open in Glossmark.",
     watchFailed: "Changes to this file will not be shown.",
-    settingsNotSaved: "Settings could not be saved.",
   },
   // One line at the top of a sheet that keeps showing the last version (live reload).
   fileNotices: {
@@ -43,6 +42,7 @@ export const strings = {
     findPrevious: "Previous match",
     findClose: "Close find",
     theme: "Theme",
+    remoteImages: "Load remote images",
     shortcuts: "Keyboard shortcuts",
   },
   // View › Theme shows the current choice; choosing it moves to the next.
@@ -54,6 +54,7 @@ export const strings = {
   outlineEmpty: "No headings",
   findPlaceholder: "Find in document",
   findCount: (current: number, total: number) => `${current} of ${total}`,
+  findCountMore: (current: number, total: number) => `${current} of ${total}+`,
   findNone: "No matches",
   shortcutsHint: "F1 or Esc closes this list.",
   // Glyphs on the bar buttons; their labels above are the tooltips.

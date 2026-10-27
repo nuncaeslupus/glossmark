@@ -5,11 +5,20 @@ const MATCH = "find-match";
 // copy buttons and the reload notice.
 const SKIP = "script, style, svg, button, .katex-mathml, .file-notice";
 
-/** Wraps each case-insensitive occurrence of `query` under `root` in `<mark class="find-match">`
- * and returns the marks in document order. Earlier matches are removed first. */
-export function highlightMatches(root: HTMLElement, query: string): HTMLElement[] {
+export interface Found {
+  /** The marks, in document order. */
+  marks: HTMLElement[];
+  /** Whether the search stopped at the limit with matches left. */
+  more: boolean;
+}
+
+/** Wraps each case-insensitive occurrence of `query` under `root` in `<mark class="find-match">`,
+ * at most `limit` of them, so a common word in a large document stays quick. Earlier matches
+ * are removed first. */
+export function highlightMatches(root: HTMLElement, query: string, limit = Infinity): Found {
   clearMatches(root);
-  if (!query) return [];
+  const marks: HTMLElement[] = [];
+  if (!query) return { marks, more: false };
   const doc = root.ownerDocument;
   const walker = doc.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
     acceptNode: (node) =>
@@ -18,7 +27,6 @@ export function highlightMatches(root: HTMLElement, query: string): HTMLElement[
   const nodes: Text[] = [];
   while (walker.nextNode()) nodes.push(walker.currentNode as Text);
 
-  const marks: HTMLElement[] = [];
   const needle = query.toLowerCase();
   for (const node of nodes) {
     // ponytail: a match must sit within one text node, so `foo **bar**` does not find "foo bar";
@@ -28,6 +36,7 @@ export function highlightMatches(root: HTMLElement, query: string): HTMLElement[
     let rest = node;
     let consumed = 0;
     for (let at = hay.indexOf(want); at >= 0; at = hay.indexOf(want, consumed)) {
+      if (marks.length === limit) return { marks, more: true };
       const match = rest.splitText(at - consumed);
       rest = match.splitText(want.length);
       const mark = doc.createElement("mark");
@@ -38,7 +47,7 @@ export function highlightMatches(root: HTMLElement, query: string): HTMLElement[
       consumed = at + want.length;
     }
   }
-  return marks;
+  return { marks, more: false };
 }
 
 /** Removes the marks `highlightMatches` added, leaving the text as it was. */

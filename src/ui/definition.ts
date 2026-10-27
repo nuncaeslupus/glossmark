@@ -72,6 +72,7 @@ export const actions: Record<ActionId, Action> = {
     needsDocument: true,
   },
   theme: { id: "theme", label: a.theme, key: "Ctrl+Shift+L" },
+  remoteImages: { id: "remoteImages", label: a.remoteImages, key: "Ctrl+Shift+M" },
   shortcuts: { id: "shortcuts", label: a.shortcuts, key: "F1" },
 };
 
@@ -106,7 +107,16 @@ export const menus: Menu[] = [
   {
     id: "view",
     label: strings.menus.view,
-    items: ["outline", "zoomIn", "zoomOut", "zoomReset", "fitWidth", "find", "theme"],
+    items: [
+      "outline",
+      "zoomIn",
+      "zoomOut",
+      "zoomReset",
+      "fitWidth",
+      "find",
+      "theme",
+      "remoteImages",
+    ],
   },
   { id: "go", label: strings.menus.go, items: ["back", "forward"] },
   { id: "help", label: strings.menus.help, items: ["shortcuts"] },
