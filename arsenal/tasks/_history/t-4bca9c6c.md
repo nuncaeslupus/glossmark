@@ -5,6 +5,7 @@ label: "Linux packaging"
 priority: 5
 deps: [t-c63c60f5]
 tags: [S-1]
+status: merged
 ---
 
 Linux packaging: `.desktop`, MIME association for `text/markdown`, icon, `.deb` and AppImage built in CI on every PR
