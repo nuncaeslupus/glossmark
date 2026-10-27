@@ -7,12 +7,14 @@ let count = 0;
 let mermaid: Mermaid | null = null;
 let loading: Promise<Mermaid> | null = null;
 let drawnDark = false;
+/** Set while printing: paper is light whatever the screen's theme. */
+let forPaper = false;
 // One draw at a time: `initialize` sets the theme for every `render` after it.
 let queue: Promise<void> = Promise.resolve();
 
 /** Whether the page is dark now: the theme sets `color-scheme` on the root. */
 function dark(): boolean {
-  return /dark/.test(getComputedStyle(document.documentElement).colorScheme);
+  return !forPaper && /dark/.test(getComputedStyle(document.documentElement).colorScheme);
 }
 
 function enqueue(work: () => Promise<void>): Promise<void> {
@@ -42,31 +44,47 @@ function initialize(m: Mermaid): void {
   });
 }
 
-/** Redraws every diagram when the page turns light or dark: Mermaid bakes its colours in. */
-function followTheme(): void {
-  const redraw = () => {
-    if (!mermaid || dark() === drawnDark) return;
-    const m = mermaid;
-    void enqueue(async () => {
-      initialize(m);
-      for (const figure of document.querySelectorAll<HTMLElement>(DRAWN)) {
-        try {
-          figure.innerHTML = await draw(m, figure.dataset.source ?? "");
-          figure.classList.remove("mermaid-error");
-        } catch (error) {
-          // The old drawing stays, in the other theme, so it is marked as a first draw's would be.
-          figure.classList.add("mermaid-error");
-          figure.title = String(error);
-          console.error(error);
-        }
+/** Redraws every diagram if the page turned light or dark since: Mermaid bakes its colours in. */
+function redraw(): Promise<void> {
+  if (!mermaid || dark() === drawnDark) return queue;
+  const m = mermaid;
+  return enqueue(async () => {
+    initialize(m);
+    for (const figure of document.querySelectorAll<HTMLElement>(DRAWN)) {
+      try {
+        figure.innerHTML = await draw(m, figure.dataset.source ?? "");
+        figure.classList.remove("mermaid-error");
+      } catch (error) {
+        // The old drawing stays, in the other theme, so it is marked as a first draw's would be.
+        figure.classList.add("mermaid-error");
+        figure.title = String(error);
+        console.error(error);
       }
-    });
-  };
-  new MutationObserver(redraw).observe(document.documentElement, {
+    }
+  });
+}
+
+function followTheme(): void {
+  new MutationObserver(() => void redraw()).observe(document.documentElement, {
     attributes: true,
     attributeFilter: ["data-theme"],
   });
-  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", redraw);
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => void redraw());
+}
+
+/** Redraws the diagrams light for paper until the print dialog closes. Mermaid draws
+ * asynchronously, so this is awaited before `print()`: `beforeprint` cannot wait. */
+export async function diagramsForPaper(): Promise<void> {
+  forPaper = true;
+  addEventListener(
+    "afterprint",
+    () => {
+      forPaper = false;
+      void redraw();
+    },
+    { once: true },
+  );
+  await redraw();
 }
 
 /** Replace each `mermaid` fence with its diagram, in the page's light or dark theme. Mermaid

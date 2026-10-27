@@ -1,5 +1,6 @@
 import { enhance } from "../render/enhance";
 import { blockRemoteImages, imagePolicy } from "../render/enhance/images";
+import { diagramsForPaper } from "../render/enhance/mermaid";
 import { inlineSvgs } from "../render/enhance/svg";
 import { render } from "../render/pipeline";
 import { sanitize } from "../render/sanitize";
@@ -104,7 +105,7 @@ export class Shell {
 
   private readonly handlers: Record<ActionId, () => void> = {
     open: () => void this.openDialog(),
-    print: () => window.print(),
+    print: () => void diagramsForPaper().then(() => window.print()),
     closeTab: () => this.active && this.close(this.active),
     outline: () => {
       this.outlineOpen = !this.outlineOpen;

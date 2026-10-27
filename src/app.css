@@ -14,8 +14,9 @@
   color-scheme: light;
 }
 
-/* View › Theme: System follows the OS; Light and Dark set `data-theme` on the root. */
-@media (prefers-color-scheme: dark) {
+/* View › Theme: System follows the OS; Light and Dark set `data-theme` on the root. Dark is for
+ * the screen only: paper is always light. */
+@media screen and (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --menu: #303134;
     --menu-ink: #e8eaed;
@@ -26,13 +27,15 @@
   }
 }
 
-:root[data-theme="dark"] {
-  --menu: #303134;
-  --menu-ink: #e8eaed;
-  --menu-hover: #45474a;
-  --match: #7a5c00;
-  --match-current: #c77700;
-  color-scheme: dark;
+@media screen {
+  :root[data-theme="dark"] {
+    --menu: #303134;
+    --menu-ink: #e8eaed;
+    --menu-hover: #45474a;
+    --match: #7a5c00;
+    --match-current: #c77700;
+    color-scheme: dark;
+  }
 }
 
 html,
@@ -409,37 +412,4 @@ mark.find-match.current {
 
 .recent-file:hover {
   text-decoration: underline;
-}
-
-@media print {
-  .tabs,
-  .bar,
-  .outline,
-  .shortcuts,
-  .file-notice,
-  .canvas[hidden] {
-    display: none;
-  }
-  mark.find-match {
-    background: none;
-  }
-  html,
-  body,
-  #app,
-  .view {
-    display: block;
-    height: auto;
-    background: none;
-  }
-  .canvas {
-    position: static;
-    overflow: visible;
-    padding: 0;
-  }
-  .sheet {
-    zoom: 1;
-    max-width: none;
-    padding: 0;
-    box-shadow: none;
-  }
 }

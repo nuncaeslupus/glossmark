@@ -35,8 +35,9 @@
   --hl-comment: #59636e;
 }
 
-/* Dark: View › Theme's System follows the OS; Light and Dark set `data-theme` on the root. */
-@media (prefers-color-scheme: dark) {
+/* Dark: View › Theme's System follows the OS; Light and Dark set `data-theme` on the root.
+ * Screen only: paper is always light (print.css). */
+@media screen and (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --canvas: #181818;
     --paper: #242424;
@@ -61,27 +62,29 @@
   }
 }
 
-:root[data-theme="dark"] {
-  --canvas: #181818;
-  --paper: #242424;
-  --ink: #e3e3e3;
-  --muted: #a3a3a3;
-  --link: #6cb6ff;
-  --rule: #3d3d3d;
-  --code-bg: #1c1c1c;
-  --highlight: #5c4a00;
-  --note: #4493f8;
-  --tip: #3fb950;
-  --important: #ab7df8;
-  --warning: #d29922;
-  --caution: #f85149;
-  --hl-keyword: #ff7b72;
-  --hl-title: #d2a8ff;
-  --hl-string: #a5d6ff;
-  --hl-number: #79c0ff;
-  --hl-built-in: #ffa657;
-  --hl-tag: #7ee787;
-  --hl-comment: #9198a1;
+@media screen {
+  :root[data-theme="dark"] {
+    --canvas: #181818;
+    --paper: #242424;
+    --ink: #e3e3e3;
+    --muted: #a3a3a3;
+    --link: #6cb6ff;
+    --rule: #3d3d3d;
+    --code-bg: #1c1c1c;
+    --highlight: #5c4a00;
+    --note: #4493f8;
+    --tip: #3fb950;
+    --important: #ab7df8;
+    --warning: #d29922;
+    --caution: #f85149;
+    --hl-keyword: #ff7b72;
+    --hl-title: #d2a8ff;
+    --hl-string: #a5d6ff;
+    --hl-number: #79c0ff;
+    --hl-built-in: #ffa657;
+    --hl-tag: #7ee787;
+    --hl-comment: #9198a1;
+  }
 }
 
 /* The page: a measure of about 70 characters inside the sheet's margins */
