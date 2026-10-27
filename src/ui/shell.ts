@@ -3,8 +3,9 @@ import { render } from "../render/pipeline";
 import { sanitize } from "../render/sanitize";
 import { strings } from "../strings";
 import { type ActionId, actions, bar, matchesKey, menus } from "./definition";
-import { type Backend, type Config, type Doc, errorMessage } from "./ipc";
+import { type Backend, type Config, type Doc, type DocumentChanged, errorMessage } from "./ipc";
 import { type Entry, findTarget, type Gesture, History, route } from "./links";
+import { restoreScroll, scrollAnchor, watchFile } from "./watch";
 
 const MAX_RECENT_FILES = 10;
 const NOTICE_MS = 6000;
@@ -17,10 +18,12 @@ interface Tab {
   /** The grey canvas that scrolls; each tab keeps its own, so switching keeps the scroll. */
   canvas: HTMLElement;
   sheet: HTMLElement;
-  /** Counts loads, so only the latest one fills the sheet. */
+  /** Counts loads and reloads, so only the latest request fills the sheet. */
   loads: number;
   /** The load in flight, or the last one. */
   loading: Promise<void>;
+  /** The path the tab watches, and how to stop; follows the file the tab shows. */
+  watched?: { path: string; stop: () => void };
 }
 
 const pathOf = (tab: Tab) => tab.history.current.path;
@@ -62,7 +65,7 @@ export class Shell {
   private dialogOpen = false;
   private disposed = false;
   private readonly listeners = new AbortController();
-  private unlisten: () => void = () => {};
+  private unlisten: (() => void)[] = [];
 
   // Actions without a handler are drawn disabled until their task lands (T12, T13).
   private readonly handlers: Partial<Record<ActionId, () => void>> = {
@@ -95,10 +98,15 @@ export class Shell {
 
   /** Listens for `open-files` first, so a second launch during startup is not lost. */
   async start(): Promise<void> {
-    const unlisten = await this.backend.onOpenFiles((paths) => {
-      if (!this.disposed) void this.openPaths(paths);
-    });
-    if (this.disposed) unlisten();
+    const unlisten = await Promise.all([
+      this.backend.onOpenFiles((paths) => {
+        if (!this.disposed) void this.openPaths(paths);
+      }),
+      this.backend.onDocumentChanged((change) => {
+        if (!this.disposed) this.onDocumentChanged(change);
+      }),
+    ]);
+    if (this.disposed) for (const stop of unlisten) stop();
     else this.unlisten = unlisten;
     this.config = await this.backend.getConfig().catch(() => {
       this.show(strings.notices.settingsUnavailable);
@@ -112,7 +120,8 @@ export class Shell {
   dispose(): void {
     this.disposed = true;
     this.listeners.abort();
-    this.unlisten();
+    for (const stop of this.unlisten) stop();
+    for (const tab of this.tabs) this.watch(tab, null);
     clearTimeout(this.noticeTimer);
   }
 
@@ -173,30 +182,41 @@ export class Shell {
   }
 
   /** `read_document` → render → sanitise → insert → enhance. Errors stay in the sheet, never a
-   * dialog. */
-  private load(tab: Tab): Promise<void> {
-    tab.loading = this.fill(tab);
+   * dialog. A reload keeps the reader's place and, if it fails, the last version. */
+  private load(tab: Tab, reload = false): Promise<void> {
+    tab.loading = this.fill(tab, reload);
     return tab.loading;
   }
 
-  private async fill(tab: Tab): Promise<void> {
+  private async fill(tab: Tab, reload: boolean): Promise<void> {
     const entry = tab.history.current;
+    // Orders overlapping reads by request, not by mtime: a coarse or older mtime still reloads.
     const seq = ++tab.loads;
-    // A tab closed, or moved on, while its read was in flight takes no result.
+    // A tab closed, moved on or reloaded again while its read was in flight takes no result.
     const live = () => !this.disposed && this.tabs.includes(tab) && tab.loads === seq;
     try {
       const doc = await this.read(entry);
       if (!live()) return;
+      const anchor = reload ? scrollAnchor(tab.canvas, tab.sheet) : undefined;
       tab.sheet.innerHTML = sanitize(render(doc.text));
       // ponytail: the outline it returns is unused until T13's outline panel.
       enhance(tab.sheet);
-      this.remember(doc.path);
-      // Back and forward return to where the user was; the fragment is for the first visit.
-      if (entry.fragment && !entry.visited) this.land(tab, entry.fragment);
-      else tab.canvas.scrollTop = entry.scroll;
-      entry.visited = true;
+      // ponytail: watching starts after a successful read, so a missing file adds no second
+      // notice; a save in the moment between the two is not seen.
+      this.watch(tab, entry.path);
+      if (anchor) {
+        restoreScroll(tab.canvas, tab.sheet, anchor);
+      } else {
+        this.remember(doc.path);
+        // Back and forward return to where the user was; the fragment is for the first visit.
+        if (entry.fragment && !entry.visited) this.land(tab, entry.fragment);
+        else tab.canvas.scrollTop = entry.scroll;
+        entry.visited = true;
+      }
     } catch (err) {
       if (!live()) return;
+      if (reload) return this.fileNotice(tab, strings.fileNotices.reloadFailed);
+      this.watch(tab, null);
       const box = h("div", "doc-error");
       box.append(h("p", "", strings.documentError), userText("p", "", errorMessage(err)));
       tab.sheet.replaceChildren(box);
@@ -249,6 +269,33 @@ export class Shell {
     else this.show(strings.notices.sectionNotFound);
   }
 
+  /** `document-changed`: every tab on the path reloads, or keeps its sheet if it was deleted. */
+  private onDocumentChanged(change: DocumentChanged): void {
+    for (const tab of this.tabs) {
+      // A tab still loading another file after navigating takes the change on its own load.
+      if (tab.watched?.path !== change.path || pathOf(tab) !== change.path) continue;
+      if (change.deleted) this.fileNotice(tab, strings.fileNotices.deleted);
+      else void this.load(tab, true);
+    }
+  }
+
+  /** A one-line notice at the top of the sheet, over the last version; the next render clears it. */
+  private fileNotice(tab: Tab, message: string): void {
+    tab.sheet.querySelector(":scope > .file-notice")?.remove();
+    const notice = h("p", "file-notice", message);
+    notice.setAttribute("role", "status");
+    tab.sheet.prepend(notice);
+  }
+
+  /** Moves the tab's watch to `path`, or ends it; the core counts watchers per path. */
+  private watch(tab: Tab, path: string | null): void {
+    if (tab.watched?.path === path) return;
+    tab.watched?.stop();
+    tab.watched = path
+      ? { path, stop: watchFile(this.backend, path, () => this.show(strings.notices.watchFailed)) }
+      : undefined;
+  }
+
   private remember(path: string): void {
     if (!this.config) return;
     const recent = [path, ...this.config.recentFiles.filter((p) => p !== path)];
@@ -299,6 +346,7 @@ export class Shell {
   private close(tab: Tab): void {
     const index = this.tabs.indexOf(tab);
     this.tabs.splice(index, 1);
+    this.watch(tab, null);
     tab.handle.remove();
     tab.canvas.remove();
     if (this.active === tab) this.active = this.tabs[Math.min(index, this.tabs.length - 1)] ?? null;

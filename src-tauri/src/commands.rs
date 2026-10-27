@@ -1,17 +1,15 @@
 use crate::config::{self, Config, UserCss};
-use crate::document::{self, Document, DocumentChanged};
+use crate::document::{self, Document};
 use crate::error::{ErrorKind, IpcError};
 use crate::external;
 use crate::scope::{self, Scope};
-use crate::watch::Registry;
+use crate::watch::{self, Registry};
 use notify_debouncer_mini::notify::{RecommendedWatcher, RecursiveMode};
-use notify_debouncer_mini::{new_debouncer, DebounceEventResult, Debouncer};
+use notify_debouncer_mini::Debouncer;
 use serde::Serialize;
-use std::collections::BTreeSet;
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, MutexGuard};
-use std::time::Duration;
 use tauri::{AppHandle, Emitter, Manager, Runtime, State};
 use tauri_plugin_dialog::{DialogExt, FilePath};
 use tauri_plugin_opener::OpenerExt;
@@ -38,24 +36,10 @@ impl AppState {
     pub fn new<R: Runtime>(app: &AppHandle<R>) -> Result<Self, Box<dyn std::error::Error>> {
         let config_dir = config::config_dir().ok_or("no config folder")?;
         let watched = Arc::new(Mutex::new(Registry::default()));
-        let (handle, registry) = (app.clone(), watched.clone());
-        let debouncer = new_debouncer(
-            Duration::from_millis(100),
-            move |res: DebounceEventResult| {
-                let Ok(events) = res else { return };
-                let paths: BTreeSet<PathBuf> = {
-                    let registry = lock(&registry);
-                    events
-                        .into_iter()
-                        .map(|e| e.path)
-                        .filter(|p| registry.contains(p))
-                        .collect()
-                };
-                for path in paths {
-                    let _ = handle.emit("document-changed", DocumentChanged::of(&path));
-                }
-            },
-        )?;
+        let handle = app.clone();
+        let debouncer = watch::debouncer(watched.clone(), move |changed| {
+            let _ = handle.emit("document-changed", changed);
+        })?;
 
         let mut scope = Scope::default();
         for recent in config::load(&config_dir.join("config.json")).recent_files {

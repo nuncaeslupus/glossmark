@@ -207,6 +207,15 @@ button:disabled {
   color: var(--muted);
 }
 
+.file-notice {
+  margin: 0 0 1.5rem;
+  padding: 6px 12px;
+  border-radius: 4px;
+  background: var(--canvas);
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
 /* Empty state */
 .empty {
   display: flex;
@@ -249,6 +258,7 @@ button:disabled {
 @media print {
   .tabs,
   .bar,
+  .file-notice,
   .canvas[hidden] {
     display: none;
   }

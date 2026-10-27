@@ -14,7 +14,7 @@ beforeEach(() => {
   calls.length = 0;
   vi.mocked(listen).mockImplementation(async (event, handler) => {
     calls.push(`listen ${event}`);
-    onOpenFiles = handler as typeof onOpenFiles;
+    if (event === "open-files") onOpenFiles = handler as typeof onOpenFiles;
     return () => {};
   });
   vi.mocked(invoke).mockImplementation(async (cmd, args) => {
@@ -53,7 +53,13 @@ describe("boot", () => {
   it("test_app_boot_listens_then_opens_launch_files", async () => {
     const root = document.createElement("div");
     await start(root);
-    expect(calls.slice(0, 3)).toEqual(["listen open-files", "get_config", "take_open_files"]);
+    expect(calls.slice(0, 4)).toEqual([
+      "listen open-files",
+      "listen document-changed",
+      "get_config",
+      "take_open_files",
+    ]);
+    expect(calls).toContain("watch");
     expect(root.querySelector(".sheet h1")?.textContent).toBe("/n/a.md");
 
     onOpenFiles({ payload: { paths: ["/n/b.md", "/n/a.md"] } });
