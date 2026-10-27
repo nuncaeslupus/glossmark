@@ -24,3 +24,11 @@ test("test_gfm_departs_from_commonmark_only_where_specified", () => {
     .map((t) => t.number);
   expect(differ).toEqual([170, 171, 172, 173, 176, 178, 608, 611, 612]);
 });
+
+test("test_gfm_autolink_edge_cases", () => {
+  const start = performance.now();
+  expect(render(`www.a.b${")".repeat(20000)}`)).toContain('href="http://www.a.b"');
+  expect(performance.now() - start).toBeLessThan(500);
+  expect(render(`x ${"www.".repeat(100)}`)).not.toContain("<a");
+  expect(render("- # [x] head")).not.toContain("<input");
+});

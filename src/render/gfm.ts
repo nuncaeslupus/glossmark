@@ -31,11 +31,14 @@ function matchUrl(s: string, i: number): string | null {
   let end = i + prefix[0].length + domain[0].length;
   while (end < s.length && !/[\s<]/.test(s[end])) end++;
   let link = s.slice(i, end);
+  let unbalanced = count(link, ")") - count(link, "(");
   for (;;) {
     const last = link[link.length - 1];
     if (TRAILING.has(last)) link = link.slice(0, -1);
-    else if (last === ")" && count(link, ")") > count(link, "(")) link = link.slice(0, -1);
-    else if (last === ";" && ENTITY_END.test(link)) link = link.replace(ENTITY_END, "");
+    else if (last === ")" && unbalanced > 0) {
+      link = link.slice(0, -1);
+      unbalanced--;
+    } else if (last === ";" && ENTITY_END.test(link)) link = link.replace(ENTITY_END, "");
     else return link;
   }
 }
@@ -73,7 +76,8 @@ function autolink(state: StateCore, md: MarkdownIt, token: Token): Token[] | nul
       text = matchEmail(s, i);
       href = text && `mailto:${text}`;
     }
-    if (!text || !href) continue;
+    // mdurl blanks a host over 255 characters; leave such text alone.
+    if (!text || !href || /^https?:\/\/$/.test(md.normalizeLink(href))) continue;
     if (i > from)
       out.push(Object.assign(new state.Token("text", "", 0), { content: s.slice(from, i) }));
     out.push(...linkTokens(state, md, text, href));
@@ -126,7 +130,9 @@ export function gfm(md: MarkdownIt): void {
     const tokens = state.tokens;
     for (let i = 2; i < tokens.length; i++) {
       const first = tokens[i].children?.[0];
-      if (tokens[i - 2].type !== "list_item_open" || first?.type !== "text") continue;
+      if (tokens[i - 2].type !== "list_item_open" || tokens[i - 1].type !== "paragraph_open")
+        continue;
+      if (first?.type !== "text") continue;
       const m = TASK.exec(first.content);
       if (!m) continue;
       const box = new state.Token("html_inline", "", 0);
