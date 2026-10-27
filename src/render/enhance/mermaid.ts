@@ -57,9 +57,13 @@ function load(): Promise<Mermaid> {
 
 /** Draws `source` with the page's current theme; throws when it does not parse. Mermaid
  * measures its drawing in the page: on a stage of its own, with layout contained, that never
- * lays out the document again. */
-async function draw(m: Mermaid, source: string, stage: HTMLElement): Promise<string> {
+ * lays out the document again. The stage is as wide as `spot`, where the drawing goes: a
+ * Gantt chart is laid out at its container's width, and one laid out wider is squashed. */
+async function draw(m: Mermaid, source: string, stage: HTMLElement, spot: HTMLElement) {
   const id = `glossmark-mermaid-${++count}`;
+  // A drawn spot in a hidden tab has no width: it keeps its drawing's.
+  const width = spot.clientWidth || spot.querySelector("svg")?.viewBox.baseVal.width;
+  stage.style.width = width ? `${width}px` : "";
   try {
     return (await m.render(id, source, stage)).svg;
   } catch (error) {
@@ -129,7 +133,7 @@ async function drawFence(m: Mermaid, pre: HTMLElement, stage: HTMLElement): Prom
     if (!pre.isConnected) return;
     const source = pre.querySelector("code")?.textContent ?? "";
     try {
-      const svg = await draw(m, source, stage);
+      const svg = await draw(m, source, stage, pre);
       const figure = document.createElement("div");
       figure.className = "mermaid";
       figure.dataset.source = source;
@@ -181,7 +185,7 @@ function redraw(): Promise<void> {
       () => figures.shift(),
       async (figure, stage) => {
         try {
-          figure.innerHTML = await draw(m, figure.dataset.source ?? "", stage);
+          figure.innerHTML = await draw(m, figure.dataset.source ?? "", stage, figure);
           figure.classList.remove("mermaid-error");
         } catch (error) {
           // The old drawing stays, in the other theme, so it is marked as a first draw's would be.
@@ -216,7 +220,8 @@ export async function diagramsForPaper(): Promise<() => void> {
   addEventListener("afterprint", back, { once: true });
   // Drawn ones first, so the pending ones are not drawn twice.
   await redraw();
-  for (const pre of pending.keys()) if (pre.isConnected) near.add(pre);
+  // Only the shown tab prints; the others' are drawn when they come near the view.
+  for (const pre of pending.keys()) if (pre.isConnected && pre.clientWidth) near.add(pre);
   if (near.size > 0) await drain();
   return back;
 }
