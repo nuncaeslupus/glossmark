@@ -3,34 +3,33 @@
 <!-- Written at session end. A new session reading this file can resume without
      additional context. -->
 
-## This session (local, 2026-10-27, second half)
+## This session (local, 2026-10-28)
 
-- **CI e2e** now runs in the Playwright container (#51).
-- **#50's squash dropped T17 work** → landed in #53.
-- **All eight PARITY gaps merged**: heading anchors (#54), img height (#55), sans-serif body
-  (#56), gantt width (#57), Git Issues chart size (#58), front matter rows (#59), copy
-  button (#60), Mermaid zoom/pan (#61, no pan arrows or fullscreen, D-11).
-- **Faster start-up** (t-c86fe6e8, #49) — claimed, **blocked on the owner**. 500 ms is out
-  of reach on WebKitGTK: ~335 ms of GTK/webview/web-process start-up runs before any app
-  code, and launch-to-read is ~490 alone (+~170 render). Breakdown and the four cuts tried
-  (none beat noise) are in the #49 comment and `tmp/t-c86fe6e8-notes.md`. Owner to rule:
-  accept a ~650 floor as a deviation, or re-scope. No PR.
+- **#49 start-up** closed at the ~650 ms WebKitGTK floor (owner-accepted deviation); perf
+  bounds loosened for CI (#65).
+- **Ideas I-24..I-29, I-38** explored → D-18..D-23, queued (#71) and all merged:
+  Find/Print Material icons (#72), Ctrl+Tab (#73), logo + icons + README hero (#74, owner
+  approved), one bar in three zones with ⋮ More (#75; owner: Print and ⋮ at the right edge,
+  Find in the centre next to zoom), Export PDF (#76).
+- Queue empty.
 
 ## What remains
 
-- #49 owner ruling (above).
-- Ideas I-24..I-29 and I-38 (logo + README hero image) in status/ideas.md, not queued.
+- README hero (`docs/hero.png`) shows the old toolbar; retake it to show the new bar.
+- Export to PDF is Linux-only; Windows/macOS return an error (D-4).
 
 ## Decisions taken
 
-- Mermaid is drawn lazily as it nears the view (D-16); T7 scope stays recursive (D-17).
-- WebKit perf budgets (T18) and first paint (T17) are gated at a floor above the measured
-  value — regression guards, looser than the spec metric (owner's calls).
-- First paint = launch-to-read (inotify OPEN on the doc) + WebKit render_ms_100KB.
-- Render boxes are 16 KB (`CHUNK_CHARS`).
+- D-19 as built: left ☰ title ←→ · centre − % + Find · right Export Print ⋮.
+- Export: the Save dialog runs in Rust; `export_pdf` writes only that dialog's last answer.
 
 ## Gotchas
 
+- GTK's file printer is named in the desktop's language: `glib::dgettext("gtk30", "Print to File")`.
+- No xdotool on this Wayland desktop: verify native flows with a temporary, uncommitted hook in
+  `main.rs` + `npm run tauri dev -- -- -- <file>`.
+- `open_task_pr.sh` from a spawned worktree session can push only the task archive (#74 did):
+  check `gh pr diff N --name-only` before trusting a worker's PR.
 - The shell is zsh: a variable holding newline-separated paths is ONE argv; list paths.
 - `gh pr edit` fails (Projects classic GraphQL); use
   `gh api -X PATCH repos/nuncaeslupus/glossmark/pulls/N -F body=@file`.
