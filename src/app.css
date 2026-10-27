@@ -10,10 +10,15 @@
   --menu: #fff;
   --menu-ink: #222;
   --menu-hover: #e8eaed;
+  --match: #fde68a;
+  --match-current: #f59e0b;
+  --outline-width: 260px;
+  color-scheme: light;
 }
 
+/* View › Theme: System follows the OS; Light and Dark set `data-theme` on the root. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --canvas: #1e1e1e;
     --paper: #2a2a2a;
     --ink: #ddd;
@@ -21,7 +26,23 @@
     --menu: #303134;
     --menu-ink: #e8eaed;
     --menu-hover: #45474a;
+    --match: #7a5c00;
+    --match-current: #c77700;
+    color-scheme: dark;
   }
+}
+
+:root[data-theme="dark"] {
+  --canvas: #1e1e1e;
+  --paper: #2a2a2a;
+  --ink: #ddd;
+  --muted: #999;
+  --menu: #303134;
+  --menu-ink: #e8eaed;
+  --menu-hover: #45474a;
+  --match: #7a5c00;
+  --match-current: #c77700;
+  color-scheme: dark;
 }
 
 html,
@@ -53,7 +74,9 @@ button:disabled {
 }
 
 .tabs[hidden],
-.empty[hidden] {
+.empty[hidden],
+.outline[hidden],
+.find[hidden] {
   display: none;
 }
 
@@ -104,6 +127,7 @@ button:disabled {
   color: var(--chrome-ink);
   font-size: 0.875rem;
   box-shadow: 0 1px 3px rgb(0 0 0 / 30%);
+  position: relative;
   z-index: 1;
 }
 
@@ -203,6 +227,139 @@ button:disabled {
   box-shadow: 0 1px 4px rgb(0 0 0 / 20%);
 }
 
+.view.with-outline .canvas {
+  left: var(--outline-width);
+}
+
+.sheet {
+  zoom: var(--zoom, 1);
+}
+
+/* Outline sidebar */
+.outline {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--outline-width);
+  box-sizing: border-box;
+  padding: 8px 0;
+  overflow: auto;
+  background: var(--chrome);
+  color: var(--chrome-ink);
+  font-size: 0.8125rem;
+}
+
+.outline ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.outline-item {
+  display: block;
+  width: 100%;
+  padding: 4px 12px 4px calc(12px + var(--depth, 0) * 12px);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  text-align: left;
+}
+
+.outline-item:hover,
+.outline-item.current {
+  background: var(--chrome-hover);
+}
+
+.outline-item.current {
+  box-shadow: inset 3px 0 var(--chrome-ink);
+}
+
+.outline-empty {
+  margin: 8px 12px;
+  opacity: 0.7;
+}
+
+/* Find, under the bar's right end */
+.find {
+  position: absolute;
+  top: 44px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  background: var(--menu);
+  color: var(--menu-ink);
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 30%);
+}
+
+.find-input {
+  width: 14rem;
+  padding: 4px 8px;
+  font: inherit;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--muted);
+  border-radius: 4px;
+}
+
+.find-count {
+  min-width: 5rem;
+  font-size: 0.8125rem;
+  text-align: center;
+  opacity: 0.7;
+}
+
+.find-button {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+}
+
+.find-button:hover:enabled {
+  background: var(--menu-hover);
+}
+
+mark.find-match {
+  color: inherit;
+  background: var(--match);
+}
+
+mark.find-match.current {
+  background: var(--match-current);
+}
+
+/* Help › Keyboard shortcuts: beside the page, not a dialog */
+.shortcuts {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 2;
+  max-height: calc(100% - 32px);
+  padding: 12px 20px;
+  overflow: auto;
+  box-sizing: border-box;
+  background: var(--menu);
+  color: var(--menu-ink);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 30%);
+  font-size: 0.875rem;
+}
+
+.shortcuts h2 {
+  margin: 0 0 8px;
+  font-size: 1rem;
+}
+
+.shortcuts td {
+  padding: 2px 16px 2px 0;
+}
+
+.shortcuts-hint {
+  margin: 8px 0 0;
+  opacity: 0.7;
+}
+
 .doc-error {
   color: var(--muted);
 }
@@ -258,9 +415,14 @@ button:disabled {
 @media print {
   .tabs,
   .bar,
+  .outline,
+  .shortcuts,
   .file-notice,
   .canvas[hidden] {
     display: none;
+  }
+  mark.find-match {
+    background: none;
   }
   html,
   body,
@@ -276,6 +438,7 @@ button:disabled {
     padding: 0;
   }
   .sheet {
+    zoom: 1;
     max-width: none;
     padding: 0;
     box-shadow: none;

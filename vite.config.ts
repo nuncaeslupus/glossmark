@@ -6,7 +6,10 @@ export default defineConfig(({ mode }) => ({
   clearScreen: false,
   server: { port: 1420, strictPort: true, watch: { ignored: ["**/src-tauri/**"] } },
   ...(mode === "e2e" && {
-    build: { outDir: "dist-e2e", rollupOptions: { input: "e2e/harness.html" } },
+    build: {
+      outDir: "dist-e2e",
+      rollupOptions: { input: ["e2e/harness.html", "e2e/shell.html"] },
+    },
     preview: { port: 4317, strictPort: true },
   }),
   test: { environment: "jsdom", exclude: [...configDefaults.exclude, "e2e/**", ".claude/**"] },

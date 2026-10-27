@@ -31,7 +31,7 @@ function uiText(el: Element, out: string[] = []): string[] {
 
 describe("strings (D-14)", () => {
   it("test_strings_all_ui_text_from_strings_file", async () => {
-    // The zoom readout is the one string built by a function at a fixed value until T13.
+    // The zoom readout is built by a function; at the default zoom it reads 100 %.
     const allowed = new Set([...stringValues(strings), strings.zoomPercent(100)]);
     const { backend, state } = fakeBackend({ "/n/a.md": "# A\n\n[x](https://a.org)" });
     state.config.recentFiles = ["/n/old.md"];
