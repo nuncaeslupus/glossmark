@@ -5,6 +5,7 @@ label: "Navigation"
 priority: 5
 deps: [t-36c4c149]
 tags: [S-1]
+status: merged
 ---
 
 Navigation: per-tab back/forward, `.md` links in place, Ctrl/middle-click new tab, `#anchors`, wiki-link resolution, external links to the OS
