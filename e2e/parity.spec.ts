@@ -95,3 +95,17 @@ test("issues image matches GitHub size", async ({ page }) => {
   expect(drawn / column).toBeGreaterThan(0.95);
   expect(drawn / natural).toBeGreaterThan(0.95);
 });
+
+test("copy button is always visible with the copy icon", async ({ page }) => {
+  // GitHub's two-squares icon, shown without hovering the block, and no text label.
+  await page.goto("/e2e/theme.html");
+  const copy = page.locator(".sheet .code-block > .copy").first();
+  await expect(copy).toHaveCSS("opacity", "1");
+  const icon = await copy.evaluate((b) => {
+    const s = getComputedStyle(b, "::before");
+    return { content: s.content, mask: s.maskImage || s.webkitMaskImage };
+  });
+  expect(icon.content).not.toContain("Copy");
+  // The Octicons "copy" path, not a check or a text label.
+  expect(icon.mask).toContain("M0 6.75");
+});

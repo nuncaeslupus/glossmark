@@ -31,8 +31,12 @@ function copyButton(source: string): HTMLButtonElement {
   const button = document.createElement("button");
   button.type = "button";
   button.className = "copy";
-  // The label is drawn from `aria-label` in CSS, so it never shows up in find or a text copy.
-  const label = (text: string) => button.setAttribute("aria-label", text);
+  // An icon, labelled by attributes only, so the label never shows up in find or a text copy.
+  const label = (text: string) => {
+    button.setAttribute("aria-label", text);
+    button.title = text;
+    button.classList.toggle("done", text === strings.copied);
+  };
   label(strings.copyCode);
   button.addEventListener("click", async () => {
     try {

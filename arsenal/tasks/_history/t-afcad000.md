@@ -4,6 +4,7 @@ title: "Copy button: GitHub's icon, always visible"
 label: "GitHub-style copy button"
 priority: 10
 tags: [PARITY]
+status: merged
 ---
 
 Use GitHub's two-squares copy icon (Octicons copy) on code blocks, and show the button always rather than on hover. (Owner's GitHub parity review during T17, status/ideas.md I-35.)

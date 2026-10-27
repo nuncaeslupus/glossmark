@@ -32,6 +32,8 @@ test("test_copy_button_reports_success_and_failure", async () => {
   button?.click();
   await vi.waitFor(() => expect(button?.getAttribute("aria-label")).toBe(strings.copied));
   expect(writeText).toHaveBeenCalledWith("let a = 1;\n");
+  expect(button?.classList.contains("done")).toBe(true);
   button?.click();
   await vi.waitFor(() => expect(button?.getAttribute("aria-label")).toBe(strings.copyFailed));
+  expect(button?.classList.contains("done")).toBe(false);
 });
