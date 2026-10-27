@@ -1,5 +1,7 @@
 const FENCES = "pre > code.language-mermaid";
 const DRAWN = ".mermaid[data-source]";
+// A Mermaid fence in Markdown source, found before it is parsed.
+const SOURCE_FENCE = /^ {0,3}(?:`{3,}|~{3,})\s*mermaid\b/m;
 
 type Mermaid = typeof import("mermaid")["default"];
 
@@ -12,6 +14,13 @@ let forPaper = false;
 // One draw at a time: `initialize` sets the theme for every `render` after it.
 let queue: Promise<void> = Promise.resolve();
 
+const nextFrame = () =>
+  new Promise<void>((resolve) =>
+    typeof requestAnimationFrame === "function"
+      ? requestAnimationFrame(() => resolve())
+      : setTimeout(resolve, 0),
+  );
+
 /** Whether the page is dark now: the theme sets `color-scheme` on the root. */
 function dark(): boolean {
   return !forPaper && /dark/.test(getComputedStyle(document.documentElement).colorScheme);
@@ -22,14 +31,45 @@ function enqueue(work: () => Promise<void>): Promise<void> {
   return queue;
 }
 
+function load(): Promise<Mermaid> {
+  loading ??= import("mermaid").then(({ default: loaded }) => {
+    mermaid = loaded;
+    followTheme();
+    return loaded;
+  });
+  return loading;
+}
+
+/** Start loading Mermaid if `source` has a diagram, while the UI thread waits on the parse. */
+export function preloadMermaid(source: string): void {
+  if (SOURCE_FENCE.test(source)) load().catch(() => {});
+}
+
+/** Draws each item in turn, one per frame, so a document with many never freezes the window.
+ * Mermaid measures its drawing in the page: on a stage of its own, with layout contained,
+ * that never lays out the document again. */
+async function drawEach<T>(items: T[], each: (item: T, stage: HTMLElement) => Promise<void>) {
+  const stage = document.createElement("div");
+  stage.className = "mermaid-stage";
+  document.body.append(stage);
+  try {
+    for (const [i, item] of items.entries()) {
+      if (i > 0) await nextFrame();
+      await each(item, stage);
+    }
+  } finally {
+    stage.remove();
+  }
+}
+
 /** Draws `source` with the page's current theme; throws when it does not parse. */
-async function draw(m: Mermaid, source: string): Promise<string> {
+async function draw(m: Mermaid, source: string, stage: HTMLElement): Promise<string> {
   const id = `glossmark-mermaid-${++count}`;
   try {
-    return (await m.render(id, source)).svg;
+    return (await m.render(id, source, stage)).svg;
   } catch (error) {
-    // Mermaid draws in a temporary element on `body`; a failed draw can leave it behind.
-    for (const tmp of [`d${id}`, id]) document.getElementById(tmp)?.remove();
+    // A failed draw can leave Mermaid's temporary element behind.
+    stage.replaceChildren();
     throw error;
   }
 }
@@ -50,9 +90,10 @@ function redraw(): Promise<void> {
   const m = mermaid;
   return enqueue(async () => {
     initialize(m);
-    for (const figure of document.querySelectorAll<HTMLElement>(DRAWN)) {
+    const figures = [...document.querySelectorAll<HTMLElement>(DRAWN)];
+    await drawEach(figures, async (figure, stage) => {
       try {
-        figure.innerHTML = await draw(m, figure.dataset.source ?? "");
+        figure.innerHTML = await draw(m, figure.dataset.source ?? "", stage);
         figure.classList.remove("mermaid-error");
       } catch (error) {
         // The old drawing stays, in the other theme, so it is marked as a first draw's would be.
@@ -60,7 +101,7 @@ function redraw(): Promise<void> {
         figure.title = String(error);
         console.error(error);
       }
-    }
+    });
   });
 }
 
@@ -94,20 +135,15 @@ export async function diagramsForPaper(): Promise<() => void> {
 export async function renderMermaid(root: ParentNode): Promise<void> {
   const fences = [...root.querySelectorAll<HTMLElement>(FENCES)];
   if (fences.length === 0) return;
-  loading ??= import("mermaid").then(({ default: loaded }) => {
-    mermaid = loaded;
-    followTheme();
-    return loaded;
-  });
-  const m = await loading;
+  const m = await load();
   return enqueue(async () => {
     initialize(m);
-    for (const code of fences) {
+    await drawEach(fences, async (code, stage) => {
       const pre = code.parentElement;
-      if (!pre) continue;
+      if (!pre) return;
       const source = code.textContent ?? "";
       try {
-        const svg = await draw(m, source);
+        const svg = await draw(m, source, stage);
         const figure = document.createElement("div");
         figure.className = "mermaid";
         figure.dataset.source = source;
@@ -117,6 +153,6 @@ export async function renderMermaid(root: ParentNode): Promise<void> {
         pre.classList.add("mermaid-error");
         pre.title = String(error);
       }
-    }
+    });
   });
 }

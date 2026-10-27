@@ -1,5 +1,6 @@
 // Link routing and per-tab history (D-8). Pure: the shell performs what `route` returns.
 import { ID_PREFIX, Slugger } from "../render/enhance/slug";
+import type { ScrollAnchor } from "./watch";
 
 export type LinkKind = "external" | "fragment" | "markdown" | "wiki" | "file";
 
@@ -18,6 +19,8 @@ export interface Entry {
   fragment: string;
   /** The canvas's scroll offset when the user left this entry. */
   scroll: number;
+  /** The same place by the heading at the top; back and forward prefer it to `scroll`. */
+  anchor?: ScrollAnchor;
   /** Other files a wiki link may mean, tried in order when `path` is not found. */
   alternates?: string[];
   /** Set once loaded; back and forward then restore `scroll` instead of the fragment. */
