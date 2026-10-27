@@ -117,8 +117,9 @@ pub fn take_open_files(state: State<'_, AppState>) -> OpenFiles {
 
 #[tauri::command]
 pub async fn read_document(path: String, state: State<'_, AppState>) -> Result<Document, IpcError> {
-    let scope = lock(&state.scope);
-    document::read_document(&scope, Path::new(&path))
+    // The scope lock covers only the check; the read itself runs without it.
+    let path = lock(&state.scope).check_document(Path::new(&path))?;
+    document::read_file(&path)
 }
 
 #[tauri::command]

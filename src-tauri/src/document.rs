@@ -1,5 +1,4 @@
 use crate::error::{ErrorKind, IpcError};
-use crate::scope::Scope;
 use serde::Serialize;
 use std::ffi::OsStr;
 use std::fs;
@@ -36,16 +35,29 @@ impl DocumentChanged {
     }
 }
 
-pub fn read_document(scope: &Scope, path: &Path) -> Result<Document, IpcError> {
-    let path = scope.check_document(path)?;
-    let meta = fs::metadata(&path).map_err(|e| IpcError::from_io(&e, &path))?;
+/// Checks `path` against `scope`, then reads it (the command takes the scope lock for the check only).
+#[cfg(test)]
+pub fn read_document(scope: &crate::scope::Scope, path: &Path) -> Result<Document, IpcError> {
+    read_file(&scope.check_document(path)?)
+}
+
+/// Reads a path already checked against the scope. Only regular files are read: a FIFO or
+/// device would pass the size cap and then block the read forever.
+pub fn read_file(path: &Path) -> Result<Document, IpcError> {
+    let meta = fs::metadata(path).map_err(|e| IpcError::from_io(&e, path))?;
+    if !meta.is_file() {
+        return Err(IpcError::new(
+            ErrorKind::NotPermitted,
+            format!("{} is not a regular file", path.display()),
+        ));
+    }
     if meta.len() > MAX_DOCUMENT_BYTES {
         return Err(IpcError::new(
             ErrorKind::TooLarge,
             format!("{} is over 20 MB", path.display()),
         ));
     }
-    let bytes = fs::read(&path).map_err(|e| IpcError::from_io(&e, &path))?;
+    let bytes = fs::read(path).map_err(|e| IpcError::from_io(&e, path))?;
     Ok(Document {
         path: path.display().to_string(),
         text: String::from_utf8_lossy(&bytes).into_owned(),
@@ -77,6 +89,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::scope::Scope;
 
     #[test]
     fn test_read_document_decodes_invalid_utf8_lossily_and_caps_size() {
@@ -95,6 +108,24 @@ mod tests {
         assert_eq!(
             read_document(&scope, &big).unwrap_err().kind,
             ErrorKind::TooLarge
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn test_read_document_refuses_non_regular_files() {
+        let dir = tempfile::tempdir().unwrap();
+        let fifo = dir.path().join("pipe.md");
+        let status = std::process::Command::new("mkfifo")
+            .arg(&fifo)
+            .status()
+            .unwrap();
+        assert!(status.success());
+        let mut scope = Scope::default();
+        scope.allow(&dir.path().join("a.md")).unwrap();
+        assert_eq!(
+            read_document(&scope, &fifo).unwrap_err().kind,
+            ErrorKind::NotPermitted
         );
     }
 

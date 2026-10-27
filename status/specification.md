@@ -244,6 +244,10 @@ tab's sheet, never a dialog (D-11).
 
 ### API contracts
 
+#### Command `take_open_files()`
+
+- **Request**: none; **Response**: `{"paths": ["/abs/a.md", "/abs/b.md"]}`, the files of the app's own launch (CLI arguments, file association), already in scope. The frontend calls it once at startup; a second call returns `{"paths": []}`. Files from a second launch arrive through `open-files`, and dropped files through the drag-drop event.
+
 #### Command `read_document(path: string)`
 
 - **Auth**: internal only. `path` must be a file the user opened (CLI, Open dialog, drop, file
@@ -252,7 +256,7 @@ tab's sheet, never a dialog (D-11).
 - **Request**: `{"path": "/home/u/notes/readme.md"}`
 - **Response**: `{"path": "/home/u/notes/readme.md", "text": "# Title\n…", "mtime_ms": 1792000000000}`.
   Invalid UTF-8 is decoded lossily (U+FFFD), not refused.
-- **Errors**: `not_found`, `not_permitted`, `too_large` (over 20 MB), `io`.
+- **Errors**: `not_found`, `not_permitted` (also for anything that is not a regular file, such as a FIFO), `too_large` (over 20 MB), `io`.
 - **Backwards compatible**: n/a (new).
 
 #### Command `read_svg(path: string)`
@@ -269,7 +273,7 @@ tab's sheet, never a dialog (D-11).
 
 #### Event `open-files`
 
-- **Payload**: `{"paths": ["/abs/a.md", "/abs/b.md"]}`, emitted for CLI arguments, a second launch (single instance), and the file association. Each path opens in a new tab; already-open paths are focused. Drag-and-drop arrives through Tauri's own drag-drop event and goes through the same handler.
+- **Payload**: `{"paths": ["/abs/a.md", "/abs/b.md"]}`, emitted for a second launch (single instance); the app's own launch files come from `take_open_files`. Each path opens in a new tab; already-open paths are focused. Drag-and-drop arrives through Tauri's own drag-drop event and goes through the same handler.
 
 #### Commands `get_config()` / `set_config(config)`
 
@@ -280,7 +284,7 @@ tab's sheet, never a dialog (D-11).
   ```
   `theme` is `system` | `light` | `dark`; `defaultZoom` is 50–300; `recentFiles` holds at most 10 entries, newest first.
   Those are the three settings (`settings <= 4`). Window size and position come from
-  `tauri-plugin-window-state`, not this file. An unreadable or unknown-version file is renamed `config.json.bak` and the defaults are used.
+  `tauri-plugin-window-state`, not this file. A file that does not parse or has an unknown version is renamed `config.json.bak` (or `config.json.1.bak`, … so no earlier backup is overwritten) and the defaults are used; a file that cannot be read is left in place and the defaults are used.
 
 #### Command `read_user_css()`
 
@@ -288,13 +292,13 @@ tab's sheet, never a dialog (D-11).
 
 #### Command `open_external(url: string)`
 
-- Opens `http:`, `https:` and `mailto:` URLs in the system handler (`tauri-plugin-opener`); other schemes are `not_permitted`.
+- Opens `http:`, `https:` and `mailto:` URLs in the system handler (`tauri-plugin-opener`); other schemes are `not_permitted`. A `mailto:` URL keeps only its `subject`, `body`, `cc` and `bcc` query fields (no `attach=`).
 
 ### Inter-service contracts
 
 | Caller | Callee | Protocol | Contract | Failure handling |
 |--------|--------|----------|----------|-----------------|
-| Web frontend | Rust core | Tauri IPC command | `read_document`, `read_svg`, `watch`, `unwatch`, `get_config`, `set_config`, `read_user_css`, `open_external` | `IpcError` rendered in the tab, no dialog |
+| Web frontend | Rust core | Tauri IPC command | `take_open_files`, `read_document`, `read_svg`, `watch`, `unwatch`, `get_config`, `set_config`, `read_user_css`, `open_external` | `IpcError` rendered in the tab, no dialog |
 | Rust core | Web frontend | Tauri IPC event | `open-files`, `document-changed` | Frontend ignores events for paths with no tab |
 | Web frontend | Local images | Tauri asset protocol (`convertFileSrc`) | Scope widened at runtime to the folder of each opened document | Broken-image placeholder |
 | Web frontend | Remote images | HTTPS from the webview | Allowed only when `remoteImages` is true; CSP `img-src` is rebuilt on change | Broken-image placeholder |

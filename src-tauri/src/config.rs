@@ -57,17 +57,28 @@ pub fn config_dir() -> Option<PathBuf> {
     dirs::config_dir().map(|d| d.join("glossmark"))
 }
 
-/// Reads the config; a missing file gives the defaults, and an unreadable or unknown-version
-/// file is renamed `config.json.bak` first.
+/// Reads the config. A missing or unreadable file gives the defaults and is left alone; a file
+/// that does not parse, or has an unknown version, is moved aside to a fresh backup first.
 pub fn load(path: &Path) -> Config {
-    let text = match fs::read_to_string(path) {
-        Err(e) if e.kind() == io::ErrorKind::NotFound => return Config::default(),
-        read => read.ok(),
+    let Ok(text) = fs::read_to_string(path) else {
+        return Config::default();
     };
-    text.as_deref().and_then(parse).unwrap_or_else(|| {
-        let _ = fs::rename(path, path.with_extension("json.bak"));
+    parse(&text).unwrap_or_else(|| {
+        if let Some(bak) = free_backup(path) {
+            let _ = fs::rename(path, bak);
+        }
         Config::default()
     })
+}
+
+/// `config.json.bak`, or `config.json.1.bak`, `config.json.2.bak`, … if that is taken.
+fn free_backup(path: &Path) -> Option<PathBuf> {
+    (0..1000)
+        .map(|n| match n {
+            0 => path.with_extension("json.bak"),
+            n => path.with_extension(format!("json.{n}.bak")),
+        })
+        .find(|p| fs::symlink_metadata(p).is_err())
 }
 
 fn parse(text: &str) -> Option<Config> {
@@ -109,16 +120,32 @@ mod tests {
     fn test_config_unknown_version_falls_back_to_defaults() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("config.json");
-        let bak = dir.path().join("config.json.bak");
 
         assert_eq!(load(&path), Config::default());
 
-        for text in [r#"{"version": 2, "theme": "dark"}"#, "{not json", "{}"] {
+        let texts = [r#"{"version": 2, "theme": "dark"}"#, "{not json", "{}"];
+        for text in texts {
             fs::write(&path, text).unwrap();
             assert_eq!(load(&path), Config::default(), "{text}");
             assert!(!path.exists());
-            assert_eq!(fs::read_to_string(&bak).unwrap(), text);
         }
+        // Each bad file gets its own backup; none is overwritten.
+        for (bak, text) in ["config.json.bak", "config.json.1.bak", "config.json.2.bak"]
+            .iter()
+            .zip(texts)
+        {
+            assert_eq!(fs::read_to_string(dir.path().join(bak)).unwrap(), text);
+        }
+    }
+
+    #[test]
+    fn test_config_read_error_keeps_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("config.json");
+        fs::create_dir(&path).unwrap(); // EISDIR on read
+        assert_eq!(load(&path), Config::default());
+        assert!(path.is_dir());
+        assert!(!dir.path().join("config.json.bak").exists());
     }
 
     #[test]
