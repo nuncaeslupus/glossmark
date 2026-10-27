@@ -26,4 +26,7 @@ tmp/.arsenal-sessions/
 # Build output
 node_modules/
 dist/
+dist-e2e/
+test-results/
+playwright-report/
 __pycache__/

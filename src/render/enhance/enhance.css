@@ -1,0 +1,44 @@
+/* Structural styles for the enhancers; colours and type belong to the theme (T9). */
+
+.code-block {
+  position: relative;
+}
+
+.code-block > .copy {
+  position: absolute;
+  top: 0.5em;
+  right: 0.5em;
+  font: inherit;
+  font-size: 0.75em;
+  cursor: pointer;
+  opacity: 0;
+}
+
+.code-block > .copy::before {
+  content: attr(aria-label);
+}
+
+.code-block:hover > .copy,
+.code-block > .copy:focus-visible {
+  opacity: 1;
+}
+
+:is(h1, h2, h3, h4, h5, h6) > .anchor {
+  margin-left: -1em;
+  padding-right: 0.25em;
+  text-decoration: none;
+  visibility: hidden;
+}
+
+.anchor::before {
+  content: "#";
+}
+
+:is(h1, h2, h3, h4, h5, h6):hover > .anchor,
+.anchor:focus-visible {
+  visibility: visible;
+}
+
+.mermaid {
+  text-align: center;
+}

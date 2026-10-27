@@ -106,3 +106,20 @@ jobs:
             src-tauri/target/release/bundle/deb/*.deb
             src-tauri/target/release/bundle/appimage/*.AppImage
           retention-days: 7
+
+  # The render pipeline in real browsers: WebKit (the app's engine family) and Chromium.
+  e2e:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: sudo rm -f /var/lib/man-db/auto-update
+      - timeout-minutes: 10
+        run: npx playwright install --with-deps webkit chromium
+      - run: npm run build
+      - run: npm run test:e2e
