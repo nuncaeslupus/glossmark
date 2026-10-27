@@ -5,12 +5,21 @@ import { render } from "../render/pipeline";
 import { sanitize } from "../render/sanitize";
 import { strings } from "../strings";
 import { type ActionId, actions, bar, matchesKey, menus } from "./definition";
+import { clearMatches, highlightMatches } from "./find";
 import { type Backend, type Config, type Doc, type DocumentChanged, errorMessage } from "./ipc";
 import { type Entry, findTarget, type Gesture, History, route } from "./links";
+import { currentSection, type Section, sections } from "./outline";
 import { restoreScroll, scrollAnchor, watchFile } from "./watch";
+import { clampZoom, fitWidth, stepZoom } from "./zoom";
 
 const MAX_RECENT_FILES = 10;
 const NOTICE_MS = 6000;
+const THEMES = ["system", "light", "dark"] as const;
+const FIND_DEBOUNCE_MS = 100;
+/** Find stops marking here, so a common word in a large document stays quick. */
+const FIND_LIMIT = 1000;
+/** Zoom keys come in bursts; the level is saved once the reader settles on it. */
+const ZOOM_SAVE_MS = 500;
 
 interface Tab {
   history: History;
@@ -20,6 +29,8 @@ interface Tab {
   /** The grey canvas that scrolls; each tab keeps its own, so switching keeps the scroll. */
   canvas: HTMLElement;
   sheet: HTMLElement;
+  /** The outline of what the sheet shows. */
+  sections: Section[];
   /** Counts loads and reloads, so only the latest request fills the sheet. */
   loads: number;
   /** The load in flight, or the last one. */
@@ -63,19 +74,59 @@ export class Shell {
   private readonly title = userText("span", "title", "");
   private readonly menuBar = h("div", "menus");
   private readonly notice = h("span", "notice");
+  private readonly zoomReadout = h("span", "zoom");
+  private readonly outlinePanel = h("nav", "outline");
+  private outlineOpen = false;
+  /** The sections the outline panel lists, so it is redrawn only when they change. */
+  private drawnSections: Section[] | null = null;
+  private readonly findBox = h("div", "find");
+  private readonly findInput = h("input", "find-input");
+  private readonly findCount = h("span", "find-count");
+  /** Find in page: the sheet holding the marks, the marks, and the current one. */
+  private found = { open: false, root: null as HTMLElement | null, marks: [] as HTMLElement[] };
+  private foundIndex = -1;
+  private foundMore = false;
+  private findTimer: ReturnType<typeof setTimeout> | undefined;
+  /** After a click in the outline, the clicked entry stays current until the reader scrolls. */
+  private sectionHeld = false;
+  private saveTimer: ReturnType<typeof setTimeout> | undefined;
+  private remoteItem: HTMLElement | null = null;
+  private shortcutsPanel: HTMLElement | null = null;
+  private themeItem: HTMLElement | null = null;
+  private theme: Config["theme"] = "system";
+  private zoom = 100;
   private noticeTimer: ReturnType<typeof setTimeout> | undefined;
   private dialogOpen = false;
   private disposed = false;
   private readonly listeners = new AbortController();
   private unlisten: (() => void)[] = [];
 
-  // Actions without a handler are drawn disabled until their task lands (T12, T13).
-  private readonly handlers: Partial<Record<ActionId, () => void>> = {
+  private readonly handlers: Record<ActionId, () => void> = {
     open: () => void this.openDialog(),
     print: () => window.print(),
     closeTab: () => this.active && this.close(this.active),
+    outline: () => {
+      this.outlineOpen = !this.outlineOpen;
+      this.update();
+    },
     back: () => this.active && this.go(this.active, "back"),
     forward: () => this.active && this.go(this.active, "forward"),
+    zoomOut: () => this.setZoom(stepZoom(this.zoom, -1)),
+    zoomIn: () => this.setZoom(stepZoom(this.zoom, 1)),
+    zoomReset: () => this.setZoom(100),
+    fitWidth: () => this.active && this.setZoom(fitWidth(this.active.canvas.clientWidth)),
+    find: () => this.openFind(),
+    findNext: () => this.stepFind(1),
+    findPrevious: () => this.stepFind(-1),
+    findClose: () => this.closeFind(),
+    theme: () => {
+      this.theme = THEMES[(THEMES.indexOf(this.theme) + 1) % THEMES.length];
+      this.saveSettings();
+    },
+    remoteImages: () => {
+      void this.setRemoteImages(!(this.config?.remoteImages ?? true)).then(() => this.update());
+    },
+    shortcuts: () => this.toggleShortcuts(),
   };
 
   constructor(
@@ -84,7 +135,8 @@ export class Shell {
     private readonly reloadWindow: () => void = () => location.reload(),
   ) {
     this.tabStrip.setAttribute("role", "tablist");
-    this.view.append(this.empty);
+    this.outlinePanel.setAttribute("aria-label", strings.actions.outline);
+    this.view.append(this.empty, this.outlinePanel);
     root.replaceChildren(this.tabStrip, this.buildBar(), this.view);
     this.notice.setAttribute("role", "status");
     const signal = this.listeners.signal;
@@ -117,6 +169,10 @@ export class Shell {
     });
     // Before any document is inserted; config unread means the default, remote images on.
     if (this.config?.remoteImages === false) blockRemoteImages(this.root.ownerDocument);
+    if (this.config) {
+      this.theme = THEMES.includes(this.config.theme) ? this.config.theme : "system";
+      this.zoom = clampZoom(this.config.defaultZoom);
+    }
     this.update();
     await this.openPaths(await this.backend.takeOpenFiles());
   }
@@ -128,6 +184,8 @@ export class Shell {
     for (const stop of this.unlisten) stop();
     for (const tab of this.tabs) this.watch(tab, null);
     clearTimeout(this.noticeTimer);
+    clearTimeout(this.findTimer);
+    if (this.saveTimer !== undefined) this.writeSettings();
   }
 
   /** A one-line message in the bar that fades on its own: never a dialog (D-11). */
@@ -229,8 +287,7 @@ export class Shell {
         render(doc.text),
         imagePolicy(doc.path, remoteImages, (path) => imageUrl(path)),
       );
-      // ponytail: the outline it returns is unused until T13's outline panel.
-      enhance(tab.sheet);
+      const { outline } = enhance(tab.sheet);
       // Before the scroll is restored, since inlined SVGs take their own height.
       await inlineSvgs(
         tab.sheet,
@@ -238,6 +295,8 @@ export class Shell {
         (path) => imageUrl(path),
       );
       if (!live()) return;
+      tab.sections = sections(tab.sheet, outline);
+      if (this.found.root === tab.sheet) this.runFind(false);
       // ponytail: watching starts after a successful read, so a missing file adds no second
       // notice; a save in the moment between the two is not seen.
       this.watch(tab, entry.path);
@@ -254,6 +313,7 @@ export class Shell {
       if (!live()) return;
       if (reload) return this.fileNotice(tab, strings.fileNotices.reloadFailed);
       this.watch(tab, null);
+      tab.sections = [];
       const box = h("div", "doc-error");
       box.append(h("p", "", strings.documentError), userText("p", "", errorMessage(err)));
       tab.sheet.replaceChildren(box);
@@ -333,6 +393,175 @@ export class Shell {
       : undefined;
   }
 
+  /** Theme and zoom: applied at once, kept in the config (when it could be read) after `delay`.
+   * The zoom last used is the default zoom: with no settings dialog (D-11), it is how one is set. */
+  private saveSettings(delay = 0): void {
+    this.update();
+    clearTimeout(this.saveTimer);
+    this.saveTimer = setTimeout(() => this.writeSettings(), delay);
+  }
+
+  private writeSettings(): void {
+    clearTimeout(this.saveTimer);
+    this.saveTimer = undefined;
+    if (!this.config) return;
+    this.config = { ...this.config, theme: this.theme, defaultZoom: this.zoom };
+    void this.backend
+      .setConfig(this.config)
+      .catch(() => this.show(strings.notices.settingNotSaved));
+  }
+
+  /** Zooms the sheets; the active tab keeps the heading the reader is at. */
+  private setZoom(percent: number): void {
+    const tab = this.active;
+    const anchor = tab && scrollAnchor(tab.canvas, tab.sheet);
+    this.zoom = clampZoom(percent);
+    this.saveSettings(ZOOM_SAVE_MS);
+    if (tab && anchor) restoreScroll(tab.canvas, tab.sheet, anchor);
+  }
+
+  /** Shows the active tab's outline, redrawn only when its sections changed. */
+  private drawOutline(): void {
+    const tab = this.active;
+    const open = this.outlineOpen && tab !== null;
+    this.outlinePanel.hidden = !open;
+    this.view.classList.toggle("with-outline", open);
+    if (!open) return;
+    if (this.drawnSections !== tab.sections) this.listSections(tab.sections);
+    if (!this.sectionHeld) this.markSection(currentSection(tab.canvas, tab.sections));
+  }
+
+  private listSections(list: Section[]): void {
+    this.drawnSections = list;
+    this.sectionHeld = false;
+    if (list.length === 0) {
+      this.outlinePanel.replaceChildren(h("p", "outline-empty", strings.outlineEmpty));
+      return;
+    }
+    const top = Math.min(...list.map((s) => s.heading.level));
+    const ul = h("ul");
+    for (const [i, { heading, node }] of list.entries()) {
+      const item = userText("button", "outline-item", heading.text);
+      item.title = heading.text;
+      item.style.setProperty("--depth", String(heading.level - top));
+      item.addEventListener("click", () => {
+        this.sectionHeld = true;
+        node.scrollIntoView?.();
+        this.markSection(i);
+      });
+      const li = h("li");
+      li.append(item);
+      ul.append(li);
+    }
+    this.outlinePanel.replaceChildren(ul);
+  }
+
+  private markSection(index: number): void {
+    for (const [i, item] of this.outlinePanel.querySelectorAll(".outline-item").entries()) {
+      item.classList.toggle("current", i === index);
+      if (i === index) item.setAttribute("aria-current", "location");
+      else item.removeAttribute("aria-current");
+    }
+  }
+
+  private openFind(): void {
+    clearTimeout(this.findTimer);
+    this.found.open = true;
+    this.findBox.hidden = false;
+    this.findInput.focus();
+    this.findInput.select();
+    this.runFind(true);
+    this.update();
+  }
+
+  private closeFind(): void {
+    clearTimeout(this.findTimer);
+    this.found.open = false;
+    this.findBox.hidden = true;
+    this.runFind(false);
+    this.update();
+  }
+
+  /** Marks the query's matches in the active sheet. `jump` goes to the first match from the
+   * reader's place; otherwise (a reload) the current match keeps its number. */
+  private runFind(jump: boolean): void {
+    const tab = this.active;
+    const keep = this.foundIndex;
+    if (this.found.root) clearMatches(this.found.root);
+    this.found.marks = [];
+    this.found.root = this.found.open && tab ? tab.sheet : null;
+    this.foundIndex = -1;
+    const { marks, more } = this.found.root
+      ? highlightMatches(this.found.root, this.findInput.value, FIND_LIMIT)
+      : { marks: [], more: false };
+    this.found.marks = marks;
+    this.foundMore = more;
+    let index = -1;
+    if (marks.length > 0 && !jump) index = Math.min(Math.max(keep, 0), marks.length - 1);
+    else if (marks.length > 0 && tab) {
+      const top = tab.canvas.getBoundingClientRect().top;
+      index = Math.max(
+        marks.findIndex((m) => m.getBoundingClientRect().top >= top),
+        0,
+      );
+    }
+    this.selectMatch(index, jump);
+  }
+
+  private stepFind(direction: 1 | -1): void {
+    const count = this.found.marks.length;
+    if (count > 0) this.selectMatch((this.foundIndex + direction + count) % count, true);
+  }
+
+  private selectMatch(index: number, scroll: boolean): void {
+    this.found.marks[this.foundIndex]?.classList.remove("current");
+    this.foundIndex = index;
+    const mark = this.found.marks[index];
+    if (mark) {
+      mark.classList.add("current");
+      if (scroll) {
+        for (let d = mark.closest("details"); d; d = d.parentElement?.closest("details") ?? null) {
+          d.open = true;
+        }
+        mark.scrollIntoView?.({ block: "center" });
+      }
+    }
+    const count = this.found.marks.length;
+    if (count > 0) {
+      const counted = this.foundMore ? strings.findCountMore : strings.findCount;
+      this.findCount.textContent = counted(index + 1, count);
+    } else if (this.found.open && this.findInput.value)
+      this.findCount.textContent = strings.findNone;
+    else this.findCount.replaceChildren();
+  }
+
+  /** Help › Keyboard shortcuts: a list beside the page, not a dialog; F1 or Esc closes it. */
+  private toggleShortcuts(): void {
+    if (this.shortcutsPanel) {
+      this.shortcutsPanel.remove();
+      this.shortcutsPanel = null;
+      return;
+    }
+    const panel = h("section", "shortcuts");
+    panel.setAttribute("aria-label", strings.actions.shortcuts);
+    const table = h("table");
+    for (const action of Object.values(actions)) {
+      const row = h("tr");
+      row.dataset.action = action.id;
+      const key = h("td");
+      key.append(h("kbd", "", action.key));
+      row.append(h("td", "", action.label), key);
+      table.append(row);
+    }
+    panel.append(
+      h("h2", "", strings.actions.shortcuts),
+      table,
+      h("p", "shortcuts-hint", strings.shortcutsHint),
+    );
+    this.view.append(panel);
+    this.shortcutsPanel = panel;
+  }
+
   private remember(path: string): void {
     if (!this.config) return;
     const recent = [path, ...this.config.recentFiles.filter((p) => p !== path)];
@@ -359,10 +588,30 @@ export class Shell {
       label,
       canvas,
       sheet,
+      sections: [],
       loads: 0,
       loading: Promise.resolve(),
     };
     label.addEventListener("click", () => this.activate(tab));
+    canvas.addEventListener(
+      "scroll",
+      () => {
+        if (tab === this.active && this.outlineOpen && !this.sectionHeld) {
+          this.markSection(currentSection(canvas, tab.sections));
+        }
+      },
+      { passive: true, signal: this.listeners.signal },
+    );
+    // The reader scrolling, not a jump from the outline, releases the clicked entry.
+    for (const type of ["wheel", "touchstart", "mousedown"]) {
+      canvas.addEventListener(
+        type,
+        () => {
+          this.sectionHeld = false;
+        },
+        { passive: true, signal: this.listeners.signal },
+      );
+    }
     // The tab's own close button closes that tab, not the active one.
     close.addEventListener("click", (e) => {
       e.stopPropagation();
@@ -391,14 +640,17 @@ export class Shell {
   }
 
   private enabled(id: ActionId): boolean {
-    if (!(id in this.handlers) || (actions[id].needsDocument && !this.active)) return false;
+    if (actions[id].needsDocument && !this.active) return false;
     if (id === "back") return this.active?.history.canGoBack === true;
     if (id === "forward") return this.active?.history.canGoForward === true;
+    if (id === "findNext" || id === "findPrevious") return this.found.marks.length > 0;
+    if (id === "findClose") return this.found.open;
+    if (id === "remoteImages") return this.config !== null;
     return true;
   }
 
   private run(id: ActionId): void {
-    if (this.enabled(id)) this.handlers[id]?.();
+    if (this.enabled(id)) this.handlers[id]();
   }
 
   private actionButton(id: ActionId, className: string): HTMLButtonElement {
@@ -418,10 +670,45 @@ export class Shell {
       if (item.kind === "button") header.append(this.actionButton(item.action, "bar-button"));
       else if (item.kind === "title") header.append(this.title, this.notice);
       else if (item.kind === "menus") header.append(this.buildMenus());
-      // ponytail: zoom is T13; until then the readout shows the unscaled sheet.
-      else header.append(h("span", "zoom", strings.zoomPercent(100)));
+      else header.append(this.zoomReadout);
     }
+    header.append(this.buildFind());
     return header;
+  }
+
+  /** The find box under the bar, shown by Find: Enter and Shift+Enter cycle the matches. */
+  private buildFind(): HTMLElement {
+    this.findBox.hidden = true;
+    this.findBox.setAttribute("role", "search");
+    this.findInput.type = "text";
+    this.findInput.placeholder = strings.findPlaceholder;
+    this.findInput.setAttribute("aria-label", strings.findPlaceholder);
+    const search = () => {
+      clearTimeout(this.findTimer);
+      this.findTimer = undefined;
+      this.runFind(true);
+      this.update();
+    };
+    this.findInput.addEventListener("input", () => {
+      clearTimeout(this.findTimer);
+      this.findTimer = setTimeout(search, FIND_DEBOUNCE_MS);
+    });
+    this.findInput.addEventListener("keydown", (e) => {
+      if (e.key !== "Enter") return;
+      e.preventDefault();
+      // Typed and Enter at once: the search runs first, then Enter moves on, as it would have.
+      if (this.findTimer !== undefined) search();
+      this.stepFind(e.shiftKey ? -1 : 1);
+    });
+    this.findCount.setAttribute("aria-live", "polite");
+    this.findBox.append(
+      this.findInput,
+      this.findCount,
+      this.actionButton("findPrevious", "find-button"),
+      this.actionButton("findNext", "find-button"),
+      this.actionButton("findClose", "find-button"),
+    );
+    return this.findBox;
   }
 
   private buildMenus(): HTMLElement {
@@ -437,6 +724,11 @@ export class Shell {
         const item = h("button", "menu-item", actions[id].label);
         item.setAttribute("role", "menuitem");
         item.dataset.action = id;
+        if (id === "theme") this.themeItem = item;
+        if (id === "remoteImages") {
+          this.remoteItem = item;
+          item.setAttribute("role", "menuitemcheckbox");
+        }
         item.addEventListener("click", () => {
           this.closeMenus();
           this.run(id);
@@ -463,7 +755,18 @@ export class Shell {
   }
 
   private onKey(e: KeyboardEvent): void {
-    if (e.key === "Escape") this.closeMenus();
+    // A key may scroll the page, which releases a section clicked in the outline.
+    this.sectionHeld = false;
+    // Esc closes an open menu or the shortcuts list before it closes find.
+    const menuOpen = [...this.menuBar.querySelectorAll<HTMLElement>(".menu")].some(
+      (m) => !m.hidden,
+    );
+    if (e.key === "Escape" && (menuOpen || this.shortcutsPanel)) {
+      this.closeMenus();
+      if (this.shortcutsPanel) this.toggleShortcuts();
+      e.preventDefault();
+      return;
+    }
     const action = Object.values(actions).find((a) => matchesKey(a.key, e));
     if (action && this.enabled(action.id)) {
       e.preventDefault();
@@ -509,10 +812,31 @@ export class Shell {
     this.root.ownerDocument.title = active
       ? strings.windowTitle(basename(pathOf(active)))
       : strings.appName;
+    // Find follows the active tab, and closes with the last one.
+    if (!active) {
+      this.found.open = false;
+      this.findBox.hidden = true;
+    }
+    if (this.found.root !== (this.found.open ? active?.sheet : null)) this.runFind(true);
     for (const node of this.root.querySelectorAll<HTMLButtonElement>("button[data-action]")) {
       if (node.classList.contains("tab-close")) continue;
       node.disabled = !this.enabled(node.dataset.action as ActionId);
     }
+    for (const node of this.root.querySelectorAll(".bar-button[data-action=outline]")) {
+      node.setAttribute("aria-pressed", String(this.outlineOpen));
+    }
+    this.applySettings();
+    this.drawOutline();
+  }
+
+  private applySettings(): void {
+    const html = this.root.ownerDocument.documentElement;
+    if (this.theme === "system") delete html.dataset.theme;
+    else html.dataset.theme = this.theme;
+    this.view.style.setProperty("--zoom", String(this.zoom / 100));
+    this.zoomReadout.textContent = strings.zoomPercent(this.zoom);
+    if (this.themeItem) this.themeItem.textContent = strings.themes[this.theme];
+    this.remoteItem?.setAttribute("aria-checked", String(this.config?.remoteImages ?? true));
   }
 
   /** "Open or drop a Markdown file", and the recent files under it. */

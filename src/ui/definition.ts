@@ -47,7 +47,32 @@ export const actions: Record<ActionId, Action> = {
   },
   zoomOut: { id: "zoomOut", label: a.zoomOut, icon: i.zoomOut, key: "Ctrl+-", needsDocument: true },
   zoomIn: { id: "zoomIn", label: a.zoomIn, icon: i.zoomIn, key: "Ctrl+=", needsDocument: true },
+  zoomReset: { id: "zoomReset", label: a.zoomReset, key: "Ctrl+0", needsDocument: true },
+  fitWidth: { id: "fitWidth", label: a.fitWidth, key: "Ctrl+9", needsDocument: true },
   find: { id: "find", label: a.find, icon: i.find, key: "Ctrl+F", needsDocument: true },
+  findNext: {
+    id: "findNext",
+    label: a.findNext,
+    icon: i.findNext,
+    key: "F3",
+    needsDocument: true,
+  },
+  findPrevious: {
+    id: "findPrevious",
+    label: a.findPrevious,
+    icon: i.findPrevious,
+    key: "Shift+F3",
+    needsDocument: true,
+  },
+  findClose: {
+    id: "findClose",
+    label: a.findClose,
+    icon: i.findClose,
+    key: "Escape",
+    needsDocument: true,
+  },
+  theme: { id: "theme", label: a.theme, key: "Ctrl+Shift+L" },
+  remoteImages: { id: "remoteImages", label: a.remoteImages, key: "Ctrl+Shift+M" },
   shortcuts: { id: "shortcuts", label: a.shortcuts, key: "F1" },
 };
 
@@ -79,7 +104,20 @@ export interface Menu {
 
 export const menus: Menu[] = [
   { id: "file", label: strings.menus.file, items: ["open", "print", "closeTab"] },
-  { id: "view", label: strings.menus.view, items: ["outline", "zoomIn", "zoomOut", "find"] },
+  {
+    id: "view",
+    label: strings.menus.view,
+    items: [
+      "outline",
+      "zoomIn",
+      "zoomOut",
+      "zoomReset",
+      "fitWidth",
+      "find",
+      "theme",
+      "remoteImages",
+    ],
+  },
   { id: "go", label: strings.menus.go, items: ["back", "forward"] },
   { id: "help", label: strings.menus.help, items: ["shortcuts"] },
 ];
@@ -101,10 +139,12 @@ export function matchesKey(key: string, e: KeyboardEvent): boolean {
   const parts = key.split("+");
   const main = parts.pop() ?? "";
   const ctrl = /Mac/.test(navigator.platform) ? e.metaKey : e.ctrlKey;
+  // `Ctrl+=` also answers to `Ctrl++`, typed with Shift or on the keypad.
+  const plus = main === "=" && e.key === "+";
   return (
-    e.key.toLowerCase() === main.toLowerCase() &&
+    (plus || e.key.toLowerCase() === main.toLowerCase()) &&
     ctrl === parts.includes("Ctrl") &&
     e.altKey === parts.includes("Alt") &&
-    e.shiftKey === parts.includes("Shift")
+    (plus || e.shiftKey === parts.includes("Shift"))
   );
 }

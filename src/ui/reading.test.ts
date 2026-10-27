@@ -1,0 +1,247 @@
+import { afterEach, describe, expect, it } from "vitest";
+import { strings } from "../strings";
+import { matchesKey } from "./definition";
+import { fakeBackend, settle } from "./fake-backend";
+import { clearMatches, highlightMatches } from "./find";
+import { Shell } from "./shell";
+import { fitWidth, stepZoom } from "./zoom";
+
+const shells: Shell[] = [];
+afterEach(() => {
+  for (const shell of shells.splice(0)) shell.dispose();
+});
+
+async function open(files: Record<string, string>, launch: string[]) {
+  const fake = fakeBackend(files, launch);
+  const root = document.createElement("div");
+  document.body.replaceChildren(root);
+  const shell = new Shell(root, fake.backend);
+  shells.push(shell);
+  await shell.start();
+  return { root, ...fake };
+}
+
+const press = (init: KeyboardEventInit) =>
+  document.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, ...init }));
+const click = (el: Element | null) => (el as HTMLElement | null)?.click();
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+/** Gives an element the layout jsdom does not compute. */
+const layout = (el: Element, props: Record<string, number>) => {
+  for (const [name, value] of Object.entries(props)) {
+    Object.defineProperty(el, name, { configurable: true, value });
+  }
+};
+
+describe("reading tools", () => {
+  it("test_outline_lists_headings_and_follows_reload", async () => {
+    const { root, state } = await open({ "/n/a.md": "# One\n\n## Two\n\ntext" }, ["/n/a.md"]);
+    const panel = root.querySelector<HTMLElement>(".outline");
+    expect(panel?.hidden).toBe(true);
+
+    press({ key: "b", ctrlKey: true });
+    expect(panel?.hidden).toBe(false);
+    const items = () => [...(panel?.querySelectorAll<HTMLElement>(".outline-item") ?? [])];
+    expect(items().map((i) => i.textContent)).toEqual(["One", "Two"]);
+    expect(items()[1].style.getPropertyValue("--depth")).toBe("1");
+    expect(panel?.querySelectorAll("[aria-current=location]")).toHaveLength(1);
+
+    // Clicking scrolls to the heading and marks it current.
+    let scrolled: Element | undefined;
+    const heading = root.querySelector(".sheet h2") as HTMLElement;
+    heading.scrollIntoView = function (this: Element) {
+      scrolled = this;
+    };
+    click(items()[1]);
+    expect(scrolled).toBe(heading);
+    expect(items()[1].getAttribute("aria-current")).toBe("location");
+
+    // A live reload rebuilds the outline.
+    state.write("/n/a.md", "# One\n\n## Two\n\n## Three");
+    await settle();
+    await settle();
+    expect(items().map((i) => i.textContent)).toEqual(["One", "Two", "Three"]);
+
+    click(root.querySelector(".bar [data-action=outline]"));
+    expect(panel?.hidden).toBe(true);
+  });
+
+  it("test_outline_click_stays_current_until_reader_scrolls", async () => {
+    const { root } = await open({ "/n/a.md": "# One\n\n## Two\n\n## Three" }, ["/n/a.md"]);
+    press({ key: "b", ctrlKey: true });
+    const items = [...root.querySelectorAll<HTMLElement>(".outline-item")];
+    const canvas = root.querySelector(".canvas") as HTMLElement;
+    // Scrolled to the bottom, where the last section counts as current.
+    layout(canvas, { scrollTop: 400, clientHeight: 600, scrollHeight: 1000 });
+
+    click(items[0]);
+    canvas.dispatchEvent(new Event("scroll"));
+    expect(items[0].getAttribute("aria-current")).toBe("location");
+
+    canvas.dispatchEvent(new Event("wheel"));
+    canvas.dispatchEvent(new Event("scroll"));
+    expect(items[2].getAttribute("aria-current")).toBe("location");
+    expect(items[0].hasAttribute("aria-current")).toBe(false);
+  });
+
+  it("test_zoom_keys_step_and_persist_default_zoom", async () => {
+    const { root, state } = await open({ "/n/a.md": "# A" }, ["/n/a.md"]);
+    const readout = () => root.querySelector(".bar .zoom")?.textContent;
+    const scale = () => root.querySelector<HTMLElement>(".view")?.style.getPropertyValue("--zoom");
+
+    press({ key: "=", ctrlKey: true });
+    expect(readout()).toBe(strings.zoomPercent(110));
+    expect(scale()).toBe("1.1");
+    press({ key: "+", ctrlKey: true, shiftKey: true });
+    expect(readout()).toBe(strings.zoomPercent(125));
+    // The zoom last used becomes the default once the keys settle, in one write.
+    await settle();
+    expect(state.config.defaultZoom).toBe(100);
+    await wait(600);
+    expect(state.config.defaultZoom).toBe(125);
+
+    for (let i = 0; i < 3; i++) press({ key: "-", ctrlKey: true });
+    expect(readout()).toBe(strings.zoomPercent(90));
+    press({ key: "0", ctrlKey: true });
+    expect(readout()).toBe(strings.zoomPercent(100));
+
+    expect(stepZoom(300, 1)).toBe(300);
+    expect(stepZoom(50, -1)).toBe(50);
+    expect(stepZoom(133, -1)).toBe(125);
+    expect(fitWidth(864)).toBe(100);
+    expect(fitWidth(0)).toBe(50);
+  });
+
+  it("test_ctrl_9_fits_sheet_to_width", async () => {
+    const { root } = await open({ "/n/a.md": "# A" }, ["/n/a.md"]);
+    layout(root.querySelector(".canvas") as Element, { clientWidth: 1680 });
+    press({ key: "9", ctrlKey: true });
+    expect(root.querySelector(".bar .zoom")?.textContent).toBe(strings.zoomPercent(200));
+    expect(root.querySelector<HTMLElement>(".view")?.style.getPropertyValue("--zoom")).toBe("2");
+  });
+
+  it("test_remote_images_menu_toggles_setting", async () => {
+    const fake = fakeBackend({});
+    const root = document.createElement("div");
+    let reloads = 0;
+    const shell = new Shell(root, fake.backend, () => reloads++);
+    shells.push(shell);
+    await shell.start();
+    const item = root.querySelector<HTMLElement>(".menu-item[data-action=remoteImages]");
+    expect(item?.getAttribute("role")).toBe("menuitemcheckbox");
+    expect(item?.getAttribute("aria-checked")).toBe("true");
+
+    click(item);
+    await settle();
+    await settle();
+    expect(fake.state.config.remoteImages).toBe(false);
+    expect(item?.getAttribute("aria-checked")).toBe("false");
+
+    // Turning them back on reloads the window, as the narrowed CSP cannot be lifted.
+    click(item);
+    await settle();
+    expect(fake.state.config.remoteImages).toBe(true);
+    expect(reloads).toBe(1);
+  });
+
+  it("test_saved_zoom_and_theme_apply_at_start", async () => {
+    const fake = fakeBackend({});
+    fake.state.config.defaultZoom = 150;
+    fake.state.config.theme = "dark";
+    const root = document.createElement("div");
+    const shell = new Shell(root, fake.backend);
+    shells.push(shell);
+    await shell.start();
+    expect(root.querySelector(".bar .zoom")?.textContent).toBe(strings.zoomPercent(150));
+    expect(document.documentElement.dataset.theme).toBe("dark");
+  });
+
+  it("test_theme_cycles_and_persists", async () => {
+    const { root, state } = await open({}, []);
+    const item = root.querySelector<HTMLElement>(".menu-item[data-action=theme]");
+    expect(item?.textContent).toBe(strings.themes.system);
+    expect(document.documentElement.dataset.theme).toBeUndefined();
+
+    click(item);
+    expect(item?.textContent).toBe(strings.themes.light);
+    expect(document.documentElement.dataset.theme).toBe("light");
+    press({ key: "L", ctrlKey: true, shiftKey: true });
+    expect(document.documentElement.dataset.theme).toBe("dark");
+    await settle();
+    expect(state.config.theme).toBe("dark");
+    press({ key: "L", ctrlKey: true, shiftKey: true });
+    expect(document.documentElement.dataset.theme).toBeUndefined();
+    await settle();
+    expect(state.config.theme).toBe("system");
+  });
+
+  it("test_find_marks_matches_and_survives_reload", async () => {
+    const { root, state } = await open({ "/n/a.md": "# Cat\n\ncat and CAT, `cat`" }, ["/n/a.md"]);
+    press({ key: "f", ctrlKey: true });
+    const input = root.querySelector<HTMLInputElement>(".find-input");
+    expect(document.activeElement).toBe(input);
+    if (!input) return;
+    input.value = "cat";
+    input.dispatchEvent(new Event("input"));
+    const count = () => root.querySelector(".find-count")?.textContent;
+    // Typing is debounced.
+    expect(root.querySelectorAll(".sheet mark.find-match")).toHaveLength(0);
+    await wait(150);
+    expect(root.querySelectorAll(".sheet mark.find-match")).toHaveLength(4);
+    expect(count()).toBe(strings.findCount(1, 4));
+
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter" }));
+    expect(count()).toBe(strings.findCount(2, 4));
+    press({ key: "F3", shiftKey: true });
+    press({ key: "F3", shiftKey: true });
+    expect(count()).toBe(strings.findCount(4, 4));
+    expect(root.querySelectorAll(".sheet mark.current")).toHaveLength(1);
+
+    // A reload keeps the search; the heading text is untouched by the marks.
+    state.write("/n/a.md", "# Cat\n\ncat");
+    await settle();
+    await settle();
+    expect(root.querySelectorAll(".sheet mark.find-match")).toHaveLength(2);
+    expect(count()).toBe(strings.findCount(2, 2));
+
+    input.value = "dog";
+    input.dispatchEvent(new Event("input"));
+    await wait(150);
+    expect(count()).toBe(strings.findNone);
+
+    // Enter straight after typing runs the search, then moves on.
+    input.value = "cat";
+    input.dispatchEvent(new Event("input"));
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter" }));
+    expect(count()).toBe(strings.findCount(2, 2));
+
+    press({ key: "Escape" });
+    expect(root.querySelector<HTMLElement>(".find")?.hidden).toBe(true);
+    expect(root.querySelectorAll(".sheet mark.find-match")).toHaveLength(0);
+    expect(root.querySelector(".sheet h1")?.textContent).toBe("Cat");
+  });
+
+  it("test_find_skips_controls_and_restores_text", () => {
+    const root = document.createElement("div");
+    root.innerHTML = "<p>a<b>ab</b>a</p><button>a</button><svg><text>a</text></svg>";
+    const before = root.innerHTML;
+    expect(highlightMatches(root, "A")).toEqual({ marks: expect.any(Array), more: false });
+    expect(highlightMatches(root, "A").marks).toHaveLength(3);
+    expect(highlightMatches(root, "ab").marks).toHaveLength(1);
+    // A capped search says there is more.
+    const capped = highlightMatches(root, "a", 2);
+    expect(capped.marks).toHaveLength(2);
+    expect(capped.more).toBe(true);
+    expect(root.querySelectorAll("mark")).toHaveLength(2);
+    expect(highlightMatches(root, "a", 3).more).toBe(false);
+    clearMatches(root);
+    expect(root.innerHTML).toBe(before);
+    expect(highlightMatches(root, "").marks).toEqual([]);
+  });
+
+  it("test_ctrl_plus_matches_zoom_in", () => {
+    const key = (init: KeyboardEventInit) => new KeyboardEvent("keydown", init);
+    expect(matchesKey("Ctrl+=", key({ key: "+", ctrlKey: true, shiftKey: true }))).toBe(true);
+    expect(matchesKey("Ctrl+=", key({ key: "+" }))).toBe(false);
+    expect(matchesKey("Shift+F3", key({ key: "F3" }))).toBe(false);
+  });
+});
