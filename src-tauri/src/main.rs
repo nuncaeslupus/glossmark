@@ -37,6 +37,7 @@ fn main() {
             commands::take_open_files,
             commands::open_dialog,
             commands::read_document,
+            commands::read_svg,
             commands::watch,
             commands::unwatch,
             commands::get_config,

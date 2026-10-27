@@ -1,4 +1,6 @@
 import { enhance } from "../render/enhance";
+import { blockRemoteImages, imagePolicy } from "../render/enhance/images";
+import { inlineSvgs } from "../render/enhance/svg";
 import { render } from "../render/pipeline";
 import { sanitize } from "../render/sanitize";
 import { strings } from "../strings";
@@ -112,6 +114,8 @@ export class Shell {
       this.show(strings.notices.settingsUnavailable);
       return null;
     });
+    // Before any document is inserted; config unread means the default, remote images on.
+    if (this.config?.remoteImages === false) blockRemoteImages(this.root.ownerDocument);
     this.update();
     await this.openPaths(await this.backend.takeOpenFiles());
   }
@@ -198,9 +202,21 @@ export class Shell {
       const doc = await this.read(entry);
       if (!live()) return;
       const anchor = reload ? scrollAnchor(tab.canvas, tab.sheet) : undefined;
-      tab.sheet.innerHTML = sanitize(render(doc.text));
+      const remoteImages = this.config?.remoteImages ?? true;
+      const { readSvg, assetUrl } = this.backend;
+      tab.sheet.innerHTML = sanitize(
+        render(doc.text),
+        imagePolicy(doc.path, remoteImages, (path) => assetUrl(path)),
+      );
       // ponytail: the outline it returns is unused until T13's outline panel.
       enhance(tab.sheet);
+      // Before the scroll is restored, since inlined SVGs take their own height.
+      await inlineSvgs(
+        tab.sheet,
+        (path) => readSvg(path),
+        (path) => assetUrl(path),
+      );
+      if (!live()) return;
       // ponytail: watching starts after a successful read, so a missing file adds no second
       // notice; a save in the moment between the two is not seen.
       this.watch(tab, entry.path);
