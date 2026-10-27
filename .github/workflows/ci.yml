@@ -67,20 +67,34 @@ jobs:
         run: npm run tauri build -- --bundles deb,appimage
       - name: Package sizes (fails when the .deb exceeds 20 MB)
         run: |
-          deb=$(ls src-tauri/target/release/bundle/deb/*.deb)
-          appimage=$(ls src-tauri/target/release/bundle/appimage/*.AppImage)
+          shopt -s nullglob
+          debs=(src-tauri/target/release/bundle/deb/*.deb)
+          appimages=(src-tauri/target/release/bundle/appimage/*.AppImage)
+          # Exactly one .deb, so the size check below can never compare an empty or multi-word value.
+          if [ "${#debs[@]}" -ne 1 ]; then
+            echo "::error::expected exactly one .deb, found ${#debs[@]}: ${debs[*]}"
+            exit 1
+          fi
+          if [ "${#appimages[@]}" -gt 1 ]; then
+            echo "::error::expected at most one AppImage, found ${#appimages[@]}: ${appimages[*]}"
+            exit 1
+          fi
+          deb=${debs[0]}
           deb_bytes=$(stat -c %s "$deb")
           limit=$((20 * 1024 * 1024))
           deb_mb=$(awk "BEGIN { printf \"%.2f\", $deb_bytes / 1048576 }")
-          appimage_mb=$(awk "BEGIN { printf \"%.2f\", $(stat -c %s "$appimage") / 1048576 }")
           echo "deb_package_mb=$deb_mb (limit 20)"
-          echo "appimage_mb=$appimage_mb (reported, not gated)"
           {
             echo "| package | MB |"
             echo "|---|---|"
             echo "| \`$(basename "$deb")\` | $deb_mb (limit 20) |"
-            echo "| \`$(basename "$appimage")\` | $appimage_mb |"
           } >> "$GITHUB_STEP_SUMMARY"
+          if [ "${#appimages[@]}" -eq 1 ]; then
+            appimage=${appimages[0]}
+            appimage_mb=$(awk "BEGIN { printf \"%.2f\", $(stat -c %s "$appimage") / 1048576 }")
+            echo "appimage_mb=$appimage_mb (reported, not gated)"
+            echo "| \`$(basename "$appimage")\` | $appimage_mb |" >> "$GITHUB_STEP_SUMMARY"
+          fi
           if [ "$deb_bytes" -gt "$limit" ]; then
             echo "::error::.deb is $deb_mb MB, over the 20 MB limit"
             exit 1
