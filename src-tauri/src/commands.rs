@@ -13,6 +13,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::Duration;
 use tauri::{AppHandle, Emitter, Manager, Runtime, State};
+use tauri_plugin_dialog::DialogExt;
 use tauri_plugin_opener::OpenerExt;
 
 pub struct AppState {
@@ -113,6 +114,25 @@ pub fn take_open_files(state: State<'_, AppState>) -> OpenFiles {
     OpenFiles {
         paths: std::mem::take(&mut *lock(&state.pending)),
     }
+}
+
+/// File › Open. The native dialog runs here rather than in the frontend, so only files the user
+/// picked enter the scope; the frontend holds no dialog permission. Cancelling gives no paths.
+#[tauri::command]
+pub async fn open_dialog<R: Runtime>(
+    app: AppHandle<R>,
+    state: State<'_, AppState>,
+) -> Result<OpenFiles, IpcError> {
+    let picked = app
+        .dialog()
+        .file()
+        .add_filter("Markdown", &scope::MARKDOWN_EXTENSIONS)
+        .blocking_pick_files()
+        .unwrap_or_default();
+    let paths = picked.into_iter().filter_map(|p| p.into_path().ok());
+    Ok(OpenFiles {
+        paths: state.open(paths),
+    })
 }
 
 #[tauri::command]

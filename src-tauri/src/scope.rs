@@ -51,10 +51,14 @@ pub fn resolve(path: &Path) -> Option<PathBuf> {
     })
 }
 
+pub const MARKDOWN_EXTENSIONS: [&str; 2] = ["md", "markdown"];
+
 fn is_markdown(path: &Path) -> bool {
-    path.extension()
-        .and_then(|e| e.to_str())
-        .is_some_and(|e| e.eq_ignore_ascii_case("md") || e.eq_ignore_ascii_case("markdown"))
+    path.extension().and_then(|e| e.to_str()).is_some_and(|e| {
+        MARKDOWN_EXTENSIONS
+            .iter()
+            .any(|m| e.eq_ignore_ascii_case(m))
+    })
 }
 
 #[cfg(test)]

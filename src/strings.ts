@@ -1,4 +1,38 @@
 // Every UI string lives here (D-14), so translations can be added without touching the code.
 export const strings = {
+  appName: "Glossmark",
+  windowTitle: (document: string) => `${document} — Glossmark`,
   emptyState: "Open or drop a Markdown file",
+  recentFiles: "Recent files",
+  documentError: "This document could not be opened.",
+  zoomPercent: (percent: number) => `${percent}%`,
+  menus: {
+    file: "File",
+    view: "View",
+    go: "Go",
+    help: "Help",
+  },
+  actions: {
+    open: "Open…",
+    print: "Print…",
+    closeTab: "Close tab",
+    outline: "Outline",
+    back: "Back",
+    forward: "Forward",
+    zoomOut: "Zoom out",
+    zoomIn: "Zoom in",
+    find: "Find",
+    shortcuts: "Keyboard shortcuts",
+  },
+  // Glyphs on the bar buttons; their labels above are the tooltips.
+  icons: {
+    outline: "☰",
+    back: "←",
+    forward: "→",
+    zoomOut: "−",
+    zoomIn: "+",
+    find: "⌕",
+    print: "⎙",
+    closeTab: "×",
+  },
 } as const;
