@@ -48,6 +48,9 @@ export function sanitizeSvg(markup: string): SVGSVGElement | null {
     // DOMPurify leaves `use` out for its external references; the hook keeps only `#id` ones.
     ADD_TAGS: ["use"],
     FORBID_TAGS: ["style"],
+    // DOM clobbering needs a bare `id` such as `title`; every id here gets the image's prefix,
+    // and the default would drop those ids while their `#id` references survive, prefixed.
+    SANITIZE_DOM: false,
   });
   // A template's content is inert too: nothing loads until the element is inserted.
   const template = document.createElement("template");
@@ -60,7 +63,7 @@ export function sanitizeSvg(markup: string): SVGSVGElement | null {
 export async function inlineSvgs(
   root: ParentNode,
   readSvg: (path: string) => Promise<string>,
-  toAssetUrl: (path: string) => string,
+  toImageUrl: (path: string) => string,
 ): Promise<void> {
   const images = Array.from(root.querySelectorAll<HTMLImageElement>("img[data-svg-path]"));
   await Promise.all(
@@ -69,8 +72,8 @@ export async function inlineSvgs(
       img.removeAttribute("data-svg-path");
       const svg = await readSvg(path).then(sanitizeSvg, () => null);
       if (!svg) {
-        // Too large (over 2 MB), unreadable or not an SVG: the asset protocol shows it as-is.
-        img.src = toAssetUrl(path);
+        // Too large (over 2 MB), unreadable or not an SVG: the `image:` protocol shows it as-is.
+        img.src = toImageUrl(path);
         return;
       }
       svg.setAttribute("role", "img");

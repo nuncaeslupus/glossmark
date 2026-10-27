@@ -1,7 +1,7 @@
 import type { Backend, Config, DocumentChanged } from "./ipc";
 
-/** Where the fake's asset-protocol URLs point (Tauri's Windows form, so a browser can route it). */
-export const FAKE_ASSET_ORIGIN = "http://asset.localhost";
+/** Where the fake's `image:` protocol URLs point (Tauri's Windows form, so a browser can route it). */
+export const FAKE_IMAGE_ORIGIN = "http://image.localhost";
 
 /** An in-memory Rust core for tests: `files` maps a path to its Markdown. */
 export function fakeBackend(files: Record<string, string>, launch: string[] = []) {
@@ -73,7 +73,7 @@ export function fakeBackend(files: Record<string, string>, launch: string[] = []
       if (!(path in files)) throw { kind: "not_found", message: `${path}: not found` };
       return files[path];
     },
-    assetUrl: (path) => `${FAKE_ASSET_ORIGIN}/${encodeURIComponent(path)}`,
+    imageUrl: (path) => `${FAKE_IMAGE_ORIGIN}/${encodeURIComponent(path)}`,
     getConfig: async () => {
       failing("getConfig");
       return structuredClone(state.config);

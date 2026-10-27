@@ -179,3 +179,43 @@ describe("shell", () => {
     expect(matchesKey("Alt+ArrowLeft", key({ key: "ArrowLeft", altKey: true }))).toBe(true);
   });
 });
+
+describe("remote images setting", () => {
+  it("test_remote_images_toggle_rerenders_off_and_reloads_on", async () => {
+    const fake = fakeBackend({ "/n/a.md": "![r](https://example.com/a.png)" }, ["/n/a.md"]);
+    const root = document.createElement("div");
+    document.body.replaceChildren(root);
+    let reloads = 0;
+    const shell = new Shell(root, fake.backend, () => reloads++);
+    shells.push(shell);
+    await shell.start();
+    const img = () => root.querySelector(".sheet img");
+    expect(img()?.getAttribute("src")).toBe("https://example.com/a.png");
+
+    await shell.setRemoteImages(false);
+    const meta = document.head.querySelector('meta[data-remote-images="off"]');
+    try {
+      expect(fake.state.config.remoteImages).toBe(false);
+      expect(meta).not.toBeNull();
+      expect(img()?.getAttribute("src")).toBeNull();
+      expect(img()?.getAttribute("data-remote-src")).toBe("https://example.com/a.png");
+      expect(reloads).toBe(0);
+
+      await shell.setRemoteImages(true);
+      expect(fake.state.config.remoteImages).toBe(true);
+      expect(reloads).toBe(1);
+    } finally {
+      meta?.remove();
+    }
+  });
+
+  it("test_remote_images_setting_not_saved_changes_nothing", async () => {
+    const { root, shell, state } = await open({ "/n/a.md": "# A" }, ["/n/a.md"], (s) => {
+      s.fail.setConfig = { kind: "io", message: "disk full" };
+    });
+    await shell.setRemoteImages(false);
+    expect(state.config.remoteImages).toBe(true);
+    expect(document.head.querySelector('meta[data-remote-images="off"]')).toBeNull();
+    expect(notice(root)).toBe(strings.notices.settingNotSaved);
+  });
+});

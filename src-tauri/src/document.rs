@@ -73,7 +73,7 @@ pub fn read_svg_file(path: &Path) -> Result<Svg, IpcError> {
 
 /// Only regular files are read: a FIFO or device would pass the size cap and then block the
 /// read forever.
-fn read_capped(
+pub fn read_capped(
     path: &Path,
     max: u64,
     max_label: &str,

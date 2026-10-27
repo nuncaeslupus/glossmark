@@ -44,6 +44,16 @@ describe("sanitizeSvg", () => {
     expect(html).not.toMatch(/example\.com|other\.svg/);
   });
 
+  it("test_svg_inline_dom_property_ids_kept_and_prefixed", () => {
+    const svg = sanitizeSvg(
+      '<svg><linearGradient id="title"/><rect fill="url(#title)"/><g id="forms"/></svg>',
+    );
+    const id = svg?.querySelector("linearGradient")?.id ?? "";
+    expect(id).toMatch(/^gm-svg\d+-title$/);
+    expect(svg?.querySelector("rect")?.getAttribute("fill")).toBe(`url(#${id})`);
+    expect(svg?.querySelector("g")?.id).toMatch(/^gm-svg\d+-forms$/);
+  });
+
   it("test_svg_inline_not_svg_returns_null", () => {
     expect(sanitizeSvg("<p>hi</p>")).toBeNull();
     expect(sanitizeSvg("")).toBeNull();
@@ -59,11 +69,11 @@ describe("inlineSvgs", () => {
       if (path === "/n/a.svg") return FLOW;
       throw { kind: "too_large" };
     };
-    await inlineSvgs(root, read, (p) => `asset://localhost${p}`);
+    await inlineSvgs(root, read, (p) => `image://localhost${p}`);
     const svg = root.querySelector("svg");
     expect(svg?.getAttribute("aria-label")).toBe("Flow");
     expect(svg?.getAttribute("width")).toBe("40");
-    expect(root.querySelector("img")?.getAttribute("src")).toBe("asset://localhost/n/big.svg");
+    expect(root.querySelector("img")?.getAttribute("src")).toBe("image://localhost/n/big.svg");
     expect(root.querySelector("[data-svg-path]")).toBeNull();
   });
 });

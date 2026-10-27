@@ -3,6 +3,7 @@ mod config;
 mod document;
 mod error;
 mod external;
+mod image;
 mod scope;
 mod watch;
 
@@ -32,6 +33,16 @@ fn main() {
                     }
                 }
             }
+        })
+        .register_asynchronous_uri_scheme_protocol(image::SCHEME, |ctx, request, responder| {
+            let app = ctx.app_handle().clone();
+            let path = request.uri().path().to_owned();
+            // Reads off the webview's thread.
+            tauri::async_runtime::spawn_blocking(move || {
+                if let Some(state) = app.try_state::<AppState>() {
+                    responder.respond(state.image(&path));
+                }
+            });
         })
         .invoke_handler(tauri::generate_handler![
             commands::take_open_files,

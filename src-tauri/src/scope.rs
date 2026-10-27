@@ -34,6 +34,14 @@ impl Scope {
         }
     }
 
+    /// The canonical path of an image (by extension) under an opened document's folder, or
+    /// `not_permitted`.
+    pub fn check_image(&self, path: &Path) -> Result<PathBuf, IpcError> {
+        resolve(path)
+            .filter(|p| crate::image::media_type(p).is_some() && self.in_folders(p))
+            .ok_or_else(|| IpcError::not_permitted(path))
+    }
+
     /// The canonical path of an SVG under an opened document's folder, or `not_permitted`.
     pub fn check_svg(&self, path: &Path) -> Result<PathBuf, IpcError> {
         resolve(path)

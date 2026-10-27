@@ -1,5 +1,5 @@
 import { expect, type Page, test } from "@playwright/test";
-import { FAKE_ASSET_ORIGIN } from "../src/ui/fake-backend";
+import { FAKE_IMAGE_ORIGIN } from "../src/ui/fake-backend";
 
 const DOC = "/notes/readme.md";
 
@@ -12,6 +12,7 @@ const FILES = {
     "![flow](img/flow.svg)",
     "![remote](https://example.com/a.png)",
     "![protocol-relative](//example.com/b.png)",
+    "![no-slashes](https:example.com/f.png) ![upper](HTTPS://EXAMPLE.COM/g.png)",
     '<img src="https://example.com/c.png" srcset="https://example.com/c2.png 2x" alt="c">',
     '<picture><source srcset="https://example.com/d.png"><img src="http://example.com/e.png" alt="e"></picture>',
   ].join("\n\n"),
@@ -28,23 +29,23 @@ const BLANK = '<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>';
 
 /**
  * Starts the shell on the in-memory core with `DOC` open, recording every request: the
- * harness's own, the asset protocol's (answered with a blank image) and the rest (aborted, so
+ * harness's own, the `image:` protocol's (answered with a blank image) and the rest (aborted, so
  * the test never touches the network).
  */
 async function open(page: Page, remoteImages: boolean, baseURL: string | undefined) {
   const appOrigin = new URL(baseURL ?? "").origin;
-  const seen = { assets: [] as string[], remote: [] as string[] };
+  const seen = { images: [] as string[], remote: [] as string[] };
   page.on("request", (request) => {
     const url = new URL(request.url());
     if (url.protocol === "data:" || url.origin === appOrigin) return;
-    if (url.origin === FAKE_ASSET_ORIGIN)
-      seen.assets.push(decodeURIComponent(url.pathname.slice(1)));
+    if (url.origin === FAKE_IMAGE_ORIGIN)
+      seen.images.push(decodeURIComponent(url.pathname.slice(1)));
     else seen.remote.push(url.href);
   });
   await page.route(
     (url) => url.origin !== appOrigin,
     (route) =>
-      new URL(route.request().url()).origin === FAKE_ASSET_ORIGIN
+      new URL(route.request().url()).origin === FAKE_IMAGE_ORIGIN
         ? route.fulfill({ contentType: "image/svg+xml", body: BLANK })
         : route.abort(),
   );
@@ -63,8 +64,8 @@ test("test_remote_images_off_no_requests", async ({ page, baseURL }) => {
   console.log(`network_requests_with_remote_images_off=${requests.remote.length}`);
   expect(requests.remote).toEqual([]);
   // The document did render its local images, so the zero above is not an empty page.
-  expect(requests.assets).toEqual(["/notes/img/photo.png"]);
-  await expect(page.locator(".sheet img[data-remote-src]")).toHaveCount(4);
+  expect(requests.images).toEqual(["/notes/img/photo.png"]);
+  await expect(page.locator(".sheet img[data-remote-src]")).toHaveCount(6);
 });
 
 test("test_remote_images_off_csp_blocks_late_image", async ({ page, baseURL }) => {
@@ -87,5 +88,6 @@ test("test_remote_images_on_requests_only_document_images", async ({ page, baseU
   // The control: with the setting on, the same harness does see remote requests.
   expect(requests.remote).toContain("https://example.com/a.png");
   expect(requests.remote).toContain("https://example.com/b.png");
+  expect(requests.remote).toContain("https://example.com/f.png");
   expect(requests.remote.filter((url) => url.includes("example.org"))).toEqual([]);
 });

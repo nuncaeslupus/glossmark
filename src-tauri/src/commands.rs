@@ -2,6 +2,7 @@ use crate::config::{self, Config, UserCss};
 use crate::document::{self, Document, Svg};
 use crate::error::{ErrorKind, IpcError};
 use crate::external;
+use crate::image;
 use crate::scope::{self, Scope};
 use crate::watch::{self, Registry};
 use notify_debouncer_mini::notify::{RecommendedWatcher, RecursiveMode};
@@ -10,14 +11,13 @@ use serde::Serialize;
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, MutexGuard};
-use tauri::scope::fs::Scope as AssetScope;
+use tauri::http::Response;
 use tauri::{AppHandle, Emitter, Manager, Runtime, State};
 use tauri_plugin_dialog::{DialogExt, FilePath};
 use tauri_plugin_opener::OpenerExt;
 
 pub struct AppState {
     scope: Mutex<Scope>,
-    assets: AssetScope,
     watched: Arc<Mutex<Registry>>,
     debouncer: Mutex<Debouncer<RecommendedWatcher>>,
     pending: Mutex<Vec<String>>,
@@ -43,16 +43,12 @@ impl AppState {
             let _ = handle.emit("document-changed", changed);
         })?;
 
-        let assets = app.asset_protocol_scope();
         let mut scope = Scope::default();
         for recent in config::load(&config_dir.join("config.json")).recent_files {
-            if let Some(path) = scope.allow(Path::new(&recent)) {
-                allow_assets(&assets, [path]);
-            }
+            scope.allow(Path::new(&recent));
         }
         Ok(Self {
             scope: Mutex::new(scope),
-            assets,
             watched,
             debouncer: Mutex::new(debouncer),
             pending: Mutex::new(Vec::new()),
@@ -62,16 +58,17 @@ impl AppState {
 
     /// Brings opened files into scope and returns their canonical paths.
     pub fn open<P: AsRef<Path>>(&self, paths: impl IntoIterator<Item = P>) -> Vec<String> {
-        let paths = open_in_scope(&mut lock(&self.scope), paths);
-        allow_assets(&self.assets, &paths);
-        paths
+        open_in_scope(&mut lock(&self.scope), paths)
     }
 
     /// Dropped files: the `open-files` payload for those the scope accepted, if any.
     pub fn dropped(&self, paths: &[PathBuf]) -> Option<OpenFiles> {
-        let files = dropped_files(&mut lock(&self.scope), paths)?;
-        allow_assets(&self.assets, &files.paths);
-        Some(files)
+        dropped_files(&mut lock(&self.scope), paths)
+    }
+
+    /// An `image:` protocol request; the scope lock covers only the check.
+    pub fn image(&self, uri_path: &str) -> Response<Vec<u8>> {
+        image::respond(|p| lock(&self.scope).check_image(p), uri_path)
     }
 
     /// Files from this launch's command line, held until the frontend asks for them.
@@ -82,19 +79,6 @@ impl AppState {
 
     fn config_path(&self) -> PathBuf {
         self.config_dir.join("config.json")
-    }
-}
-
-/// Opens the folders of files just brought into `Scope` (recursively, like its folders) to the
-/// asset protocol, so their documents' local images load through `convertFileSrc`.
-// ponytail: the asset protocol serves any file type under that folder, not only images; only
-// `<img>` reaches it (CSP `script-src 'self'`, sanitised documents), so nothing can read it back.
-fn allow_assets<P: AsRef<Path>>(assets: &AssetScope, opened: impl IntoIterator<Item = P>) {
-    for path in opened {
-        if let Some(folder) = path.as_ref().parent() {
-            // Fails only on a path that is not a valid glob pattern; the images then show broken.
-            let _ = assets.allow_directory(folder, true);
-        }
     }
 }
 
@@ -138,9 +122,7 @@ pub async fn open_dialog<R: Runtime>(
         dialog = dialog.set_parent(&window);
     }
     let picked = dialog.blocking_pick_files().unwrap_or_default();
-    let files = picked_files(&mut lock(&state.scope), picked);
-    allow_assets(&state.assets, &files.paths);
-    Ok(files)
+    Ok(picked_files(&mut lock(&state.scope), picked))
 }
 
 /// Brings files into `scope` and returns the canonical paths it accepted.

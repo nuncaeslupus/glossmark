@@ -81,6 +81,7 @@ export class Shell {
   constructor(
     private readonly root: HTMLElement,
     private readonly backend: Backend,
+    private readonly reloadWindow: () => void = () => location.reload(),
   ) {
     this.tabStrip.setAttribute("role", "tablist");
     this.view.append(this.empty);
@@ -136,6 +137,26 @@ export class Shell {
     this.noticeTimer = setTimeout(() => {
       this.notice.replaceChildren();
     }, NOTICE_MS);
+  }
+
+  /**
+   * The remote-images setting (D-12), saved first. Off applies at once: the CSP is narrowed and
+   * open tabs re-render without remote images. On reloads the window, since a narrowed CSP cannot
+   * be lifted.
+   */
+  async setRemoteImages(on: boolean): Promise<void> {
+    if (!this.config || this.config.remoteImages === on) return;
+    const next = { ...this.config, remoteImages: on };
+    try {
+      await this.backend.setConfig(next);
+    } catch {
+      this.show(strings.notices.settingNotSaved);
+      return;
+    }
+    this.config = next;
+    if (on) return this.reloadWindow();
+    blockRemoteImages(this.root.ownerDocument);
+    await Promise.all(this.tabs.map((tab) => this.load(tab, true)));
   }
 
   /** Opens each path in a new tab, or focuses its tab; the last one becomes active. */
@@ -203,10 +224,10 @@ export class Shell {
       if (!live()) return;
       const anchor = reload ? scrollAnchor(tab.canvas, tab.sheet) : undefined;
       const remoteImages = this.config?.remoteImages ?? true;
-      const { readSvg, assetUrl } = this.backend;
+      const { readSvg, imageUrl } = this.backend;
       tab.sheet.innerHTML = sanitize(
         render(doc.text),
-        imagePolicy(doc.path, remoteImages, (path) => assetUrl(path)),
+        imagePolicy(doc.path, remoteImages, (path) => imageUrl(path)),
       );
       // ponytail: the outline it returns is unused until T13's outline panel.
       enhance(tab.sheet);
@@ -214,7 +235,7 @@ export class Shell {
       await inlineSvgs(
         tab.sheet,
         (path) => readSvg(path),
-        (path) => assetUrl(path),
+        (path) => imageUrl(path),
       );
       if (!live()) return;
       // ponytail: watching starts after a successful read, so a missing file adds no second
