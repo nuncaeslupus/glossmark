@@ -111,6 +111,9 @@ jobs:
   e2e:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
+    # Browsers and their system deps come preinstalled, so this job never touches the slow apt mirror.
+    # The tag must match the @playwright/test version pinned in package.json.
+    container: mcr.microsoft.com/playwright:v1.63.0-noble
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -118,8 +121,5 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: sudo rm -f /var/lib/man-db/auto-update
-      - timeout-minutes: 10
-        run: npx playwright install --with-deps webkit chromium
       - run: npm run build
       - run: npm run test:e2e
