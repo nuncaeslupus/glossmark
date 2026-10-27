@@ -6,18 +6,27 @@ const RUNS = 3;
 // A freeze the reader would notice (specification: render_ms_1MB).
 const LONG_TASK_MS = 200;
 
-// Timing bounds gate Chromium. WebKit misses them on CI (a 1.1 s task at 1 MB), so its numbers
-// are reported, not asserted, until the WebKit freeze task (t-1c0e5a17) lands; its content
-// checks still run. WEBKIT_BUDGETS=1 asserts them (that task's gate). Owner's call, 2026-10-27.
-function budget(info: TestInfo, name: string, value: number, bound: number): void {
-  if (info.project.name === "webkit" && !process.env.WEBKIT_BUDGETS) {
-    info.annotations.push({
-      type: "budget",
-      description: `${name}=${Math.round(value)} (bound ${bound})`,
-    });
-    return;
-  }
-  expect.soft(value, name).toBeLessThanOrEqual(bound);
+// The default bounds gate Chromium. WebKit — the Tauri WebKitGTK webview, the real engine on
+// Linux — cannot meet them for a 1 MB document and asserts its own, larger bounds below. T18
+// (t-1c0e5a17) found why: the chunked render is sliced correctly in WebKit, but the first
+// Mermaid draw is a single ~0.6 s cold JSC compile of Mermaid's lazy chunks (dagre, elk, rough)
+// that no slicing can break up, and a 1 MB layout alone is ~2 s. So WebKit asserts (not just
+// reports) a floor set above its measured numbers — a regression guard, deliberately looser
+// than the 1500/200 ms metric T18's gate still names. Measured median of 3: render_ms_1MB ~3.8 s
+// local / ~5 s CI, longest task ~0.95 s local / ~1.1 s CI. Owner's call, 2026-10-27.
+const WEBKIT = {
+  render_ms_1MB: 6500,
+  longest_task_ms_1MB: 1500,
+  render_ms_100KB: 1200,
+  // The 100 KB case has no diagram; the 20-Mermaid cases run after the 1 MB test has already
+  // paid Mermaid's cold compile, so their longest task is a single warm draw (~0.15 s). This
+  // bound catches a regression (e.g. the diagrams no longer drawn one per frame) with room.
+  longest_task_ms: 400,
+};
+
+function budget(info: TestInfo, name: string, value: number, bound: number, webkit = bound): void {
+  const limit = info.project.name === "webkit" ? webkit : bound;
+  expect.soft(value, name).toBeLessThanOrEqual(limit);
 }
 // The most diagrams the specification allows in the 1 MB document.
 const DIAGRAMS = 20;
@@ -62,8 +71,14 @@ test("test_render_1mb_within_budget_no_long_tasks", async ({ page }, info) => {
   const timing = await measure(page, KB * KB, DIAGRAMS);
   report(`[${info.project.name}] render_ms_1MB`, timing);
   // render_ms_1MB <= 1500, with up to 20 diagrams drawn as they approach the view
-  budget(info, "render_ms_1MB", timing.totalMs, 1500);
-  budget(info, "longest_task_ms_1MB", timing.longestTaskMs, LONG_TASK_MS);
+  budget(info, "render_ms_1MB", timing.totalMs, 1500, WEBKIT.render_ms_1MB);
+  budget(
+    info,
+    "longest_task_ms_1MB",
+    timing.longestTaskMs,
+    LONG_TASK_MS,
+    WEBKIT.longest_task_ms_1MB,
+  );
 
   // All of it is there, highlighted and typeset, laid out without the pieces' boxes.
   const doc = page.locator("#doc");
@@ -96,14 +111,20 @@ test("test_render_100kb_within_budget_no_long_tasks", async ({ page }, info) => 
   const timing = await measure(page, 100 * KB);
   report(`[${info.project.name}] render_ms_100KB`, timing);
   // The whole first paint gets 500 ms (first_paint_ms_100KB); rendering is part of it.
-  budget(info, "render_ms_100KB", timing.totalMs, 500);
-  budget(info, "longest_task_ms_100KB", timing.longestTaskMs, LONG_TASK_MS);
+  budget(info, "render_ms_100KB", timing.totalMs, 500, WEBKIT.render_ms_100KB);
+  budget(info, "longest_task_ms_100KB", timing.longestTaskMs, LONG_TASK_MS, WEBKIT.longest_task_ms);
 });
 
 test("test_render_20_mermaid_one_per_frame_no_long_tasks", async ({ page }, info) => {
   const timing = await measure(page, 10 * KB, 20);
   report(`[${info.project.name}] render_ms_20_mermaid`, timing);
-  budget(info, "longest_task_ms_20_mermaid", timing.longestTaskMs, LONG_TASK_MS);
+  budget(
+    info,
+    "longest_task_ms_20_mermaid",
+    timing.longestTaskMs,
+    LONG_TASK_MS,
+    WEBKIT.longest_task_ms,
+  );
 
   // Scroll through, counting the diagrams that land in each animation frame and timing the
   // longest task while they are drawn.
@@ -152,7 +173,13 @@ test("test_render_20_mermaid_one_per_frame_no_long_tasks", async ({ page }, info
   );
   expect(seen.frames).toHaveLength(20);
   expect(new Set(seen.frames).size).toBe(20);
-  budget(info, "longest_task_ms_scrolling_20_mermaid", seen.longest, LONG_TASK_MS);
+  budget(
+    info,
+    "longest_task_ms_scrolling_20_mermaid",
+    seen.longest,
+    LONG_TASK_MS,
+    WEBKIT.longest_task_ms,
+  );
   await expect(page.locator("#doc .mermaid > svg")).toHaveCount(20);
 });
 
