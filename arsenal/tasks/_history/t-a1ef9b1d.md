@@ -5,6 +5,7 @@ label: "GFM extensions"
 priority: 5
 deps: [t-befb1a9f]
 tags: [S-1]
+status: merged
 ---
 
 GFM: tables, task lists, strikethrough, extended autolinks, tag filter
