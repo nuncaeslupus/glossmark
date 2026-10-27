@@ -31,6 +31,8 @@ beforeEach(() => {
           remoteImages: true,
           recentFiles: [],
         };
+      case "read_user_css":
+        return { css: null };
       case "read_document":
         return { path, text: `# ${path}`, mtime_ms: 0 };
       default:
@@ -53,10 +55,11 @@ describe("boot", () => {
   it("test_app_boot_listens_then_opens_launch_files", async () => {
     const root = document.createElement("div");
     await start(root);
-    expect(calls.slice(0, 4)).toEqual([
+    expect(calls.slice(0, 5)).toEqual([
       "listen open-files",
       "listen document-changed",
       "get_config",
+      "read_user_css",
       "take_open_files",
     ]);
     expect(calls).toContain("watch");

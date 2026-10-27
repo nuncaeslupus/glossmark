@@ -4,6 +4,7 @@ import { inlineSvgs } from "../render/enhance/svg";
 import { render } from "../render/pipeline";
 import { sanitize } from "../render/sanitize";
 import { strings } from "../strings";
+import { applyUserCss } from "../themes/user-css";
 import { type ActionId, actions, bar, matchesKey, menus } from "./definition";
 import { clearMatches, highlightMatches } from "./find";
 import { type Backend, type Config, type Doc, type DocumentChanged, errorMessage } from "./ipc";
@@ -173,6 +174,11 @@ export class Shell {
       this.theme = THEMES.includes(this.config.theme) ? this.config.theme : "system";
       this.zoom = clampZoom(this.config.defaultZoom);
     }
+    // ponytail: a user.css that cannot be read is ignored; the theme alone still reads well.
+    await this.backend.readUserCss().then(
+      (css) => applyUserCss(this.root.ownerDocument, css),
+      () => {},
+    );
     this.update();
     await this.openPaths(await this.backend.takeOpenFiles());
   }

@@ -18,6 +18,7 @@ export function fakeBackend(files: Record<string, string>, launch: string[] = []
       recentFiles: [],
     } as Config,
     external: [] as string[],
+    userCss: null as string | null,
     dialogPaths: [] as string[],
     dialogCalls: 0,
     reads: 0,
@@ -82,6 +83,7 @@ export function fakeBackend(files: Record<string, string>, launch: string[] = []
       failing("setConfig");
       state.config = config;
     },
+    readUserCss: async () => state.userCss,
     openExternal: async (url) => {
       state.external.push(url);
     },
