@@ -34,3 +34,75 @@ jobs:
           workspaces: src-tauri
       - run: npm ci
       - run: make lint test
+
+  # Separate from `check` so packaging (a release build plus linuxdeploy) never slows the lint/test feedback.
+  package:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      # linuxdeploy is itself an AppImage; the runner has no libfuse2, so extract it instead of mounting.
+      APPIMAGE_EXTRACT_AND_RUN: 1
+    steps:
+      - uses: actions/checkout@v4
+      # Same apt workaround as `check`: man-db's trigger can stall apt on ubuntu-24.04 runners.
+      - timeout-minutes: 20
+        run: |
+          sudo rm -f /var/lib/man-db/auto-update
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          key: package
+      - run: npm ci
+      # ponytail: the AppImage step downloads linuxdeploy and its plugin from GitHub releases on every
+      # run and bundles WebKitGTK (~80 MB), so it is the slow, network-dependent part of this job.
+      # It is built and its size reported, not gated (spec: `.deb` is the gated package).
+      - timeout-minutes: 30
+        run: npm run tauri build -- --bundles deb,appimage
+      - name: Package sizes (fails when the .deb exceeds 20 MB)
+        run: |
+          shopt -s nullglob
+          debs=(src-tauri/target/release/bundle/deb/*.deb)
+          appimages=(src-tauri/target/release/bundle/appimage/*.AppImage)
+          # Exactly one .deb, so the size check below can never compare an empty or multi-word value.
+          if [ "${#debs[@]}" -ne 1 ]; then
+            echo "::error::expected exactly one .deb, found ${#debs[@]}: ${debs[*]}"
+            exit 1
+          fi
+          if [ "${#appimages[@]}" -gt 1 ]; then
+            echo "::error::expected at most one AppImage, found ${#appimages[@]}: ${appimages[*]}"
+            exit 1
+          fi
+          deb=${debs[0]}
+          deb_bytes=$(stat -c %s "$deb")
+          limit=$((20 * 1024 * 1024))
+          deb_mb=$(awk "BEGIN { printf \"%.2f\", $deb_bytes / 1048576 }")
+          echo "deb_package_mb=$deb_mb (limit 20)"
+          {
+            echo "| package | MB |"
+            echo "|---|---|"
+            echo "| \`$(basename "$deb")\` | $deb_mb (limit 20) |"
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "${#appimages[@]}" -eq 1 ]; then
+            appimage=${appimages[0]}
+            appimage_mb=$(awk "BEGIN { printf \"%.2f\", $(stat -c %s "$appimage") / 1048576 }")
+            echo "appimage_mb=$appimage_mb (reported, not gated)"
+            echo "| \`$(basename "$appimage")\` | $appimage_mb |" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          if [ "$deb_bytes" -gt "$limit" ]; then
+            echo "::error::.deb is $deb_mb MB, over the 20 MB limit"
+            exit 1
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-packages
+          path: |
+            src-tauri/target/release/bundle/deb/*.deb
+            src-tauri/target/release/bundle/appimage/*.AppImage
+          retention-days: 7

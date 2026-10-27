@@ -5,6 +5,7 @@ label: "Linux packaging"
 priority: 5
 deps: [t-c63c60f5]
 tags: [S-1]
+status: merged
 ---
 
 Linux packaging: `.desktop`, MIME association for `text/markdown`, icon, `.deb` and AppImage built in CI on every PR
@@ -19,6 +20,7 @@ repo
 Metric: `deb_package_mb <= 20` (from `status/plan.md`).
 
 ```bash
-# arsenal:gate-placeholder — replace with the real check; it may land in this task's own PR
-false
+# The .desktop file declares text/markdown, opens files with %F, and has Name/Icon.
+# deb_package_mb <= 20 is enforced by the `package` job in .github/workflows/ci.yml.
+cd src-tauri && cargo test --test desktop_file
 ```
