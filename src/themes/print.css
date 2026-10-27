@@ -1,0 +1,93 @@
+/* Printing (D-6): the active tab's sheet in the signature theme, light on paper, without the
+ * canvas or the app's controls. Loaded after the theme; dark there is screen-only. */
+
+@page {
+  margin: 2cm;
+}
+
+@media print {
+  .tabs,
+  .bar,
+  .outline,
+  .find,
+  .shortcuts,
+  .empty,
+  .file-notice,
+  .canvas[hidden],
+  .sheet .code-block > .copy {
+    display: none;
+  }
+
+  html,
+  body,
+  #app,
+  .view {
+    display: block;
+    height: auto;
+    background: none;
+  }
+
+  .canvas {
+    position: static;
+    overflow: visible;
+    padding: 0;
+  }
+
+  .sheet {
+    zoom: 1;
+    max-width: none;
+    padding: 0;
+    background: none;
+    box-shadow: none;
+    /* Code backgrounds, table stripes and highlights are part of the typography. */
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  mark.find-match {
+    background: none;
+  }
+
+  /* Nothing scrolls on paper: long code lines wrap, wide tables and formulas fit the page. */
+  .sheet pre {
+    overflow: visible;
+    white-space: pre-wrap;
+  }
+
+  .sheet table {
+    display: table;
+    width: auto;
+    overflow: visible;
+  }
+
+  .sheet .math-display {
+    overflow: visible;
+  }
+
+  /* No page break inside a block that reads as one, nor between a heading and what follows. */
+  .sheet
+    :is(
+      pre,
+      .code-block,
+      table,
+      figure,
+      img,
+      svg[role="img"],
+      .math-display,
+      .mermaid,
+      .markdown-alert,
+      blockquote
+    ) {
+    break-inside: avoid;
+  }
+
+  .sheet :is(h1, h2, h3, h4, h5, h6) {
+    break-after: avoid;
+    break-inside: avoid;
+  }
+
+  .sheet :is(p, li, dd) {
+    orphans: 3;
+    widows: 3;
+  }
+}
