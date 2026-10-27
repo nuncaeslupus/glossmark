@@ -235,6 +235,10 @@ Generated from the **Depends** column — never drawn by hand.
 > **Owner sign-off (2026-10-27): accepted as a documented WebKitGTK start-up deviation (same
 > decision as T18); the gate asserts a 900 ms regression floor, and a start-up speed task is
 > queued to bring it under 500 ms.**
+> **Start-up task (t-c86fe6e8, #49), owner ruling (2026-10-27):** profiling found ~335 ms of
+> GTK/webview/web-process start-up before any app code and launch-to-read ≈ 490 ms alone; no
+> cut beat run-to-run noise (breakdown in #49). ~650 ms is accepted as the WebKitGTK floor;
+> that task's gate asserts 700 ms.
 
 > **T17 idle-RSS deviation.** `idle_rss_mb` (three 100 KB tabs) is about 400 MB (398–412 over five runs) (summed PSS, the
 > footprint with shared library pages counted once), over the 250 MB target. The cause is
