@@ -1,7 +1,8 @@
 use crate::config::{self, Config, UserCss};
-use crate::document::{self, Document};
+use crate::document::{self, Document, Svg};
 use crate::error::{ErrorKind, IpcError};
 use crate::external;
+use crate::image;
 use crate::scope::{self, Scope};
 use crate::watch::{self, Registry};
 use notify_debouncer_mini::notify::{RecommendedWatcher, RecursiveMode};
@@ -10,6 +11,7 @@ use serde::Serialize;
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, MutexGuard};
+use tauri::http::Response;
 use tauri::{AppHandle, Emitter, Manager, Runtime, State};
 use tauri_plugin_dialog::{DialogExt, FilePath};
 use tauri_plugin_opener::OpenerExt;
@@ -62,6 +64,11 @@ impl AppState {
     /// Dropped files: the `open-files` payload for those the scope accepted, if any.
     pub fn dropped(&self, paths: &[PathBuf]) -> Option<OpenFiles> {
         dropped_files(&mut lock(&self.scope), paths)
+    }
+
+    /// An `image:` protocol request; the scope lock covers only the check.
+    pub fn image(&self, uri_path: &str) -> Response<Vec<u8>> {
+        image::respond(|p| lock(&self.scope).check_image(p), uri_path)
     }
 
     /// Files from this launch's command line, held until the frontend asks for them.
@@ -149,6 +156,12 @@ pub async fn read_document(path: String, state: State<'_, AppState>) -> Result<D
     // The scope lock covers only the check; the read itself runs without it.
     let path = lock(&state.scope).check_document(Path::new(&path))?;
     document::read_file(&path)
+}
+
+#[tauri::command]
+pub async fn read_svg(path: String, state: State<'_, AppState>) -> Result<Svg, IpcError> {
+    let path = lock(&state.scope).check_svg(Path::new(&path))?;
+    document::read_svg_file(&path)
 }
 
 #[tauri::command]

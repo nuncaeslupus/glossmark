@@ -10,6 +10,7 @@ export const strings = {
     openFailed: "The Open dialog could not be shown.",
     settingsUnavailable: "Settings could not be read; recent files will not be kept.",
     recentFilesNotSaved: "Recent files could not be saved.",
+    settingNotSaved: "The setting could not be saved.",
     sectionNotFound: "That section is not in this document.",
     notMarkdown: "Only Markdown files open in Glossmark.",
     watchFailed: "Changes to this file will not be shown.",

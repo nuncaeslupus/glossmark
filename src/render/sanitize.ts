@@ -1,4 +1,5 @@
 import DOMPurify from "dompurify";
+import type { ImagePolicy } from "./enhance/images";
 
 // GitHub's safe-HTML allowlist (D-15), after html-pipeline's SanitizationFilter. `section` and
 // `input` carry footnotes and task-list checkboxes; `class`/`id` carry language tags, alerts
@@ -29,6 +30,7 @@ const EXTERNAL = /^(?:https?|mailto):/i;
 const PROTOCOL_RELATIVE = /^\s*[\\/]{2}/;
 
 const purify = DOMPurify(window);
+let images: ImagePolicy | undefined;
 
 // Links: external ones are flagged for the shell to hand to the OS and never open in the
 // webview; in-document and relative links stay for in-app navigation.
@@ -40,18 +42,25 @@ purify.addHook("afterSanitizeAttributes", (node) => {
       node.setAttribute("data-external", "");
       node.setAttribute("rel", "noopener noreferrer");
     }
+  } else if (node instanceof HTMLImageElement || node instanceof HTMLSourceElement) {
+    images?.(node);
   } else if (node instanceof HTMLInputElement) {
     if (node.type !== "checkbox") node.remove();
     else node.setAttribute("disabled", "");
   }
 });
 
-/** Strip everything outside the allowlist from rendered HTML. */
-export function sanitize(html: string): string {
-  return purify.sanitize(html, {
-    ALLOWED_TAGS: TAGS,
-    ALLOWED_ATTR: ATTRS,
-    ALLOWED_URI_REGEXP: URI,
-    ALLOW_DATA_ATTR: false,
-  });
+/** Strip everything outside the allowlist from rendered HTML; `policy` rewrites image sources. */
+export function sanitize(html: string, policy?: ImagePolicy): string {
+  images = policy;
+  try {
+    return purify.sanitize(html, {
+      ALLOWED_TAGS: TAGS,
+      ALLOWED_ATTR: ATTRS,
+      ALLOWED_URI_REGEXP: URI,
+      ALLOW_DATA_ATTR: false,
+    });
+  } finally {
+    images = undefined;
+  }
 }

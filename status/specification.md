@@ -300,11 +300,11 @@ tab's sheet, never a dialog (D-11).
 |--------|--------|----------|----------|-----------------|
 | Web frontend | Rust core | Tauri IPC command | `take_open_files`, `read_document`, `read_svg`, `watch`, `unwatch`, `get_config`, `set_config`, `read_user_css`, `open_external` | `IpcError` rendered in the tab, no dialog |
 | Rust core | Web frontend | Tauri IPC event | `open-files`, `document-changed` | Frontend ignores events for paths with no tab |
-| Web frontend | Local images | Tauri asset protocol (`convertFileSrc`) | Scope widened at runtime to the folder of each opened document | Broken-image placeholder |
-| Web frontend | Remote images | HTTPS from the webview | Allowed only when `remoteImages` is true; CSP `img-src` is rebuilt on change | Broken-image placeholder |
+| Web frontend | Local images | `image://localhost/<path>` (`convertFileSrc(path, "image")`), served by the Rust core | Each request checked: canonical path (symlinks resolved) under an opened document's folder, image extensions only (`png`, `jpg`, `jpeg`, `gif`, `webp`, `avif`, `bmp`, `ico`, `svg`), regular files up to 50 MB; responses carry `nosniff` and a `sandbox` CSP. Not Tauri's asset protocol: its scope grants whole folders of any file type | Broken-image placeholder (403/404/413) |
+| Web frontend | Remote images | HTTPS from the webview | Allowed only when `remoteImages` is true; when off, remote sources are removed before insertion and a meta CSP narrows `img-src` (turning it back on reloads the window) | Broken-image placeholder |
 
 **Content-security policy** (in `tauri.conf.json`): `default-src 'self'; script-src 'self';
-style-src 'self' 'unsafe-inline'; img-src 'self' asset: http://asset.localhost data: https:;
+style-src 'self' 'unsafe-inline'; img-src 'self' image: http://image.localhost data: https:;
 font-src 'self' data:; connect-src ipc: http://ipc.localhost; frame-src 'none'; object-src 'none'`.
 `style-src 'unsafe-inline'` is needed by KaTeX and Mermaid output; scripts stay `'self'` only.
 
@@ -322,7 +322,7 @@ plugin's file; both are recreated with defaults when missing.
 | Risk | Likelihood | Impact | Mitigation | Validation |
 |------|-----------|--------|------------|------------|
 | WebKitGTK printing cuts code blocks or tables, or drops fonts, KaTeX or Mermaid | Med | High | Print stylesheet with `break-inside: avoid` on code, tables, figures; fonts bundled locally; Mermaid rendered before print; checked in T10, before most UI work | manual (owner judges print parity) + Playwright WebKit `emulateMedia('print')` snapshot |
-| A hostile document runs script or reads files | Med | High | DOMPurify with an explicit allowlist, strict CSP, Mermaid `securityLevel: 'strict'`, filesystem scope limited to opened files' folders, external links handed to the OS | security: XSS fixture (`script_execution_from_document == 0`) + Rust test refusing paths outside scope |
+| A hostile document runs script or reads files | Med | High | DOMPurify with an explicit allowlist, strict CSP, Mermaid `securityLevel: 'strict'`, filesystem scope limited to opened files' folders (the `image:` protocol serves only image files there), external links handed to the OS | security: XSS fixture (`script_execution_from_document == 0`) + Rust test refusing paths outside scope |
 | A markdown-it plugin is unmaintained or misrenders against GitHub | Med | Med | Pin exact versions; the feature fixture covers each construct; a broken plugin is vendored into `src/render/plugins/` and fixed there | unit (fixture snapshot) |
 | GFM spec examples fail on markdown-it's linkify or tag-filter behaviour | Med | Low | Configure linkify to GFM's rules; add a small tag-filter rule; any example still failing is listed and justified in the test file, not silently skipped | unit (`gfm_extension_examples_pass_rate == 1.0`) |
 | A 1 MB document or 20 Mermaid diagrams freeze the window | Med | Med | Mermaid lazy-loaded and rendered one diagram per animation frame; parsing moves to a Web Worker if `render_ms_1MB` fails | perf benchmark (T15) |

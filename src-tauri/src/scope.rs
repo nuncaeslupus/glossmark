@@ -34,6 +34,21 @@ impl Scope {
         }
     }
 
+    /// The canonical path of an image (by extension) under an opened document's folder, or
+    /// `not_permitted`.
+    pub fn check_image(&self, path: &Path) -> Result<PathBuf, IpcError> {
+        resolve(path)
+            .filter(|p| crate::image::media_type(p).is_some() && self.in_folders(p))
+            .ok_or_else(|| IpcError::not_permitted(path))
+    }
+
+    /// The canonical path of an SVG under an opened document's folder, or `not_permitted`.
+    pub fn check_svg(&self, path: &Path) -> Result<PathBuf, IpcError> {
+        resolve(path)
+            .filter(|p| has_extension(p, &["svg"]) && self.in_folders(p))
+            .ok_or_else(|| IpcError::not_permitted(path))
+    }
+
     fn in_folders(&self, path: &Path) -> bool {
         path.ancestors().skip(1).any(|a| self.folders.contains(a))
     }
@@ -54,17 +69,19 @@ pub fn resolve(path: &Path) -> Option<PathBuf> {
 pub const MARKDOWN_EXTENSIONS: [&str; 2] = ["md", "markdown"];
 
 fn is_markdown(path: &Path) -> bool {
-    path.extension().and_then(|e| e.to_str()).is_some_and(|e| {
-        MARKDOWN_EXTENSIONS
-            .iter()
-            .any(|m| e.eq_ignore_ascii_case(m))
-    })
+    has_extension(path, &MARKDOWN_EXTENSIONS)
+}
+
+fn has_extension(path: &Path, extensions: &[&str]) -> bool {
+    path.extension()
+        .and_then(|e| e.to_str())
+        .is_some_and(|e| extensions.iter().any(|x| e.eq_ignore_ascii_case(x)))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::document::read_document;
+    use crate::document::{read_document, read_svg, MAX_SVG_BYTES};
     use crate::error::ErrorKind;
 
     #[test]
@@ -122,5 +139,52 @@ mod tests {
             allowed.is_empty(),
             "out_of_scope_reads_allowed: {allowed:?}"
         );
+    }
+
+    #[test]
+    fn test_read_svg_scoped_capped_regular_files_only() {
+        let root = tempfile::tempdir().unwrap();
+        let root = fs::canonicalize(root.path()).unwrap();
+        let notes = root.join("notes");
+        let secret = root.join("secret");
+        fs::create_dir_all(notes.join("img")).unwrap();
+        fs::create_dir_all(&secret).unwrap();
+        fs::write(notes.join("readme.md"), "# hi").unwrap();
+        fs::write(notes.join("img/flow.svg"), "<svg/>").unwrap();
+        fs::write(notes.join("img/flow.png"), "png").unwrap();
+        fs::write(secret.join("x.svg"), "<svg/>").unwrap();
+        fs::File::create(notes.join("big.svg"))
+            .unwrap()
+            .set_len(MAX_SVG_BYTES + 1)
+            .unwrap();
+
+        let mut scope = Scope::default();
+        scope.allow(&notes.join("readme.md")).unwrap();
+
+        assert_eq!(
+            read_svg(&scope, &notes.join("img/flow.svg")).unwrap().svg,
+            "<svg/>"
+        );
+        let kind = |p: PathBuf| read_svg(&scope, &p).unwrap_err().kind;
+        assert_eq!(kind(notes.join("big.svg")), ErrorKind::TooLarge);
+        assert_eq!(kind(notes.join("missing.svg")), ErrorKind::NotFound);
+        for denied in [
+            notes.join("img/flow.png"),
+            notes.join("readme.md"),
+            secret.join("x.svg"),
+            notes.join("../secret/x.svg"),
+        ] {
+            assert_eq!(kind(denied.clone()), ErrorKind::NotPermitted, "{denied:?}");
+        }
+        #[cfg(unix)]
+        {
+            let fifo = notes.join("pipe.svg");
+            let status = std::process::Command::new("mkfifo")
+                .arg(&fifo)
+                .status()
+                .unwrap();
+            assert!(status.success());
+            assert_eq!(kind(fifo), ErrorKind::NotPermitted);
+        }
     }
 }

@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 
 export interface Config {
@@ -27,6 +27,10 @@ export interface Backend {
   takeOpenFiles(): Promise<string[]>;
   openDialog(): Promise<string[]>;
   readDocument(path: string): Promise<Doc>;
+  /** The markup of a local SVG, for inlining after sanitising (2 MB cap). */
+  readSvg(path: string): Promise<string>;
+  /** The `image:` protocol URL of a local image, for `<img src>`. */
+  imageUrl(path: string): string;
   getConfig(): Promise<Config>;
   setConfig(config: Config): Promise<void>;
   openExternal(url: string): Promise<void>;
@@ -46,6 +50,8 @@ export const tauriBackend: Backend = {
   takeOpenFiles: () => invoke<OpenFiles>("take_open_files").then((r) => r.paths),
   openDialog: () => invoke<OpenFiles>("open_dialog").then((r) => r.paths),
   readDocument: (path) => invoke<Doc>("read_document", { path }),
+  readSvg: (path) => invoke<{ svg: string }>("read_svg", { path }).then((r) => r.svg),
+  imageUrl: (path) => convertFileSrc(path, "image"),
   getConfig: () => invoke<Config>("get_config"),
   setConfig: (config) => invoke<void>("set_config", { config }),
   openExternal: (url) => invoke<void>("open_external", { url }),
