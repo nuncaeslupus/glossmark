@@ -105,7 +105,13 @@ export class Shell {
 
   private readonly handlers: Record<ActionId, () => void> = {
     open: () => void this.openDialog(),
-    print: () => void diagramsForPaper().then(() => window.print()),
+    // `print()` usually blocks until the dialog closes; restoring after it covers a webview
+    // that never fires `afterprint`.
+    print: () =>
+      void diagramsForPaper().then((back) => {
+        window.print();
+        back();
+      }),
     closeTab: () => this.active && this.close(this.active),
     outline: () => {
       this.outlineOpen = !this.outlineOpen;

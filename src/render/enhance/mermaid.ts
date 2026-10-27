@@ -72,19 +72,19 @@ function followTheme(): void {
   matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => void redraw());
 }
 
-/** Redraws the diagrams light for paper until the print dialog closes. Mermaid draws
- * asynchronously, so this is awaited before `print()`: `beforeprint` cannot wait. */
-export async function diagramsForPaper(): Promise<void> {
+/** Redraws the diagrams light for paper; the returned function puts the screen theme back.
+ * Mermaid draws asynchronously, so this is awaited before `print()`: `beforeprint` cannot
+ * wait. `afterprint` restores too, for a webview whose `print()` does not block. */
+export async function diagramsForPaper(): Promise<() => void> {
   forPaper = true;
-  addEventListener(
-    "afterprint",
-    () => {
-      forPaper = false;
-      void redraw();
-    },
-    { once: true },
-  );
+  const back = () => {
+    if (!forPaper) return;
+    forPaper = false;
+    void redraw();
+  };
+  addEventListener("afterprint", back, { once: true });
   await redraw();
+  return back;
 }
 
 /** Replace each `mermaid` fence with its diagram, in the page's light or dark theme. Mermaid
