@@ -16,13 +16,20 @@ test("test_gfm_extension_examples_all_match", () => {
 });
 
 // Where GFM deliberately departs from CommonMark, as cmark-gfm does with its extensions on:
-// the tag filter (raw <script>, <style>, <textarea>) and extended autolinks. Nothing else.
+// the tag filter (raw <script>, <style>, <textarea>) and extended autolinks. The T4 extras
+// add two more departures, both syntax CommonMark leaves to extensions:
+// - 96, 98: a document opening with `---` … `---` is YAML front matter, not two rules.
+// - 548, 559, 590: `[[…]]` is a wiki link, so it wins over a bracketed reference link.
+// Nothing else: math, mark, sub, sup, emoji, footnotes, abbr and deflist change no example.
 test("test_gfm_departs_from_commonmark_only_where_specified", () => {
   const normalise = (html: string) => tabs(html).replace(/>\n</g, "><");
   const differ = spec.tests
     .filter((t) => normalise(render(tabs(t.markdown))) !== normalise(t.html))
     .map((t) => t.number);
-  expect(differ).toEqual([170, 171, 172, 173, 176, 178, 608, 611, 612]);
+  const frontMatter = [96, 98];
+  const wikiLinks = [548, 559, 590];
+  const gfm = [170, 171, 172, 173, 176, 178, 608, 611, 612];
+  expect(differ).toEqual([...frontMatter, ...wikiLinks, ...gfm].sort((a, b) => a - b));
 });
 
 test("test_gfm_autolink_edge_cases", () => {
