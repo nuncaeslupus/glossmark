@@ -31,6 +31,8 @@ export const strings = {
     open: "Open…",
     print: "Print…",
     closeTab: "Close tab",
+    nextTab: "Next tab",
+    previousTab: "Previous tab",
     outline: "Outline",
     back: "Back",
     forward: "Forward",
