@@ -5,6 +5,7 @@ label: "Signature theme"
 priority: 1
 deps: [t-a9b25b23, t-c8683796]
 tags: [S-1]
+status: merged
 ---
 
 Signature theme: paper sheet on grey canvas, typography, light and dark, bundled fonts, user CSS loaded last
