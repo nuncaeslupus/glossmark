@@ -4,6 +4,7 @@ title: "Bring first paint under 500 ms by shortening start-up"
 label: "faster start-up"
 priority: 5
 tags: [PERF]
+status: merged
 ---
 
 T17 measured first paint (launch `glossmark big.md` to the sheet visible, release build) at
