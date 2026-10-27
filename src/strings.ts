@@ -40,4 +40,7 @@ export const strings = {
     print: "⎙",
     closeTab: "×",
   },
+  copyCode: "Copy",
+  copied: "Copied",
+  headingLink: (heading: string) => `Link to “${heading}”`,
 } as const;
