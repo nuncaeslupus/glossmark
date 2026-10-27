@@ -109,6 +109,7 @@ test("test_extras_edge_cases", () => {
   expect(performance.now() - start).toBeLessThan(300);
 
   expect(html("[[Page| ]]")).toBe('<p><a href="Page.md" class="wikilink">Page</a></p>');
+  expect(sanitize(render("[[Project:Plan]]"))).toContain('href="./Project:Plan.md"');
   for (const src of ["[[https://x/y]]", "[[mailto:a@b.c]]"]) {
     expect(html(src), src).not.toContain(".md");
     expect(html(src), src).not.toContain("wikilink");

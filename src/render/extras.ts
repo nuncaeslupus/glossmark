@@ -92,7 +92,8 @@ function mathBlock(state: StateBlock, startLine: number, endLine: number, silent
   return true;
 }
 
-const SCHEME = /^[a-z][a-z0-9+.-]*:/i;
+// URLs, not namespaced pages like [[Project:Plan]].
+const SCHEME = /^(?:[a-z][a-z0-9+.-]*:\/\/|mailto:)/i;
 const WIKI = /^\[\[([^[\]|\n]+)(?:\|([^[\]\n]+))?\]\]/;
 
 /** `[[Page]]`, `[[Page|label]]` and `[[Page#Heading]]`: a relative link to `Page.md`. */
@@ -107,7 +108,9 @@ function wikiLink(md: MarkdownIt) {
     const hash = target.indexOf("#");
     const page = hash < 0 ? target : target.slice(0, hash);
     const fragment = hash < 0 ? "" : target.slice(hash);
-    const href = md.normalizeLink((page && !/\.md$/i.test(page) ? `${page}.md` : page) + fragment);
+    const file = page && !/\.md$/i.test(page) ? `${page}.md` : page;
+    // `./` keeps `Ns:Page.md` from reading as an `ns:` scheme to the sanitiser.
+    const href = md.normalizeLink((file.includes(":") ? `./${file}` : file) + fragment);
     if (!target || !md.validateLink(href)) return false;
     if (!silent) {
       const open = state.push("link_open", "a", 1);
