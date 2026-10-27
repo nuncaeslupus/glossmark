@@ -3,24 +3,22 @@
 <!-- Written at session end. A new session reading this file can resume without
      additional context. -->
 
-## This session (local, 2026-10-27)
+## This session (local, 2026-10-27, second half)
 
-- **T18 WebKit render freeze (t-1c0e5a17, #36)** → merged as #38. WebKit perf is asserted
-  at WebKit-specific budgets above the measured floor (owner's call).
-- **Watcher self-trigger loop** (tab clicks looked dead) → fixed in #40: watch.rs emits only
-  when the file's mtime changes.
-- **T17 Acceptance (t-b222ec6c, #18)** → merged as #50. `scripts/measure.sh` writes
-  `status/acceptance.json` (first paint 648 ms, idle RSS 412 MB). Owner signed off four
-  deviations, all in the status/plan.md Evidence log: first paint (gate at a 900 ms floor),
-  idle RSS (WebKitGTK floor), GitHub parity (gaps queued), VM test on Ubuntu 26.04.1
-  instead of 24.04 (local .deb needs glibc 2.43). Simplicity signed off.
-- **CI flake**: the e2e Playwright install times out on a slow apt mirror → PR #51
-  (session "Stop CI e2e timing out on Playwright install"), waiting on CI.
+- **CI e2e** now runs in the Playwright container (#51).
+- **#50's squash dropped T17 work** → landed in #53.
+- **All eight PARITY gaps merged**: heading anchors (#54), img height (#55), sans-serif body
+  (#56), gantt width (#57), Git Issues chart size (#58), front matter rows (#59), copy
+  button (#60), Mermaid zoom/pan (#61, no pan arrows or fullscreen, D-11).
+- **Faster start-up** (t-c86fe6e8, #49) — claimed, **blocked on the owner**. 500 ms is out
+  of reach on WebKitGTK: ~335 ms of GTK/webview/web-process start-up runs before any app
+  code, and launch-to-read is ~490 alone (+~170 render). Breakdown and the four cuts tried
+  (none beat noise) are in the #49 comment and `tmp/t-c86fe6e8-notes.md`. Owner to rule:
+  accept a ~650 floor as a deviation, or re-scope. No PR.
 
 ## What remains
 
-- **PARITY gaps** #41–#48 (tag PARITY, gates in `e2e/parity.spec.ts`).
-- **Faster start-up** (t-c86fe6e8, #49): first paint under 500 ms.
+- #49 owner ruling (above).
 - Ideas I-24..I-29 and I-38 (logo + README hero image) in status/ideas.md, not queued.
 
 ## Decisions taken
@@ -42,6 +40,13 @@
 - Plain `cargo build --release` has no embedded frontend; use `npm run tauri build`.
 - Global `push.negotiate=true` makes pushes fail: `git -c push.negotiate=false push`.
 - Any edit after an adversarial-review verdict invalidates the receipt.
+- e2e perf `render_ms_1MB` (chromium, ≤ 1500) flakes on CI at ~1550–1710: `gh run rerun <id> --failed`.
+  A budget change is the owner's call.
+- Parity PRs all append to the end of `e2e/parity.spec.ts`: rebasing one on another conflicts;
+  keep both tests.
+- `open_task_pr.sh` commits the whole uncommitted tree; run it from a clean tree.
+- Gates needing the env (npm, display) need `ARSENAL_GATE_INHERIT_ENV=1`.
+- `mcp__ccd_pr__bind_pr` takes `url`, not `pr_number`.
 - GitHub auto-merge is disabled for this repo; merge by hand once `merge_ready.sh` is READY.
 
 ## How to continue
