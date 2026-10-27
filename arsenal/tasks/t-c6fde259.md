@@ -19,6 +19,5 @@ frontend
 Metric: `link_routing_cases_failed == 0` (from `status/plan.md`).
 
 ```bash
-# arsenal:gate-placeholder — replace with the real check; it may land in this task's own PR
-false
+npm exec -- vitest run src/ui/links.test.ts
 ```

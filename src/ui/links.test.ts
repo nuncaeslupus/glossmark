@@ -1,0 +1,226 @@
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { render } from "../render/pipeline";
+import { sanitize } from "../render/sanitize";
+import { strings } from "../strings";
+import { fakeBackend, settle } from "./fake-backend";
+import { findTarget, type Gesture, History, type LinkAction, resolvePath, route } from "./links";
+import { Shell } from "./shell";
+
+const shells: Shell[] = [];
+afterEach(() => {
+  for (const shell of shells.splice(0)) shell.dispose();
+});
+
+/** The first link that `markdown` renders to, after sanitising, as the shell sees it. */
+function link(markdown: string): Element {
+  const sheet = document.createElement("article");
+  sheet.innerHTML = sanitize(render(markdown));
+  const a = sheet.querySelector("a[href]");
+  if (!a) throw new Error(`no link in ${markdown}`);
+  return a;
+}
+
+const entry = (path: string, fragment = "", alternates?: string[]) => ({
+  path,
+  fragment,
+  scroll: 0,
+  ...(alternates ? { alternates } : {}),
+});
+
+async function open(files: Record<string, string>, launch: string[]) {
+  const fake = fakeBackend(files, launch);
+  const root = document.createElement("div");
+  document.body.replaceChildren(root);
+  const shell = new Shell(root, fake.backend);
+  shells.push(shell);
+  await shell.start();
+  return { root, shell, ...fake };
+}
+
+function press(el: Element | null, init: MouseEventInit = {}, type = "click"): MouseEvent {
+  const e = new MouseEvent(type, { bubbles: true, cancelable: true, button: 0, ...init });
+  el?.dispatchEvent(e);
+  return e;
+}
+
+const backButton = (root: Element) =>
+  root.querySelector<HTMLButtonElement>('.bar-button[data-action="back"]');
+const forwardButton = (root: Element) =>
+  root.querySelector<HTMLButtonElement>('.bar-button[data-action="forward"]');
+
+describe("links", () => {
+  it("test_link_routing_table_all_cases", () => {
+    const from = "/n/docs/a.md";
+    const cases: [string, Gesture, LinkAction][] = [
+      ["[x](https://a.org/p)", "click", { type: "external", url: "https://a.org/p" }],
+      ["[x](https://a.org/p)", "newTab", { type: "external", url: "https://a.org/p" }],
+      ["[x](mailto:me@a.org)", "click", { type: "external", url: "mailto:me@a.org" }],
+      ["[x](#goal)", "click", { type: "scroll", fragment: "goal" }],
+      ["[x](#goal)", "newTab", { type: "scroll", fragment: "goal" }],
+      ["[x](b.md)", "click", { type: "navigate", entry: entry("/n/docs/b.md") }],
+      ["[x](b.md)", "newTab", { type: "newTab", entry: entry("/n/docs/b.md") }],
+      [
+        "[x](./sub/b.md#part)",
+        "click",
+        { type: "navigate", entry: entry("/n/docs/sub/b.md", "part") },
+      ],
+      ["[x](../B%20c.markdown)", "click", { type: "navigate", entry: entry("/n/B c.markdown") }],
+      ["[x](/abs/c.md?raw=1)", "newTab", { type: "newTab", entry: entry("/abs/c.md") }],
+      ["[x](a.md#goal)", "click", { type: "scroll", fragment: "goal" }],
+      ["[x](a.md#goal)", "newTab", { type: "newTab", entry: entry(from, "goal") }],
+      ["[[Page]]", "click", { type: "navigate", entry: entry("/n/docs/Page.md") }],
+      [
+        "[[Page#Intro|see]]",
+        "newTab",
+        { type: "newTab", entry: entry("/n/docs/Page.md", "Intro") },
+      ],
+      [
+        "[[My Page]]",
+        "click",
+        { type: "navigate", entry: entry("/n/docs/My Page.md", "", ["/n/docs/My-Page.md"]) },
+      ],
+      ["[x](notes.txt)", "click", { type: "unsupported" }],
+      ["[x](pic.png)", "newTab", { type: "unsupported" }],
+    ];
+    const failed = cases.filter(([md, gesture, want]) => {
+      const got = route(link(md), from, gesture);
+      return JSON.stringify(got) !== JSON.stringify(want);
+    });
+    expect(failed).toEqual([]);
+    expect(resolvePath("/n/a.md", "../../x.md")).toBe("/x.md");
+  });
+
+  it("test_history_back_after_two_links_returns_first", async () => {
+    const files = {
+      "/n/a.md": "# A\n\n[to b](b.md)",
+      "/n/b.md": "# B\n\n[to c](c.md)",
+      "/n/c.md": "# C",
+    };
+    const { root } = await open(files, ["/n/a.md"]);
+    const heading = () => root.querySelector(".sheet h1")?.textContent;
+    expect(backButton(root)?.disabled).toBe(true);
+
+    press(root.querySelector(".sheet a"));
+    await settle();
+    press(root.querySelector(".sheet a"));
+    await settle();
+    expect(heading()).toBe("C");
+    expect(root.querySelectorAll(".tab")).toHaveLength(1);
+    expect(root.querySelector(".tab-label")?.textContent).toBe("c.md");
+
+    press(backButton(root));
+    await settle();
+    expect(heading()).toBe("B");
+    root.ownerDocument.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "ArrowLeft", altKey: true }),
+    );
+    await settle();
+    expect(heading()).toBe("A");
+    expect(backButton(root)?.disabled).toBe(true);
+    expect(forwardButton(root)?.disabled).toBe(false);
+
+    root.ownerDocument.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "ArrowRight", altKey: true }),
+    );
+    await settle();
+    expect(heading()).toBe("B");
+    // A new link drops the forward entries.
+    press(root.querySelector(".sheet a"));
+    await settle();
+    expect(heading()).toBe("C");
+    expect(forwardButton(root)?.disabled).toBe(true);
+  });
+
+  it("test_back_restores_scroll_offset", async () => {
+    const files = { "/n/a.md": "# A\n\n[to b](b.md)", "/n/b.md": "# B" };
+    const { root } = await open(files, ["/n/a.md"]);
+    const canvas = () => root.querySelector<HTMLElement>(".canvas:not([hidden])");
+    const a = canvas();
+    if (a) a.scrollTop = 120;
+    press(root.querySelector(".sheet a"));
+    await settle();
+    expect(canvas()?.scrollTop).toBe(0);
+    press(backButton(root));
+    await settle();
+    expect(canvas()?.scrollTop).toBe(120);
+  });
+
+  it("test_ctrl_and_middle_click_open_new_tab", async () => {
+    const md = "[b](b.md) [c](c.md#end)";
+    const files = {
+      "/n/a.md": md,
+      "/n/b.md": "# B",
+      "/n/c.md": '# C\n\n<p id="user-content-end">e</p>',
+    };
+    const { root } = await open(files, ["/n/a.md"]);
+    const scroll = vi.fn();
+    Element.prototype.scrollIntoView = scroll;
+    const [b, c] = root.querySelectorAll(".sheet a");
+
+    expect(press(b, { ctrlKey: true }).defaultPrevented).toBe(true);
+    await settle();
+    expect(root.querySelectorAll(".tab")).toHaveLength(2);
+    expect(root.querySelector(".tab.active .tab-label")?.textContent).toBe("b.md");
+
+    expect(press(c, { button: 1 }, "auxclick").defaultPrevented).toBe(false);
+    // The middle click lands on the first tab's link, which is hidden now: switch back.
+    press(root.querySelector(".tab-label"));
+    expect(press(c, { button: 1 }, "auxclick").defaultPrevented).toBe(true);
+    await settle();
+    expect(root.querySelectorAll(".tab")).toHaveLength(3);
+    expect(root.querySelector(".tab.active .tab-label")?.textContent).toBe("c.md");
+    expect((scroll.mock.contexts.at(-1) as Element).id).toBe("user-content-end");
+    // The first tab did not move.
+    expect(root.querySelector(".tab .tab-label")?.textContent).toBe("a.md");
+  });
+
+  it("test_missing_targets_show_in_sheet_not_dialog", async () => {
+    const md = "[gone](gone.md) [nowhere](#nowhere) [txt](notes.txt) [[Wiki Page]]";
+    const files = { "/n/a.md": md, "/n/Wiki-Page.md": "# Wiki" };
+    const { root } = await open(files, ["/n/a.md"]);
+    Element.prototype.scrollIntoView = vi.fn();
+    const notice = () => root.querySelector(".bar .notice")?.textContent;
+    const links = () => root.querySelectorAll(".sheet a");
+
+    press(links()[1]);
+    expect(notice()).toBe(strings.notices.sectionNotFound);
+    press(links()[2]);
+    expect(notice()).toBe(strings.notices.notMarkdown);
+
+    press(links()[3]);
+    await settle();
+    expect(root.querySelector(".sheet h1")?.textContent).toBe("Wiki");
+    expect(root.querySelector(".tab-label")?.textContent).toBe("Wiki-Page.md");
+    press(backButton(root));
+    await settle();
+
+    press(links()[0]);
+    await settle();
+    const error = root.querySelector(".sheet .doc-error");
+    expect(error?.textContent).toContain(strings.documentError);
+    expect(error?.textContent).toContain("/n/gone.md: not found");
+    expect(backButton(root)?.disabled).toBe(false);
+  });
+
+  it("test_find_target_accepts_user_content_prefix", () => {
+    const sheet = document.createElement("div");
+    sheet.innerHTML = '<h2 id="user-content-intro">i</h2><a name="old">o</a><p id="a b">s</p>';
+    expect(findTarget(sheet, "intro")?.id).toBe("user-content-intro");
+    expect(findTarget(sheet, "user-content-intro")?.id).toBe("user-content-intro");
+    expect(findTarget(sheet, "old")?.textContent).toBe("o");
+    expect(findTarget(sheet, "a%20b")?.textContent).toBe("s");
+    expect(findTarget(sheet, "missing")).toBeNull();
+  });
+
+  it("test_history_push_drops_forward_entries", () => {
+    const history = new History(entry("/a.md"));
+    history.push(entry("/b.md"));
+    history.push(entry("/c.md"));
+    expect(history.back()?.path).toBe("/b.md");
+    history.push(entry("/d.md"));
+    expect(history.canGoForward).toBe(false);
+    expect(history.back()?.path).toBe("/b.md");
+    expect(history.back()?.path).toBe("/a.md");
+    expect(history.back()).toBeNull();
+  });
+});
