@@ -78,10 +78,14 @@ test("test_print_keeps_blocks_whole", async ({ page }) => {
 });
 
 test("test_print_draws_diagrams_light", async ({ page }) => {
+  // The stub records the diagram's fill at the moment print() runs.
   await page.addInitScript(() => {
-    (window as unknown as { printed: number }).printed = 0;
+    const w = window as unknown as { printed: number; printedFill: string };
+    w.printed = 0;
     window.print = () => {
-      (window as unknown as { printed: number }).printed++;
+      w.printed++;
+      const el = document.querySelector(".sheet .mermaid > svg .node :is(rect, polygon)");
+      w.printedFill = el ? getComputedStyle(el).fill : "";
     };
   });
   await open(page, "light");
@@ -96,8 +100,10 @@ test("test_print_draws_diagrams_light", async ({ page }) => {
   await expect
     .poll(() => page.evaluate(() => (window as unknown as { printed: number }).printed))
     .toBe(1);
-  expect(await fill(), "drawn light before print()").toBe(light);
-
-  await page.evaluate(() => dispatchEvent(new Event("afterprint")));
+  const printedFill = await page.evaluate(
+    () => (window as unknown as { printedFill: string }).printedFill,
+  );
+  expect(printedFill, "drawn light when print() runs").toBe(light);
+  // Restored once print() returns, even without `afterprint`.
   await expect.poll(fill).toBe(dark);
 });
