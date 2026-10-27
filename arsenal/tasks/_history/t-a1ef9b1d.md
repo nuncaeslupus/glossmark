@@ -5,6 +5,7 @@ label: "GFM extensions"
 priority: 5
 deps: [t-befb1a9f]
 tags: [S-1]
+status: merged
 ---
 
 GFM: tables, task lists, strikethrough, extended autolinks, tag filter
@@ -19,6 +20,5 @@ frontend
 Metric: `gfm_extension_examples_pass_rate == 1.0` (from `status/plan.md`).
 
 ```bash
-# arsenal:gate-placeholder — replace with the real check; it may land in this task's own PR
-false
+npm exec -- vitest run src/render/gfm.test.ts
 ```
