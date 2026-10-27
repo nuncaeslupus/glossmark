@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { strings } from "../strings";
-import { matchesKey } from "./definition";
+import { matchesKey, menus } from "./definition";
 import { fakeBackend, gate, settle } from "./fake-backend";
 import { Shell } from "./shell";
 
@@ -38,6 +38,30 @@ function click(el: Element | null, init: MouseEventInit = {}): MouseEvent {
 }
 
 describe("shell", () => {
+  it("test_bar_has_three_zones_and_more_menu", async () => {
+    const { root } = await open({ "/d/a.md": "# A" }, ["/d/a.md"]);
+    // Chrome's PDF viewer (D-19): navigation left, zoom centred, tools and ⋮ More right.
+    const zones = [...root.querySelectorAll(".bar > .zone")].map((zone) =>
+      [
+        ...zone.querySelectorAll<HTMLElement>(
+          ":is([data-action], .title, .zoom, .menu-button):not(.menu *)",
+        ),
+      ].map((el) => el.dataset.action ?? el.className),
+    );
+    expect(zones).toEqual([
+      ["outline", "title", "back", "forward"],
+      ["zoomOut", "zoom", "zoomIn"],
+      ["find", "print", "menu-button"],
+    ]);
+    // One ⋮ More button replaces the text menus, and lists every one of their commands.
+    const more = root.querySelectorAll(".bar .menu-button");
+    expect(more).toHaveLength(1);
+    expect(more[0]?.textContent).toBe("");
+    click(more[0] ?? null);
+    const items = [...root.querySelectorAll<HTMLElement>(".menu:not([hidden]) .menu-item")];
+    expect(items.map((i) => i.dataset.action)).toEqual(menus.flat());
+  });
+
   it("test_find_and_print_use_material_icons", async () => {
     const { root } = await open({ "/d/a.md": "# A" }, ["/d/a.md"]);
     // Material Symbols' search and print, as in Chrome's PDF viewer (D-21).

@@ -111,9 +111,9 @@ button:disabled {
 
 /* The one slim bar (Chrome's PDF viewer) */
 .bar {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  gap: 2px;
   height: 40px;
   padding: 0 8px;
   background: var(--chrome);
@@ -132,17 +132,23 @@ button:disabled {
   font-size: 1rem;
 }
 
-.bar-button svg {
+.zone {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+
+.zone:last-child {
+  justify-content: flex-end;
+}
+
+.bar-button svg,
+.menu-button svg {
   width: 20px;
   height: 20px;
   vertical-align: middle;
   fill: currentColor;
-}
-
-.menu-button {
-  border-radius: 4px;
-  padding: 0 8px;
-  font-size: 0.875rem;
 }
 
 .tab-close:hover:enabled,
@@ -171,11 +177,6 @@ button:disabled {
   text-align: center;
 }
 
-.menus {
-  display: flex;
-  margin-right: 8px;
-}
-
 .menu-wrap {
   position: relative;
 }
@@ -183,7 +184,7 @@ button:disabled {
 .menu {
   position: absolute;
   top: 36px;
-  left: 0;
+  right: 0;
   min-width: 12rem;
   padding: 4px 0;
   background: var(--menu);
@@ -206,6 +207,11 @@ button:disabled {
 
 .menu-item[aria-checked="true"]::after {
   content: "✓";
+}
+
+.menu-rule {
+  margin: 4px 0;
+  border-top: 1px solid var(--menu-hover);
 }
 
 .menu-item:hover:enabled {
