@@ -26,3 +26,4 @@ tmp/.arsenal-sessions/
 # Build output
 node_modules/
 dist/
+__pycache__/
