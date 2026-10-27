@@ -12,6 +12,17 @@ import sup from "markdown-it-sup";
 // The extras beyond GFM (D-7): maintained plugins, plus three small local rules where no
 // plugin fits. Math is parsed here and only typeset after sanitising (enhance/math.ts).
 
+// Per inline run and delimiter: the first opener position from which no closer exists, so
+// a paragraph full of unclosed `$` is scanned once, not once per `$`.
+const noCloser = new WeakMap<StateInline, Map<string, number>>();
+
+/** Whether `src[i]` is escaped: an odd run of backslashes before it. */
+function escaped(src: string, i: number): boolean {
+  let n = 0;
+  while (src[i - 1 - n] === "\\") n++;
+  return n % 2 === 1;
+}
+
 /** `$…$` and `$$…$$` inside a paragraph, as pandoc reads dollars: no space inside the
  * single-dollar delimiters and no digit right after the closing one. */
 function mathInline(state: StateInline, silent: boolean): boolean {
@@ -21,13 +32,19 @@ function mathInline(state: StateInline, silent: boolean): boolean {
   const delim = src[start + 1] === "$" ? "$$" : "$";
   const open = start + delim.length;
   if (open >= state.posMax || /\s/.test(src[open])) return false;
+  const cache = noCloser.get(state) ?? new Map<string, number>();
+  noCloser.set(state, cache);
+  const key = `${delim}:${state.posMax}`;
+  if (open >= (cache.get(key) ?? Number.POSITIVE_INFINITY)) return false;
   let end = open;
   for (;;) {
     end = src.indexOf(delim, end);
-    if (end < 0 || end + delim.length > state.posMax) return false;
-    const escaped = src[end - 1] === "\\";
+    if (end < 0 || end + delim.length > state.posMax) {
+      cache.set(key, Math.min(open, cache.get(key) ?? open));
+      return false;
+    }
     const bad = delim === "$" && (/\s/.test(src[end - 1]) || /\d/.test(src[end + 1] ?? ""));
-    if (end > open && !escaped && !bad) break;
+    if (end > open && !escaped(src, end) && !bad) break;
     end++;
   }
   if (!silent) {
@@ -50,9 +67,12 @@ function mathBlock(state: StateBlock, startLine: number, endLine: number, silent
   let tail = "";
   let line = startLine;
   if (head.endsWith("$$")) head = head.slice(0, -2);
+  // Text after a closing `$$` makes the line a paragraph with display math in it.
+  else if (head.includes("$$")) return false;
   else {
+    // Like pandoc, a block never crosses a blank line; unclosed, it is a paragraph.
     for (line++; line < endLine; line++) {
-      if (state.sCount[line] < state.blkIndent && !state.isEmpty(line)) return false;
+      if (state.isEmpty(line) || state.sCount[line] < state.blkIndent) return false;
       const text = lineText(line).trimEnd();
       if (text.endsWith("$$")) {
         tail = text.slice(0, -2);
@@ -72,6 +92,7 @@ function mathBlock(state: StateBlock, startLine: number, endLine: number, silent
   return true;
 }
 
+const SCHEME = /^[a-z][a-z0-9+.-]*:/i;
 const WIKI = /^\[\[([^[\]|\n]+)(?:\|([^[\]\n]+))?\]\]/;
 
 /** `[[Page]]`, `[[Page|label]]` and `[[Page#Heading]]`: a relative link to `Page.md`. */
@@ -81,6 +102,8 @@ function wikiLink(md: MarkdownIt) {
     const m = WIKI.exec(state.src.slice(state.pos, state.posMax));
     if (!m) return false;
     const target = m[1].trim();
+    // `[[https://…]]` is not a page: left as text.
+    if (SCHEME.test(target)) return false;
     const hash = target.indexOf("#");
     const page = hash < 0 ? target : target.slice(0, hash);
     const fragment = hash < 0 ? "" : target.slice(hash);
@@ -93,7 +116,7 @@ function wikiLink(md: MarkdownIt) {
         ["class", "wikilink"],
       ];
       open.markup = "wikilink";
-      state.push("text", "", 0).content = (m[2] ?? target).trim();
+      state.push("text", "", 0).content = m[2]?.trim() || target;
       state.push("link_close", "a", -1).markup = "wikilink";
     }
     state.pos += m[0].length;

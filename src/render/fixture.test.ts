@@ -89,4 +89,28 @@ test("test_extras_edge_cases", () => {
   expect(html("---\nlist:\n  - a\n---")).toContain('<pre class="front-matter">');
   expect(html("---\n---")).toBe("");
   expect(html(":) :-)")).toBe("<p>:) :-)</p>");
+
+  // A `$$` block never crosses a blank line: text after the closer, or no closer, is a paragraph.
+  for (const src of [
+    "$$a$$ is display\n\n# Heading\n\nText\n\n$$b$$",
+    "$$\nx\n\n# Heading\n\npara ends$$",
+  ]) {
+    expect(html(src), src).toContain("<h1>Heading</h1>");
+  }
+  expect(html("$$a$$ is display")).toBe(
+    '<p><span class="math math-display">a</span> is display</p>',
+  );
+  // An escaped backslash does not escape the dollar after it.
+  expect(html("$a\\\\$ b")).toBe('<p><span class="math math-inline">a\\\\</span> b</p>');
+  expect(html("$a\\$ b")).not.toContain("math");
+  // Unclosed dollars stay linear.
+  const start = performance.now();
+  expect(html("$5 ".repeat(10000))).not.toContain("math");
+  expect(performance.now() - start).toBeLessThan(300);
+
+  expect(html("[[Page| ]]")).toBe('<p><a href="Page.md" class="wikilink">Page</a></p>');
+  for (const src of ["[[https://x/y]]", "[[mailto:a@b.c]]"]) {
+    expect(html(src), src).not.toContain(".md");
+    expect(html(src), src).not.toContain("wikilink");
+  }
 });
