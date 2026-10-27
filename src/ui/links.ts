@@ -19,6 +19,8 @@ export interface Entry {
   scroll: number;
   /** Other files a wiki link may mean, tried in order when `path` is not found. */
   alternates?: string[];
+  /** Set once loaded; back and forward then restore `scroll` instead of the fragment. */
+  visited?: boolean;
 }
 
 const MARKDOWN = /\.(?:md|markdown)$/i;
@@ -75,11 +77,23 @@ export function route(link: Element, from: string, gesture: Gesture): LinkAction
   return { type: gesture === "click" ? "navigate" : "newTab", entry };
 }
 
-/** The element a `#fragment` names; heading ids may carry GitHub's `user-content-` prefix. */
+/** GitHub's heading id for `text`: lower case, spaces to `-`, punctuation dropped. */
+export function slug(text: string): string {
+  return text
+    .trim()
+    .toLowerCase()
+    .replace(/[^\p{L}\p{M}\p{N}_\- ]/gu, "")
+    .replace(/ /g, "-");
+}
+
+/**
+ * The element a `#fragment` names: the exact id first, then its GitHub slug (so
+ * `[[Page#My Section]]` finds `my-section`), each with and without `user-content-`.
+ */
 export function findTarget(sheet: Element, fragment: string): Element | null {
   const id = decode(fragment);
-  const ids = [id, `user-content-${id}`];
-  for (const want of ids) {
+  const ids = [id, `user-content-${id}`, slug(id), `user-content-${slug(id)}`];
+  for (const want of ids.filter(Boolean)) {
     const found = [...sheet.querySelectorAll("[id], a[name]")].find(
       (n) => n.id === want || n.getAttribute("name") === want,
     );

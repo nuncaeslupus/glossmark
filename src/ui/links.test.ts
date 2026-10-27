@@ -2,13 +2,15 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "../render/pipeline";
 import { sanitize } from "../render/sanitize";
 import { strings } from "../strings";
-import { fakeBackend, settle } from "./fake-backend";
+import { fakeBackend, gate, settle } from "./fake-backend";
 import { findTarget, type Gesture, History, type LinkAction, resolvePath, route } from "./links";
 import { Shell } from "./shell";
 
 const shells: Shell[] = [];
+const scrollIntoView = Element.prototype.scrollIntoView;
 afterEach(() => {
   for (const shell of shells.splice(0)) shell.dispose();
+  Element.prototype.scrollIntoView = scrollIntoView;
 });
 
 /** The first link that `markdown` renders to, after sanitising, as the shell sees it. */
@@ -210,6 +212,60 @@ describe("links", () => {
     expect(findTarget(sheet, "old")?.textContent).toBe("o");
     expect(findTarget(sheet, "a%20b")?.textContent).toBe("s");
     expect(findTarget(sheet, "missing")).toBeNull();
+  });
+
+  it("test_find_target_falls_back_to_github_slug", () => {
+    const sheet = document.createElement("div");
+    sheet.innerHTML = '<h2 id="user-content-my-section-2">m</h2><h3 id="über-uns">u</h3>';
+    expect(findTarget(sheet, "My%20Section%202!")?.textContent).toBe("m");
+    expect(findTarget(sheet, "My Section 2")?.textContent).toBe("m");
+    expect(findTarget(sheet, "Über Uns")?.textContent).toBe("u");
+    expect(findTarget(sheet, "Other Section")).toBeNull();
+  });
+
+  it("test_back_restores_scroll_not_fragment", async () => {
+    const files = { "/n/a.md": "[b](b.md#end)", "/n/b.md": '[c](c.md)\n\n<p id="end">e</p>' };
+    const { root } = await open(files, ["/n/a.md"]);
+    const scroll = vi.fn();
+    Element.prototype.scrollIntoView = scroll;
+    const canvas = () => root.querySelector<HTMLElement>(".canvas:not([hidden])");
+
+    press(root.querySelector(".sheet a"));
+    await settle();
+    expect(scroll).toHaveBeenCalledTimes(1);
+    const b = canvas();
+    if (b) b.scrollTop = 300;
+    press(root.querySelector(".sheet a"));
+    await settle();
+    press(backButton(root));
+    await settle();
+    expect(scroll).toHaveBeenCalledTimes(1);
+    expect(canvas()?.scrollTop).toBe(300);
+  });
+
+  it("test_new_tab_link_to_open_file_lands_after_its_load", async () => {
+    const md = "[b](b.md#end)";
+    const files = { "/n/a.md": md, "/n/b.md": '# B\n\n<p id="end">e</p>' };
+    const { root, shell, state } = await open(files, ["/n/a.md"]);
+    const pending = gate();
+    state.readGate = pending.promise;
+    const loading = shell.openPaths(["/n/b.md"]);
+    press(root.querySelector(".tab-label"));
+    const activeOnScroll: (string | null | undefined)[] = [];
+    Element.prototype.scrollIntoView = () => {
+      activeOnScroll.push(root.querySelector(".tab.active .tab-label")?.textContent);
+    };
+
+    press(root.querySelector(".canvas:not([hidden]) .sheet a"), { ctrlKey: true });
+    await settle();
+    expect(root.querySelector(".bar .notice")?.textContent).toBe("");
+    expect(activeOnScroll).toEqual([]);
+    pending.open();
+    await loading;
+    await settle();
+    expect(activeOnScroll).toEqual(["b.md"]);
+    expect(root.querySelector(".bar .notice")?.textContent).toBe("");
+    expect(root.querySelectorAll(".tab")).toHaveLength(2);
   });
 
   it("test_history_push_drops_forward_entries", () => {

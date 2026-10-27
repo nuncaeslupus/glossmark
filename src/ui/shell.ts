@@ -19,6 +19,8 @@ interface Tab {
   sheet: HTMLElement;
   /** Counts loads, so only the latest one fills the sheet. */
   loads: number;
+  /** The load in flight, or the last one. */
+  loading: Promise<void>;
 }
 
 const pathOf = (tab: Tab) => tab.history.current.path;
@@ -131,15 +133,28 @@ export class Shell {
   private async openEntries(entries: Entry[]): Promise<void> {
     const added: Tab[] = [];
     let last: Tab | undefined;
+    // A `#fragment` for a tab that is already open; a new tab lands on its own.
+    let jump = "";
     for (const entry of entries) {
       last = this.tabs.find((t) => pathOf(t) === entry.path);
+      jump = last ? entry.fragment : "";
       if (!last) {
         last = this.addTab(entry);
         added.push(last);
-      } else if (entry.fragment) this.land(last, entry.fragment);
+      }
     }
-    if (last) this.activate(last);
+    if (!last) return;
+    const tab = last;
+    this.activate(tab);
     await Promise.all(added.map((t) => this.load(t)));
+    if (!jump) return;
+    // Lands once that tab's own load is done, so a half-loaded sheet is not searched.
+    let pending: Promise<void>;
+    do {
+      pending = tab.loading;
+      await pending;
+    } while (pending !== tab.loading);
+    if (!this.disposed && this.active === tab) this.land(tab, jump);
   }
 
   private async openDialog(): Promise<void> {
@@ -159,7 +174,12 @@ export class Shell {
 
   /** `read_document` → render → sanitise → insert → enhance. Errors stay in the sheet, never a
    * dialog. */
-  private async load(tab: Tab): Promise<void> {
+  private load(tab: Tab): Promise<void> {
+    tab.loading = this.fill(tab);
+    return tab.loading;
+  }
+
+  private async fill(tab: Tab): Promise<void> {
     const entry = tab.history.current;
     const seq = ++tab.loads;
     // A tab closed, or moved on, while its read was in flight takes no result.
@@ -171,8 +191,10 @@ export class Shell {
       // ponytail: the outline it returns is unused until T13's outline panel.
       enhance(tab.sheet);
       this.remember(doc.path);
-      if (entry.fragment) this.land(tab, entry.fragment);
+      // Back and forward return to where the user was; the fragment is for the first visit.
+      if (entry.fragment && !entry.visited) this.land(tab, entry.fragment);
       else tab.canvas.scrollTop = entry.scroll;
+      entry.visited = true;
     } catch (err) {
       if (!live()) return;
       const box = h("div", "doc-error");
@@ -247,7 +269,15 @@ export class Shell {
     const canvas = h("div", "canvas");
     const sheet = h("article", "sheet");
     canvas.append(sheet);
-    const tab: Tab = { history: new History(entry), handle, label, canvas, sheet, loads: 0 };
+    const tab: Tab = {
+      history: new History(entry),
+      handle,
+      label,
+      canvas,
+      sheet,
+      loads: 0,
+      loading: Promise.resolve(),
+    };
     label.addEventListener("click", () => this.activate(tab));
     // The tab's own close button closes that tab, not the active one.
     close.addEventListener("click", (e) => {
