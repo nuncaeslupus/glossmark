@@ -82,6 +82,20 @@ test("body text is sans-serif", async ({ page }) => {
   await expect(p).toHaveCSS("font-family", /^"?Inter Variable/);
 });
 
+test("issues image matches GitHub size", async ({ page }) => {
+  // The Mermaid README's "Git Issues" chart: GitHub lays it out across the column, unshrunk.
+  await page.goto("/e2e/theme.html?issues");
+  const svg = page.locator(".sheet .mermaid > svg[aria-roledescription=gantt]");
+  await expect(svg).toHaveCount(1);
+  const { drawn, natural, column } = await svg.evaluate((el) => ({
+    drawn: el.getBoundingClientRect().width,
+    natural: (el as SVGSVGElement).viewBox.baseVal.width,
+    column: (el.parentElement as HTMLElement).clientWidth,
+  }));
+  expect(drawn / column).toBeGreaterThan(0.95);
+  expect(drawn / natural).toBeGreaterThan(0.95);
+});
+
 test("front matter renders one row per key", async ({ page }) => {
   // GitHub shows front matter as key/value rows, not one row of columns.
   await page.goto("/e2e/theme.html");
