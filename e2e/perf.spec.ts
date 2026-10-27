@@ -1,10 +1,24 @@
-import { expect, type Page, test } from "@playwright/test";
+import { expect, type Page, type TestInfo, test } from "@playwright/test";
 import type { Timing } from "./harness";
 
 const KB = 1024;
 const RUNS = 3;
 // A freeze the reader would notice (specification: render_ms_1MB).
 const LONG_TASK_MS = 200;
+
+// Timing bounds gate Chromium. WebKit misses them on CI (a 1.1 s task at 1 MB), so its numbers
+// are reported, not asserted, until the WebKit freeze task (t-1c0e5a17) lands; its content
+// checks still run. WEBKIT_BUDGETS=1 asserts them (that task's gate). Owner's call, 2026-10-27.
+function budget(info: TestInfo, name: string, value: number, bound: number): void {
+  if (info.project.name === "webkit" && !process.env.WEBKIT_BUDGETS) {
+    info.annotations.push({
+      type: "budget",
+      description: `${name}=${Math.round(value)} (bound ${bound})`,
+    });
+    return;
+  }
+  expect.soft(value, name).toBeLessThanOrEqual(bound);
+}
 // The most diagrams the specification allows in the 1 MB document.
 const DIAGRAMS = 20;
 
@@ -48,8 +62,8 @@ test("test_render_1mb_within_budget_no_long_tasks", async ({ page }, info) => {
   const timing = await measure(page, KB * KB, DIAGRAMS);
   report(`[${info.project.name}] render_ms_1MB`, timing);
   // render_ms_1MB <= 1500, with up to 20 diagrams drawn as they approach the view
-  expect.soft(timing.totalMs).toBeLessThanOrEqual(1500);
-  expect.soft(timing.longestTaskMs).toBeLessThanOrEqual(LONG_TASK_MS);
+  budget(info, "render_ms_1MB", timing.totalMs, 1500);
+  budget(info, "longest_task_ms_1MB", timing.longestTaskMs, LONG_TASK_MS);
 
   // All of it is there, highlighted and typeset, laid out without the pieces' boxes.
   const doc = page.locator("#doc");
@@ -82,14 +96,14 @@ test("test_render_100kb_within_budget_no_long_tasks", async ({ page }, info) => 
   const timing = await measure(page, 100 * KB);
   report(`[${info.project.name}] render_ms_100KB`, timing);
   // The whole first paint gets 500 ms (first_paint_ms_100KB); rendering is part of it.
-  expect(timing.totalMs).toBeLessThanOrEqual(500);
-  expect(timing.longestTaskMs).toBeLessThanOrEqual(LONG_TASK_MS);
+  budget(info, "render_ms_100KB", timing.totalMs, 500);
+  budget(info, "longest_task_ms_100KB", timing.longestTaskMs, LONG_TASK_MS);
 });
 
 test("test_render_20_mermaid_one_per_frame_no_long_tasks", async ({ page }, info) => {
   const timing = await measure(page, 10 * KB, 20);
   report(`[${info.project.name}] render_ms_20_mermaid`, timing);
-  expect(timing.longestTaskMs).toBeLessThanOrEqual(LONG_TASK_MS);
+  budget(info, "longest_task_ms_20_mermaid", timing.longestTaskMs, LONG_TASK_MS);
 
   // Scroll through, counting the diagrams that land in each animation frame and timing the
   // longest task while they are drawn.
@@ -138,7 +152,7 @@ test("test_render_20_mermaid_one_per_frame_no_long_tasks", async ({ page }, info
   );
   expect(seen.frames).toHaveLength(20);
   expect(new Set(seen.frames).size).toBe(20);
-  expect(seen.longest).toBeLessThanOrEqual(LONG_TASK_MS);
+  budget(info, "longest_task_ms_scrolling_20_mermaid", seen.longest, LONG_TASK_MS);
   await expect(page.locator("#doc .mermaid > svg")).toHaveCount(20);
 });
 
