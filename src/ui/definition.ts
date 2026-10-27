@@ -1,0 +1,110 @@
+// The window's chrome as data (D-11): the shell draws it and the budget test counts it.
+import { strings } from "../strings";
+import type { Config } from "./ipc";
+
+export type ActionId = keyof typeof strings.actions;
+
+export interface Action {
+  id: ActionId;
+  label: string;
+  icon?: string;
+  /** e.g. `Ctrl+O`, `Alt+ArrowLeft`; matched against `KeyboardEvent.key`. */
+  key: string;
+  /** Acts on the active document, so it is disabled with none open. */
+  needsDocument?: boolean;
+  /** Shows a native dialog. Only actions the user explicitly asks for may (D-11). */
+  dialog?: boolean;
+}
+
+const a = strings.actions;
+const i = strings.icons;
+
+export const actions: Record<ActionId, Action> = {
+  open: { id: "open", label: a.open, key: "Ctrl+O", dialog: true },
+  print: {
+    id: "print",
+    label: a.print,
+    icon: i.print,
+    key: "Ctrl+P",
+    needsDocument: true,
+    dialog: true,
+  },
+  closeTab: {
+    id: "closeTab",
+    label: a.closeTab,
+    icon: i.closeTab,
+    key: "Ctrl+W",
+    needsDocument: true,
+  },
+  outline: { id: "outline", label: a.outline, icon: i.outline, key: "Ctrl+B", needsDocument: true },
+  back: { id: "back", label: a.back, icon: i.back, key: "Alt+ArrowLeft", needsDocument: true },
+  forward: {
+    id: "forward",
+    label: a.forward,
+    icon: i.forward,
+    key: "Alt+ArrowRight",
+    needsDocument: true,
+  },
+  zoomOut: { id: "zoomOut", label: a.zoomOut, icon: i.zoomOut, key: "Ctrl+-", needsDocument: true },
+  zoomIn: { id: "zoomIn", label: a.zoomIn, icon: i.zoomIn, key: "Ctrl+=", needsDocument: true },
+  find: { id: "find", label: a.find, icon: i.find, key: "Ctrl+F", needsDocument: true },
+  shortcuts: { id: "shortcuts", label: a.shortcuts, key: "F1" },
+};
+
+export type BarItem =
+  | { kind: "button"; action: ActionId }
+  | { kind: "title" }
+  | { kind: "menus" }
+  | { kind: "zoom" };
+
+/** The one slim bar, left to right (Chrome's PDF viewer, adapted to Markdown). */
+export const bar: BarItem[] = [
+  { kind: "button", action: "outline" },
+  { kind: "title" },
+  { kind: "menus" },
+  { kind: "button", action: "back" },
+  { kind: "button", action: "forward" },
+  { kind: "button", action: "zoomOut" },
+  { kind: "zoom" },
+  { kind: "button", action: "zoomIn" },
+  { kind: "button", action: "find" },
+  { kind: "button", action: "print" },
+];
+
+export interface Menu {
+  id: keyof typeof strings.menus;
+  label: string;
+  items: ActionId[];
+}
+
+export const menus: Menu[] = [
+  { id: "file", label: strings.menus.file, items: ["open", "print", "closeTab"] },
+  { id: "view", label: strings.menus.view, items: ["outline", "zoomIn", "zoomOut", "find"] },
+  { id: "go", label: strings.menus.go, items: ["back", "forward"] },
+  { id: "help", label: strings.menus.help, items: ["shortcuts"] },
+];
+
+/** What the user can set; window size is remembered by the window-state plugin. */
+export const settings = [
+  "theme",
+  "defaultZoom",
+  "remoteImages",
+] as const satisfies readonly (keyof Config)[];
+
+export function barButtons(): ActionId[] {
+  return bar.flatMap((item) => (item.kind === "button" ? [item.action] : []));
+}
+
+/** Whether a keydown matches an action's `key`, e.g. `Ctrl+O`. */
+export function matchesKey(key: string, e: KeyboardEvent): boolean {
+  // ponytail: no key is `+` itself; `Ctrl` means Cmd on macOS.
+  const parts = key.split("+");
+  const main = parts.pop() ?? "";
+  const ctrl = /Mac/.test(navigator.platform) ? e.metaKey : e.ctrlKey;
+  return (
+    e.key.toLowerCase() === main.toLowerCase() &&
+    ctrl === parts.includes("Ctrl") &&
+    e.altKey === parts.includes("Alt") &&
+    e.shiftKey === parts.includes("Shift")
+  );
+}

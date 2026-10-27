@@ -1,14 +1,12 @@
-import { strings } from "./strings";
+import { type Backend, tauriBackend } from "./ui/ipc";
+import { Shell } from "./ui/shell";
 
-/** Render the window for the given documents; with none, the empty state. */
-export function boot(root: HTMLElement, paths: string[]): void {
-  if (paths.length === 0) {
-    const empty = document.createElement("main");
-    empty.className = "empty";
-    empty.textContent = strings.emptyState;
-    root.replaceChildren(empty);
-  }
+/** Draw the window, then open the launch's files and those that arrive later. */
+export async function start(root: HTMLElement, backend: Backend = tauriBackend): Promise<Shell> {
+  const shell = new Shell(root, backend);
+  await shell.start();
+  return shell;
 }
 
 const root = document.getElementById("app");
-if (root) boot(root, []);
+if (root) start(root).catch(console.error);

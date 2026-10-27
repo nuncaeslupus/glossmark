@@ -1,27 +1,273 @@
+:root {
+  --canvas: #e8e8e6;
+  --paper: #fff;
+  --ink: #222;
+  --muted: #666;
+  --chrome: #323639;
+  --chrome-ink: #f1f3f4;
+  --chrome-hover: #4a4e51;
+  --tabs: #202124;
+  --menu: #fff;
+  --menu-ink: #222;
+  --menu-hover: #e8eaed;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --canvas: #1e1e1e;
+    --paper: #2a2a2a;
+    --ink: #ddd;
+    --muted: #999;
+    --menu: #303134;
+    --menu-ink: #e8eaed;
+    --menu-hover: #45474a;
+  }
+}
+
 html,
 body {
   margin: 0;
   height: 100%;
   font-family: system-ui, sans-serif;
-  background: #e8e8e6;
-  color: #222;
+  background: var(--canvas);
+  color: var(--ink);
 }
 
-.empty {
-  display: grid;
-  place-items: center;
+#app {
+  display: flex;
+  flex-direction: column;
   height: 100%;
-  font-size: 1.25rem;
-  color: #666;
 }
 
-@media (prefers-color-scheme: dark) {
-  html,
-  body {
-    background: #1e1e1e;
-    color: #ddd;
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.tabs[hidden],
+.empty[hidden] {
+  display: none;
+}
+
+/* Tab strip, above the bar */
+.tabs {
+  display: flex;
+  gap: 1px;
+  padding: 4px 4px 0;
+  background: var(--tabs);
+  color: var(--chrome-ink);
+  font-size: 0.8125rem;
+  overflow-x: auto;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  max-width: 14rem;
+  border-radius: 6px 6px 0 0;
+}
+
+.tab.active {
+  background: var(--chrome);
+}
+
+.tab-label {
+  padding: 6px 4px 6px 10px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.tab-close {
+  width: 1.5rem;
+  height: 1.5rem;
+  margin-right: 4px;
+  border-radius: 50%;
+}
+
+/* The one slim bar (Chrome's PDF viewer) */
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 40px;
+  padding: 0 8px;
+  background: var(--chrome);
+  color: var(--chrome-ink);
+  font-size: 0.875rem;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 30%);
+  z-index: 1;
+}
+
+.bar-button,
+.menu-button {
+  min-width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: 1rem;
+}
+
+.menu-button {
+  border-radius: 4px;
+  padding: 0 8px;
+  font-size: 0.875rem;
+}
+
+.tab-close:hover:enabled,
+.bar-button:hover:enabled,
+.menu-button:hover,
+.menu-button[aria-expanded="true"] {
+  background: var(--chrome-hover);
+}
+
+.title {
+  flex: 1;
+  margin: 0 8px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.notice {
+  margin-right: 8px;
+  opacity: 0.8;
+  white-space: nowrap;
+}
+
+.zoom {
+  min-width: 3rem;
+  text-align: center;
+}
+
+.menus {
+  display: flex;
+  margin-right: 8px;
+}
+
+.menu-wrap {
+  position: relative;
+}
+
+.menu {
+  position: absolute;
+  top: 36px;
+  left: 0;
+  min-width: 12rem;
+  padding: 4px 0;
+  background: var(--menu);
+  color: var(--menu-ink);
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 30%);
+}
+
+.menu-item {
+  display: block;
+  width: 100%;
+  padding: 6px 16px;
+  text-align: left;
+}
+
+.menu-item:hover:enabled {
+  background: var(--menu-hover);
+}
+
+/* The document area: one scrolling canvas per tab */
+.view {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
+.canvas {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  padding: 24px 0;
+  box-sizing: border-box;
+}
+
+.sheet {
+  box-sizing: border-box;
+  max-width: 816px;
+  margin: 0 auto;
+  padding: 72px 80px;
+  background: var(--paper);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 20%);
+}
+
+.doc-error {
+  color: var(--muted);
+}
+
+/* Empty state */
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+  height: 100%;
+  color: var(--muted);
+}
+
+.drop {
+  padding: 3rem 4rem;
+  border: 2px dashed currentColor;
+  border-radius: 12px;
+  font-size: 1.25rem;
+}
+
+.recent h2 {
+  margin: 0 0 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.recent ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.recent-file {
+  padding: 4px 0;
+  color: var(--ink);
+}
+
+.recent-file:hover {
+  text-decoration: underline;
+}
+
+@media print {
+  .tabs,
+  .bar,
+  .canvas[hidden] {
+    display: none;
   }
-  .empty {
-    color: #999;
+  html,
+  body,
+  #app,
+  .view {
+    display: block;
+    height: auto;
+    background: none;
+  }
+  .canvas {
+    position: static;
+    overflow: visible;
+    padding: 0;
+  }
+  .sheet {
+    max-width: none;
+    padding: 0;
+    box-shadow: none;
   }
 }

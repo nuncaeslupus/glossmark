@@ -13,6 +13,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::Duration;
 use tauri::{AppHandle, Emitter, Manager, Runtime, State};
+use tauri_plugin_dialog::{DialogExt, FilePath};
 use tauri_plugin_opener::OpenerExt;
 
 pub struct AppState {
@@ -71,12 +72,12 @@ impl AppState {
 
     /// Brings opened files into scope and returns their canonical paths.
     pub fn open<P: AsRef<Path>>(&self, paths: impl IntoIterator<Item = P>) -> Vec<String> {
-        let mut scope = lock(&self.scope);
-        paths
-            .into_iter()
-            .filter_map(|p| scope.allow(p.as_ref()))
-            .map(|p| p.display().to_string())
-            .collect()
+        open_in_scope(&mut lock(&self.scope), paths)
+    }
+
+    /// Dropped files: the `open-files` payload for those the scope accepted, if any.
+    pub fn dropped(&self, paths: &[PathBuf]) -> Option<OpenFiles> {
+        dropped_files(&mut lock(&self.scope), paths)
     }
 
     /// Files from this launch's command line, held until the frontend asks for them.
@@ -113,6 +114,50 @@ pub fn take_open_files(state: State<'_, AppState>) -> OpenFiles {
     OpenFiles {
         paths: std::mem::take(&mut *lock(&state.pending)),
     }
+}
+
+/// File › Open. The native dialog runs here rather than in the frontend, so only files the user
+/// picked enter the scope; the frontend holds no dialog permission. Cancelling gives no paths.
+#[tauri::command]
+pub async fn open_dialog<R: Runtime>(
+    app: AppHandle<R>,
+    state: State<'_, AppState>,
+) -> Result<OpenFiles, IpcError> {
+    let mut dialog = app
+        .dialog()
+        .file()
+        .add_filter("Markdown", &scope::MARKDOWN_EXTENSIONS);
+    if let Some(window) = app.get_webview_window("main") {
+        dialog = dialog.set_parent(&window);
+    }
+    let picked = dialog.blocking_pick_files().unwrap_or_default();
+    Ok(picked_files(&mut lock(&state.scope), picked))
+}
+
+/// Brings files into `scope` and returns the canonical paths it accepted.
+fn open_in_scope<P: AsRef<Path>>(
+    scope: &mut Scope,
+    paths: impl IntoIterator<Item = P>,
+) -> Vec<String> {
+    paths
+        .into_iter()
+        .filter_map(|p| scope.allow(p.as_ref()))
+        .map(|p| p.display().to_string())
+        .collect()
+}
+
+/// The dialog's picks enter the scope before they are returned; non-file URLs are dropped.
+fn picked_files(scope: &mut Scope, picked: Vec<FilePath>) -> OpenFiles {
+    let paths = picked.into_iter().filter_map(|p| p.into_path().ok());
+    OpenFiles {
+        paths: open_in_scope(scope, paths),
+    }
+}
+
+/// Only the paths the scope accepted are emitted, and nothing when it accepted none.
+fn dropped_files(scope: &mut Scope, paths: &[PathBuf]) -> Option<OpenFiles> {
+    let paths = open_in_scope(scope, paths);
+    (!paths.is_empty()).then_some(OpenFiles { paths })
 }
 
 #[tauri::command]
@@ -175,4 +220,45 @@ pub fn open_external(url: String, app: AppHandle) -> Result<(), IpcError> {
     app.opener()
         .open_url(url.as_str(), None::<&str>)
         .map_err(|e| IpcError::new(ErrorKind::Io, e.to_string()))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+
+    #[test]
+    fn test_open_dialog_picks_enter_scope_before_return() {
+        let dir = tempfile::tempdir().unwrap();
+        let dir = fs::canonicalize(dir.path()).unwrap();
+        let doc = dir.join("a.md");
+        fs::write(&doc, "# a").unwrap();
+        let mut scope = Scope::default();
+        assert!(scope.check_document(&doc).is_err());
+
+        let picked = vec![
+            FilePath::Path(doc.clone()),
+            FilePath::Url("https://a.org/x.md".parse().unwrap()),
+            FilePath::Path(dir.clone()),
+        ];
+        let opened = picked_files(&mut scope, picked);
+        assert_eq!(opened.paths, [doc.display().to_string()]);
+        assert!(scope.is_opened(&doc));
+        assert!(picked_files(&mut scope, Vec::new()).paths.is_empty());
+    }
+
+    #[test]
+    fn test_drop_emits_only_accepted_paths() {
+        let dir = tempfile::tempdir().unwrap();
+        let dir = fs::canonicalize(dir.path()).unwrap();
+        let doc = dir.join("a.md");
+        fs::write(&doc, "# a").unwrap();
+        let mut scope = Scope::default();
+
+        let dropped = [dir.clone(), PathBuf::from("rel.md"), doc.clone()];
+        let event = dropped_files(&mut scope, &dropped).unwrap();
+        assert_eq!(event.paths, [doc.display().to_string()]);
+        assert!(scope.is_opened(&doc));
+        assert!(dropped_files(&mut scope, std::slice::from_ref(&dir)).is_none());
+    }
 }
