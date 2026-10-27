@@ -125,6 +125,7 @@ export class Shell {
         window.print();
         back();
       }),
+    export: () => void this.exportPdf(),
     closeTab: () => this.active && this.close(this.active),
     nextTab: () => this.cycleTab(1),
     previousTab: () => this.cycleTab(-1),
@@ -274,6 +275,27 @@ export class Shell {
       await pending;
     } while (pending !== tab.loading);
     if (!this.disposed && this.active === tab) this.land(tab, jump);
+  }
+
+  /** Export: the print styling, saved as a PDF where the user picks (D-20). */
+  private async exportPdf(): Promise<void> {
+    if (this.dialogOpen || !this.active) return;
+    this.dialogOpen = true;
+    try {
+      const name = basename(pathOf(this.active)).replace(/\.[^.]*$/, "");
+      const path = await this.backend.saveDialog(`${name}.pdf`);
+      if (!path) return;
+      const back = await diagramsForPaper();
+      try {
+        await this.backend.exportPdf(path);
+      } finally {
+        back();
+      }
+    } catch {
+      this.show(strings.notices.exportFailed);
+    } finally {
+      this.dialogOpen = false;
+    }
   }
 
   private async openDialog(): Promise<void> {
