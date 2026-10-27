@@ -86,47 +86,32 @@ export const actions: Record<ActionId, Action> = {
 export type BarItem =
   | { kind: "button"; action: ActionId }
   | { kind: "title" }
-  | { kind: "menus" }
+  | { kind: "more" }
   | { kind: "zoom" };
 
-/** The one slim bar, left to right (Chrome's PDF viewer, adapted to Markdown). */
-export const bar: BarItem[] = [
-  { kind: "button", action: "outline" },
-  { kind: "title" },
-  { kind: "menus" },
-  { kind: "button", action: "back" },
-  { kind: "button", action: "forward" },
-  { kind: "button", action: "zoomOut" },
-  { kind: "zoom" },
-  { kind: "button", action: "zoomIn" },
-  { kind: "button", action: "find" },
-  { kind: "button", action: "print" },
+/** The one slim bar in three zones, left, centre, right (Chrome's PDF viewer, D-19). */
+export const bar: BarItem[][] = [
+  [
+    { kind: "button", action: "outline" },
+    { kind: "title" },
+    { kind: "button", action: "back" },
+    { kind: "button", action: "forward" },
+  ],
+  [
+    { kind: "button", action: "zoomOut" },
+    { kind: "zoom" },
+    { kind: "button", action: "zoomIn" },
+    { kind: "button", action: "find" },
+  ],
+  [{ kind: "button", action: "print" }, { kind: "more" }],
 ];
 
-export interface Menu {
-  id: keyof typeof strings.menus;
-  label: string;
-  items: ActionId[];
-}
-
-export const menus: Menu[] = [
-  { id: "file", label: strings.menus.file, items: ["open", "print", "closeTab"] },
-  {
-    id: "view",
-    label: strings.menus.view,
-    items: [
-      "outline",
-      "zoomIn",
-      "zoomOut",
-      "zoomReset",
-      "fitWidth",
-      "find",
-      "theme",
-      "remoteImages",
-    ],
-  },
-  { id: "go", label: strings.menus.go, items: ["back", "forward", "nextTab", "previousTab"] },
-  { id: "help", label: strings.menus.help, items: ["shortcuts"] },
+/** ⋮ More's sections, divided by rules; every command keeps its shortcut. */
+export const menus: ActionId[][] = [
+  ["open", "print", "closeTab"],
+  ["outline", "zoomIn", "zoomOut", "zoomReset", "fitWidth", "find", "theme", "remoteImages"],
+  ["back", "forward", "nextTab", "previousTab"],
+  ["shortcuts"],
 ];
 
 /** What the user can set; window size is remembered by the window-state plugin. */
@@ -137,7 +122,7 @@ export const settings = [
 ] as const satisfies readonly (keyof Config)[];
 
 export function barButtons(): ActionId[] {
-  return bar.flatMap((item) => (item.kind === "button" ? [item.action] : []));
+  return bar.flat().flatMap((item) => (item.kind === "button" ? [item.action] : []));
 }
 
 /** Whether a keydown matches an action's `key`, e.g. `Ctrl+O`. */

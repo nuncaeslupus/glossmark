@@ -1,5 +1,4 @@
 import { expect, type Page, test } from "@playwright/test";
-import { strings } from "../src/strings";
 
 type Scheme = "light" | "dark";
 
@@ -109,8 +108,8 @@ test("test_mermaid_redrawn_when_theme_changes", async ({ page }) => {
   const node = page.locator(".sheet .mermaid > svg .node :is(rect, polygon)").first();
   const fill = () => node.evaluate((el) => getComputedStyle(el).fill);
   const light = await fill();
-  // View › Theme cycles System → Light → Dark.
-  await page.locator(".menu-button", { hasText: strings.menus.view }).click();
+  // ⋮ More › Theme cycles System → Light → Dark.
+  await page.locator(".menu-button").click();
   await page.locator(".menu-item[data-action=theme]").click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await expect.poll(fill).not.toBe(light);

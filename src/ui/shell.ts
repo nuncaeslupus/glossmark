@@ -52,6 +52,21 @@ function h<K extends keyof HTMLElementTagNameMap>(
   return node;
 }
 
+/** A button showing `icon`: a glyph, or SVG path data on Material Symbols' 960 grid. */
+function iconButton(className: string, icon: string): HTMLButtonElement {
+  if (!icon.startsWith("M")) return h("button", className, icon);
+  const button = h("button", className);
+  const ns = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(ns, "svg");
+  svg.setAttribute("viewBox", "0 -960 960 960");
+  svg.setAttribute("aria-hidden", "true");
+  const path = document.createElementNS(ns, "path");
+  path.setAttribute("d", icon);
+  svg.append(path);
+  button.append(svg);
+  return button;
+}
+
 /** Text that comes from the user's files, not from `strings` (file names, paths, errors). */
 function userText<K extends keyof HTMLElementTagNameMap>(tag: K, className: string, text: string) {
   const node = h(tag, className, text);
@@ -72,7 +87,7 @@ export class Shell {
   private readonly view = h("div", "view");
   private readonly empty = h("main", "empty");
   private readonly title = userText("span", "title", "");
-  private readonly menuBar = h("div", "menus");
+  private readonly menuBar = h("div", "menu-wrap");
   private readonly notice = h("span", "notice");
   private readonly zoomReadout = h("span", "zoom");
   private readonly outlinePanel = h("nav", "outline");
@@ -687,18 +702,7 @@ export class Shell {
 
   private actionButton(id: ActionId, className: string): HTMLButtonElement {
     const action = actions[id];
-    const icon = action.icon ?? action.label;
-    const button = h("button", className, icon.startsWith("M") ? undefined : icon);
-    if (icon.startsWith("M")) {
-      const ns = "http://www.w3.org/2000/svg";
-      const svg = document.createElementNS(ns, "svg");
-      svg.setAttribute("viewBox", "0 -960 960 960");
-      svg.setAttribute("aria-hidden", "true");
-      const path = document.createElementNS(ns, "path");
-      path.setAttribute("d", icon);
-      svg.append(path);
-      button.append(svg);
-    }
+    const button = iconButton(className, action.icon ?? action.label);
     button.title = action.label;
     button.setAttribute("aria-label", action.label);
     button.dataset.action = id;
@@ -709,11 +713,15 @@ export class Shell {
 
   private buildBar(): HTMLElement {
     const header = h("header", "bar");
-    for (const item of bar) {
-      if (item.kind === "button") header.append(this.actionButton(item.action, "bar-button"));
-      else if (item.kind === "title") header.append(this.title, this.notice);
-      else if (item.kind === "menus") header.append(this.buildMenus());
-      else header.append(this.zoomReadout);
+    for (const items of bar) {
+      const zone = h("div", "zone");
+      for (const item of items) {
+        if (item.kind === "button") zone.append(this.actionButton(item.action, "bar-button"));
+        else if (item.kind === "title") zone.append(this.title, this.notice);
+        else if (item.kind === "more") zone.append(this.buildMore());
+        else zone.append(this.zoomReadout);
+      }
+      header.append(zone);
     }
     header.append(this.buildFind());
     return header;
@@ -754,16 +762,23 @@ export class Shell {
     return this.findBox;
   }
 
-  private buildMenus(): HTMLElement {
-    for (const menu of menus) {
-      const wrap = h("div", "menu-wrap");
-      const button = h("button", "menu-button", menu.label);
-      button.setAttribute("aria-haspopup", "menu");
-      button.setAttribute("aria-expanded", "false");
-      const list = h("div", "menu");
-      list.setAttribute("role", "menu");
-      list.hidden = true;
-      for (const id of menu.items) {
+  /** ⋮ More: the menu's sections in one list, divided by rules. */
+  private buildMore(): HTMLElement {
+    const button = iconButton("menu-button", strings.icons.more);
+    button.title = strings.more;
+    button.setAttribute("aria-label", strings.more);
+    button.setAttribute("aria-haspopup", "menu");
+    button.setAttribute("aria-expanded", "false");
+    const list = h("div", "menu");
+    list.setAttribute("role", "menu");
+    list.hidden = true;
+    for (const [n, section] of menus.entries()) {
+      if (n > 0) {
+        const rule = h("div", "menu-rule");
+        rule.setAttribute("role", "separator");
+        list.append(rule);
+      }
+      for (const id of section) {
         const item = h("button", "menu-item", actions[id].label);
         item.setAttribute("role", "menuitem");
         item.dataset.action = id;
@@ -778,15 +793,14 @@ export class Shell {
         });
         list.append(item);
       }
-      button.addEventListener("click", () => {
-        const opening = list.hidden;
-        this.closeMenus();
-        list.hidden = !opening;
-        button.setAttribute("aria-expanded", String(opening));
-      });
-      wrap.append(button, list);
-      this.menuBar.append(wrap);
     }
+    button.addEventListener("click", () => {
+      const opening = list.hidden;
+      this.closeMenus();
+      list.hidden = !opening;
+      button.setAttribute("aria-expanded", String(opening));
+    });
+    this.menuBar.append(button, list);
     return this.menuBar;
   }
 
