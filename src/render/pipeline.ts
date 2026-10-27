@@ -11,7 +11,7 @@ export function render(source: string): string {
 }
 
 /** About how much HTML goes in one piece of a chunked render. */
-export const CHUNK_CHARS = 32_000;
+export const CHUNK_CHARS = 16_000;
 /** A piece grows past this many times its size only to keep a raw-HTML element whole. */
 export const MAX_CHUNK_FACTOR = 8;
 
