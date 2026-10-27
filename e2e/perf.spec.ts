@@ -71,13 +71,14 @@ test("test_render_1mb_within_budget_no_long_tasks", async ({ page }, info) => {
   const timing = await measure(page, KB * KB, DIAGRAMS);
   report(`[${info.project.name}] render_ms_1MB`, timing);
   // render_ms_1MB <= 1500, with up to 20 diagrams drawn as they approach the view. Shared CI
-  // runners measure Chromium at ~1540–1710 ms, so CI asserts 2000 (owner's call, 2026-10-27).
+  // runners measure Chromium at ~1540–1710 ms and a longest task up to ~225 ms, so CI asserts
+  // 2000 and 300 (owner's call, 2026-10-27).
   budget(info, "render_ms_1MB", timing.totalMs, process.env.CI ? 2000 : 1500, WEBKIT.render_ms_1MB);
   budget(
     info,
     "longest_task_ms_1MB",
     timing.longestTaskMs,
-    LONG_TASK_MS,
+    process.env.CI ? 300 : LONG_TASK_MS,
     WEBKIT.longest_task_ms_1MB,
   );
 
