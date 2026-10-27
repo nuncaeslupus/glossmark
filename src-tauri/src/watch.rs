@@ -55,11 +55,14 @@ impl Registry {
 }
 
 /// A watcher whose events, debounced, become one `emit` per changed file in `registry`. Other
-/// files in a watched folder are ignored. The caller adds folders through `watcher()`.
+/// files in a watched folder are ignored, and so are events that leave a file's mtime as last
+/// reported: inotify reports opens and reads, so a reload's own read would trigger the next one.
+/// The caller adds folders through `watcher()`.
 pub fn debouncer(
     registry: Arc<Mutex<Registry>>,
     emit: impl Fn(DocumentChanged) + Send + 'static,
 ) -> notify::Result<Debouncer<RecommendedWatcher>> {
+    let mut reported = HashMap::new();
     new_debouncer(DEBOUNCE, move |res: DebounceEventResult| {
         let Ok(events) = res else { return };
         let paths: BTreeSet<PathBuf> = {
@@ -71,7 +74,10 @@ pub fn debouncer(
                 .collect()
         };
         for path in paths {
-            emit(DocumentChanged::of(&path));
+            let changed = DocumentChanged::of(&path);
+            if reported.insert(path, changed.mtime_ms) != Some(changed.mtime_ms) {
+                emit(changed);
+            }
         }
     })
 }
@@ -118,6 +124,28 @@ mod tests {
         fs::remove_file(&doc).unwrap();
         let changed = rx.recv_timeout(Duration::from_secs(2)).unwrap();
         assert!(changed.deleted && changed.mtime_ms.is_none());
+    }
+
+    #[test]
+    fn test_reading_a_watched_file_emits_nothing() {
+        let dir = tempfile::tempdir().unwrap();
+        let dir = fs::canonicalize(dir.path()).unwrap();
+        let doc = dir.join("a.md");
+        fs::write(&doc, "# one").unwrap();
+        let registry = Arc::new(Mutex::new(Registry::default()));
+        let folder = registry.lock().unwrap().add(&doc).unwrap();
+        let (tx, rx) = mpsc::channel();
+        let mut debouncer = debouncer(registry, move |c| tx.send(c).unwrap()).unwrap();
+        debouncer
+            .watcher()
+            .watch(&folder, RecursiveMode::NonRecursive)
+            .unwrap();
+
+        // A reload reads the file; if that read emitted, every reload would trigger the next.
+        fs::write(&doc, "# two").unwrap();
+        rx.recv_timeout(Duration::from_secs(2)).unwrap();
+        fs::read(&doc).unwrap();
+        assert!(rx.recv_timeout(DEBOUNCE * 3).is_err());
     }
 
     #[test]
