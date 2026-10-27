@@ -225,6 +225,55 @@ Generated from the **Depends** column — never drawn by hand.
 
 | T# | Gate | Measured | Command | SHA | Env | Date |
 |----|------|----------|---------|-----|-----|------|
+| T17 | `first_paint_ms_100KB <= 500` (asserted at a 900 ms WebKitGTK floor) | **648 ms** ✗ vs 500, ✓ vs 900 (launch-to-read 481 + render 167; see note) · idle_rss **412 MB** PSS vs 250 MB target ✗ (see note) | `scripts/measure.sh` | 916fd2d | reference (WebKitGTK, Wayland) | 2026-10-27 |
+
+> **T17 first paint, corrected.** The first recorded 167 ms was the in-page WebKit render
+> alone, not the spec's "from launching `glossmark big.md` to the sheet being visible".
+> `measure.sh` now adds the release binary's launch-to-document-read (time to the first
+> inotify OPEN of the file: process, GTK and WebKitGTK start-up, bundle load, IPC; 458–491 ms
+> over nine runs) to the render. The total, about 650–680 ms, misses the 500 ms budget.
+> **Owner sign-off (2026-10-27): accepted as a documented WebKitGTK start-up deviation (same
+> decision as T18); the gate asserts a 900 ms regression floor, and a start-up speed task is
+> queued to bring it under 500 ms.**
+
+> **T17 idle-RSS deviation.** `idle_rss_mb` (three 100 KB tabs) is about 400 MB (398–412 over five runs) (summed PSS, the
+> footprint with shared library pages counted once), over the 250 MB target. The cause is
+> WebKitGTK's irreducible baseline: the app with **no document open is already 282 MB** PSS;
+> the first 100 KB tab adds ~100 MB and two more only ~22 MB. WebKitGTK is the real Tauri
+> Linux engine (same finding as T18's render freeze), so the 250 MB target is not reachable
+> there. `first_paint_ms_100KB` is the gate metric (see the corrected first-paint note). The
+> idle-RSS target is an owner sign-off item, not the gate's metric. **Owner sign-off
+> (2026-10-27): accepted as a documented WebKitGTK engine-floor deviation (same decision as
+> T18's perf budgets).** Empty-app breakdown: WebKitWebProcess 146 MB + UI 108 MB + network
+> 16 MB = ~270 MB native, before any document; the whole eager JS bundle is 648 KB (~2-3 MB
+> heap) and Mermaid is already lazy, so no frontend change reaches 250 MB. Per-document cost
+> is ~40 MB/tab. The only baseline lever is a lighter webview engine than WebKitGTK — tracked
+> separately, out of scope for T17.
+
+> **T17 GitHub parity.** The owner compared the all-features fixture and the three READMEs
+> (`rust-lang/rust`, `mermaid-js/mermaid`, `sindresorhus/awesome`) side by side with GitHub.
+> **Owner sign-off (2026-10-27): parity accepted, with these gaps queued as follow-up
+> tasks** (`status/ideas.md` I-30 to I-37): `<img height>` ignored (Mermaid logo page-wide), an
+> image in the GitHub Issues section too small, Gantt charts squashed vertically, no
+> zoom/pan on Mermaid diagrams, front matter laid out horizontally rather than as a
+> key/value table, copy button not GitHub's and hover-only, heading anchors hard to reach
+> and not GitHub's chain icon, and a sans-serif body wanted. Where Glossmark goes beyond
+> GitHub on purpose (extras syntax, `currentColor` SVGs following the theme), it was not
+> counted as a gap. The README copies in `docs/fixtures/readmes/` are text only: their relative
+> images (awesome's `media/logo.svg`, mermaid's `./img/header.png`) were not vendored, so they
+> show as broken there; the comparison was judged on the rest.
+
+> **T17 simplicity.** The owner used the app throughout the T17 review (opening documents, tabs,
+> links, Back). **Owner sign-off (2026-10-27): simplicity accepted.** Their
+> toolbar and view ideas are kept as later improvements (`status/ideas.md` I-24 to I-29), not
+> as failures.
+
+> **T17 install and double-click.** On a fresh **Ubuntu 26.04.1 LTS** VM (GNOME Boxes, KVM),
+> `sudo apt install ./Glossmark_0.1.0_amd64.deb` (built from 29edaa2) installed cleanly and
+> double-clicking a `.md` file opened it in Glossmark as the default app. **Owner sign-off
+> (2026-10-27): passed.** Deviation: the plan names 24.04, but the owner's machine and target
+> are 26.04, and a `.deb` built there needs glibc 2.43 (24.04 ships 2.39); CI still builds the
+> `.deb` on ubuntu-24.04.
 
 ---
 

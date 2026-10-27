@@ -33,9 +33,28 @@
 ### D. Distribution
 - Free, public GitHub repo, open-source licence  (I-13)
 - Packages for Linux (AppImage/deb/Flatpak/Snap), Windows (.msi / Microsoft Store) and macOS (.dmg / App Store)  (I-14)
+- Later: a logo (app icon) and a hero image for the README  (I-38)
 
 ### E. Project documentation
 - Diagrams in the project's own docs drawn with the owner's drawspec  (I-15)
+
+### G. Toolbar and view (owner review during T17, 2026-10-27)
+- Zoom: scale the whole page like a PDF viewer, or only the text size?  (I-24)
+- Menus in a row of their own; tool icons centred, Export and Print maybe on the right, Find's place undecided  (I-25)
+- An Export option next to Print  (I-26)
+- Search and Print icons: use the familiar ones (as in Chrome's PDF viewer), not custom ones  (I-27)
+- Switch tabs from the keyboard: Ctrl+Tab / Ctrl+Shift+Tab  (I-28)
+- Toolbar order: Back/Forward on the left, zoom (and maybe Find) in the centre, Export and Print on the right  (I-29)
+
+### H. GitHub parity gaps (owner comparison during T17, 2026-10-27)
+- Bug: an `<img height="150">` (Mermaid README logo) renders page-wide; `height: auto` in signature.css overrides the attribute  (I-30)
+- An image in the GitHub Issues part renders too small  (I-31)
+- Gantt charts too compressed vertically  (I-32)
+- Mermaid diagrams: zoom and pan controls, as on GitHub  (I-33)
+- Front matter: GitHub shows it as a vertical (key/value) table, ours is horizontal  (I-34)
+- Code copy button: GitHub's two-squares icon, always visible  (I-35)
+- Heading anchors: appear when hovering their own spot, GitHub's chain icon  (I-36)
+- Body text in sans-serif (owner preference; revisits the serif signature theme, I-21)  (I-37)
 
 ## Sub-projects
 
