@@ -1,5 +1,13 @@
-use std::collections::HashMap;
+use crate::document::DocumentChanged;
+use notify_debouncer_mini::notify::{self, RecommendedWatcher};
+use notify_debouncer_mini::{new_debouncer, DebounceEventResult, Debouncer};
+use std::collections::{BTreeSet, HashMap};
 use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex};
+use std::time::Duration;
+
+/// Quiet time before a change is reported, so one save that writes several times reloads once.
+pub const DEBOUNCE: Duration = Duration::from_millis(100);
 
 /// Reference counts for watched files. The folder is what gets watched, not the file: editors
 /// that save by writing a new file and renaming it over the old one would end a file watch.
@@ -46,9 +54,71 @@ impl Registry {
     }
 }
 
+/// A watcher whose events, debounced, become one `emit` per changed file in `registry`. Other
+/// files in a watched folder are ignored. The caller adds folders through `watcher()`.
+pub fn debouncer(
+    registry: Arc<Mutex<Registry>>,
+    emit: impl Fn(DocumentChanged) + Send + 'static,
+) -> notify::Result<Debouncer<RecommendedWatcher>> {
+    new_debouncer(DEBOUNCE, move |res: DebounceEventResult| {
+        let Ok(events) = res else { return };
+        let paths: BTreeSet<PathBuf> = {
+            let registry = registry.lock().unwrap_or_else(|e| e.into_inner());
+            events
+                .into_iter()
+                .map(|e| e.path)
+                .filter(|p| registry.contains(p))
+                .collect()
+        };
+        for path in paths {
+            emit(DocumentChanged::of(&path));
+        }
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use notify_debouncer_mini::notify::RecursiveMode;
+    use std::fs;
+    use std::sync::mpsc;
+    use std::time::Instant;
+
+    /// Budget for the core's share of `live_reload_ms <= 500`: from the write to the event.
+    const CORE_BUDGET: Duration = Duration::from_millis(350);
+
+    #[test]
+    fn test_save_by_rename_and_delete_emit_document_changed() {
+        let dir = tempfile::tempdir().unwrap();
+        let dir = fs::canonicalize(dir.path()).unwrap();
+        let doc = dir.join("a.md");
+        fs::write(&doc, "# one").unwrap();
+        let registry = Arc::new(Mutex::new(Registry::default()));
+        let folder = registry.lock().unwrap().add(&doc).unwrap();
+        let (tx, rx) = mpsc::channel();
+        let mut debouncer = debouncer(registry, move |c| tx.send(c).unwrap()).unwrap();
+        debouncer
+            .watcher()
+            .watch(&folder, RecursiveMode::NonRecursive)
+            .unwrap();
+
+        // An unwatched neighbour is not reported; the editor's rename over `a.md` is, once.
+        let saved = Instant::now();
+        fs::write(dir.join("other.md"), "x").unwrap();
+        fs::write(dir.join(".a.md.swp"), "# two").unwrap();
+        fs::rename(dir.join(".a.md.swp"), &doc).unwrap();
+        let changed = rx.recv_timeout(Duration::from_secs(2)).unwrap();
+        let elapsed = saved.elapsed();
+        println!("live_reload_ms core share: {}", elapsed.as_millis());
+        assert!(elapsed <= CORE_BUDGET, "{elapsed:?}");
+        assert_eq!(changed.path, doc.display().to_string());
+        assert!(changed.mtime_ms.is_some() && !changed.deleted);
+        assert!(rx.recv_timeout(DEBOUNCE * 3).is_err());
+
+        fs::remove_file(&doc).unwrap();
+        let changed = rx.recv_timeout(Duration::from_secs(2)).unwrap();
+        assert!(changed.deleted && changed.mtime_ms.is_none());
+    }
 
     #[test]
     fn test_watch_is_reference_counted_per_path() {

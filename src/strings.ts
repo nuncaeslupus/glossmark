@@ -12,6 +12,12 @@ export const strings = {
     recentFilesNotSaved: "Recent files could not be saved.",
     sectionNotFound: "That section is not in this document.",
     notMarkdown: "Only Markdown files open in Glossmark.",
+    watchFailed: "Changes to this file will not be shown.",
+  },
+  // One line at the top of a sheet that keeps showing the last version (live reload).
+  fileNotices: {
+    deleted: "This file was deleted. Showing the last version.",
+    reloadFailed: "This file could not be reloaded. Showing the last version.",
   },
   menus: {
     file: "File",

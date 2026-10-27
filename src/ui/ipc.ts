@@ -15,6 +15,13 @@ export interface Doc {
   mtime_ms: number;
 }
 
+/** Payload of `document-changed`: a new `mtime_ms`, or `deleted`. */
+export interface DocumentChanged {
+  path: string;
+  mtime_ms?: number;
+  deleted?: boolean;
+}
+
 /** The Rust core, as the shell sees it; tests pass a fake. */
 export interface Backend {
   takeOpenFiles(): Promise<string[]>;
@@ -23,8 +30,12 @@ export interface Backend {
   getConfig(): Promise<Config>;
   setConfig(config: Config): Promise<void>;
   openExternal(url: string): Promise<void>;
+  /** Watching is reference-counted in the core: each `watch` needs its own `unwatch`. */
+  watch(path: string): Promise<void>;
+  unwatch(path: string): Promise<void>;
   /** Resolves to the function that stops listening. */
   onOpenFiles(handler: (paths: string[]) => void): Promise<() => void>;
+  onDocumentChanged(handler: (change: DocumentChanged) => void): Promise<() => void>;
 }
 
 interface OpenFiles {
@@ -38,7 +49,11 @@ export const tauriBackend: Backend = {
   getConfig: () => invoke<Config>("get_config"),
   setConfig: (config) => invoke<void>("set_config", { config }),
   openExternal: (url) => invoke<void>("open_external", { url }),
+  watch: (path) => invoke<void>("watch", { path }),
+  unwatch: (path) => invoke<void>("unwatch", { path }),
   onOpenFiles: (handler) => listen<OpenFiles>("open-files", (e) => handler(e.payload.paths)),
+  onDocumentChanged: (handler) =>
+    listen<DocumentChanged>("document-changed", (e) => handler(e.payload)),
 };
 
 /** The message of an `IpcError` (`{kind, message}`), or of anything else thrown. */
