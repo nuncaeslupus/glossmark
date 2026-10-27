@@ -36,8 +36,12 @@ function copyButton(source: string): HTMLButtonElement {
   const label = (text: string) => button.setAttribute("aria-label", text);
   label(strings.copyCode);
   button.addEventListener("click", async () => {
-    await navigator.clipboard.writeText(source);
-    label(strings.copied);
+    try {
+      await navigator.clipboard.writeText(source);
+      label(strings.copied);
+    } catch {
+      label(strings.copyFailed);
+    }
     setTimeout(() => label(strings.copyCode), COPIED_MS);
   });
   return button;

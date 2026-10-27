@@ -42,5 +42,6 @@ export const strings = {
   },
   copyCode: "Copy",
   copied: "Copied",
+  copyFailed: "Copy failed",
   headingLink: (heading: string) => `Link to “${heading}”`,
 } as const;

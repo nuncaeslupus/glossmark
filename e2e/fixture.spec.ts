@@ -89,3 +89,15 @@ test("test_mermaid_absent_not_loaded", async ({ page }) => {
   await expect(page.locator("#doc .hljs")).toHaveCount(1);
   expect(requests.filter((url) => MERMAID.test(url))).toEqual([]);
 });
+
+test("test_mermaid_broken_fence_left_as_source", async ({ page }) => {
+  await page.goto("/e2e/harness.html");
+  const outside = () =>
+    page.locator("body > :not(#doc)").evaluateAll((els) => els.map((e) => e.outerHTML));
+  const before = await outside();
+  await page.evaluate(() => window.harness.show("```mermaid\ngraph LR\n  A -->\n```\n"));
+  await expect(page.locator("#doc pre.mermaid-error > code.language-mermaid")).toHaveCount(1);
+  await expect(page.locator("#doc svg")).toHaveCount(0);
+  // Mermaid's temporary element and its "Syntax error" graphic are gone from `body`.
+  expect(await outside()).toEqual(before);
+});
