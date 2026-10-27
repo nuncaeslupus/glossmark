@@ -15,7 +15,9 @@ const URL_START = /^(?:www\.|https?:\/\/|ftp:\/\/)/;
 const DOMAIN = /^[\w-]+(?:\.[\w-]+)*/;
 const EMAIL = /^[\w.+-]+@[\w-]+(?:\.[\w-]+)+/;
 const TRAILING = new Set("?!.,:*_~");
-const ENTITY_END = /&[a-zA-Z0-9]+;$/;
+const ENTITY = /^&[a-zA-Z0-9]+;$/;
+// mdurl blanks a longer host, so such text is left unlinked.
+const MAX_HOST = 255;
 
 /** The URL autolink starting at `s[i]`, trailing punctuation trimmed, or null. */
 function matchUrl(s: string, i: number): string | null {
@@ -26,7 +28,12 @@ function matchUrl(s: string, i: number): string | null {
   // A valid domain has a period and no underscore in its last two segments.
   const host = prefix[0] === "www." ? `www.${domain[0]}` : domain[0];
   const segments = host.split(".");
-  if (segments.length < 2 || segments.slice(-2).some((p) => p.includes("_"))) return null;
+  if (
+    host.length > MAX_HOST ||
+    segments.length < 2 ||
+    segments.slice(-2).some((p) => p.includes("_"))
+  )
+    return null;
 
   let end = i + prefix[0].length + domain[0].length;
   while (end < s.length && !/[\s<]/.test(s[end])) end++;
@@ -38,14 +45,16 @@ function matchUrl(s: string, i: number): string | null {
     else if (last === ")" && unbalanced > 0) {
       link = link.slice(0, -1);
       unbalanced--;
-    } else if (last === ";" && ENTITY_END.test(link)) link = link.replace(ENTITY_END, "");
-    else return link;
+    } else if (last === ";" && ENTITY.test(link.slice(link.lastIndexOf("&")))) {
+      link = link.slice(0, link.lastIndexOf("&"));
+    } else return link;
   }
 }
 
 function matchEmail(s: string, i: number): string | null {
   const m = EMAIL.exec(s.slice(i));
-  return m && !/[-_]$/.test(m[0]) ? m[0] : null;
+  if (!m || /[-_]$/.test(m[0]) || m[0].length - m[0].indexOf("@") - 1 > MAX_HOST) return null;
+  return m[0];
 }
 
 const count = (s: string, c: string) => s.split(c).length - 1;
@@ -76,8 +85,7 @@ function autolink(state: StateCore, md: MarkdownIt, token: Token): Token[] | nul
       text = matchEmail(s, i);
       href = text && `mailto:${text}`;
     }
-    // mdurl blanks a host over 255 characters; leave such text alone.
-    if (!text || !href || /^https?:\/\/$/.test(md.normalizeLink(href))) continue;
+    if (!text || !href) continue;
     if (i > from)
       out.push(Object.assign(new state.Token("text", "", 0), { content: s.slice(from, i) }));
     out.push(...linkTokens(state, md, text, href));

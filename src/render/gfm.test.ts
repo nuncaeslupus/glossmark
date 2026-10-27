@@ -28,7 +28,16 @@ test("test_gfm_departs_from_commonmark_only_where_specified", () => {
 test("test_gfm_autolink_edge_cases", () => {
   const start = performance.now();
   expect(render(`www.a.b${")".repeat(20000)}`)).toContain('href="http://www.a.b"');
-  expect(performance.now() - start).toBeLessThan(500);
-  expect(render(`x ${"www.".repeat(100)}`)).not.toContain("<a");
+  expect(render(`www.a.b${"&a;".repeat(20000)}`)).toContain('href="http://www.a.b"');
+  expect(performance.now() - start).toBeLessThan(1000);
+  const long = "a".repeat(300);
+  for (const text of [
+    `www.${long}.com/p`,
+    `https://${long}.com/x`,
+    `ftp://${long}.com`,
+    `me@${long}.com`,
+  ]) {
+    expect(render(text), text).not.toContain("<a");
+  }
   expect(render("- # [x] head")).not.toContain("<input");
 });
