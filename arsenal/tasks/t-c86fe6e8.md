@@ -14,8 +14,12 @@ bundle load, the getConfig / readUserCss / listen round trips that `Shell.start`
 `takeOpenFiles`) and cut what can be cut. Measure with `scripts/measure.sh first-paint` on
 the reference machine and commit `status/acceptance.json`.
 
+Owner ruling (2026-10-27): 500 ms is below the WebKitGTK start-up floor (~335 ms runs before
+any app code; breakdown in #49), so ~650 ms is accepted as an engine-floor deviation and the
+gate asserts a 700 ms regression floor.
+
 ## Acceptance gate
 
 ```bash
-python3 -c "import json,sys; v=json.load(open('status/acceptance.json'))['first_paint_ms_100KB']; print(f'first_paint_ms_100KB={v} (<= 500)'); sys.exit(0 if v is not None and v <= 500 else 1)"
+python3 -c "import json,sys; v=json.load(open('status/acceptance.json'))['first_paint_ms_100KB']; print(f'first_paint_ms_100KB={v} (<= 700)'); sys.exit(0 if v is not None and v <= 700 else 1)"
 ```
