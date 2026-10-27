@@ -5,8 +5,10 @@ import { fakeBackend, gate, settle } from "./fake-backend";
 import { Shell } from "./shell";
 
 const shells: Shell[] = [];
+const scrollIntoView = Element.prototype.scrollIntoView;
 afterEach(() => {
   for (const shell of shells.splice(0)) shell.dispose();
+  Element.prototype.scrollIntoView = scrollIntoView;
 });
 
 type FakeState = ReturnType<typeof fakeBackend>["state"];
