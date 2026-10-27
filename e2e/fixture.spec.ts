@@ -9,7 +9,17 @@ async function show(page: Page, source?: string): Promise<string[]> {
   page.on("request", (r) => requests.push(r.url()));
   await page.goto("/e2e/harness.html");
   await page.evaluate((s) => window.harness.show(s ?? window.harness.fixture), source);
+  await drawDiagrams(page);
   return requests;
+}
+
+/** Scroll every diagram near the view, as a reader would, so it is drawn (or fails). */
+async function drawDiagrams(page: Page): Promise<void> {
+  const pending = page.locator("#doc pre.mermaid-pending");
+  for (let left = await pending.count(); left > 0; left = await pending.count()) {
+    await pending.first().scrollIntoViewIfNeeded();
+    await expect(pending).not.toHaveCount(left, { timeout: 10_000 });
+  }
 }
 
 test("test_feature_fixture_all_constructs_rendered", async ({ page }) => {

@@ -114,7 +114,7 @@ Measured on the reference machine (the owner's Ubuntu laptop) with release build
 - [ ] Simplicity, **judged by the owner**: a first-time user can open, read, navigate and print a document without looking anything up, and the window shows nothing they would call clutter.
 - [ ] `network_requests_with_remote_images_off == 0`: with remote images off, opening the fixture makes no network request; with them on, only image URLs are requested.
 - [ ] `first_paint_ms_100KB <= 500`: from launching `glossmark big.md` (100 KB, ~2,500 lines) to the sheet being visible.
-- [ ] `render_ms_1MB <= 1500`: a 1 MB document is fully rendered (all Mermaid included, at most 20 diagrams) without the window freezing for more than 200 ms at a time.
+- [ ] `render_ms_1MB <= 1500`: a 1 MB document with up to 20 Mermaid diagrams is rendered and interactive in ≤ 1500 ms with no task over 200 ms; diagrams are drawn as they approach the view, each without a task over 200 ms (D-16).
 - [ ] `live_reload_ms <= 500`: from saving the file in another editor to the change appearing; the scroll offset changes by less than one screen.
 - [ ] `deb_package_mb <= 20` for the Linux `.deb`. The AppImage is also built, but it bundles WebKitGTK, so its size is reported, not gated.
 - [ ] `idle_rss_mb <= 250` with three 100 KB documents open in tabs.
@@ -228,6 +228,8 @@ as D-12 to D-15.
 | D-13 | drawspec diagrams arrive as rendered SVG/PNG files; local SVGs are inlined so they follow the theme; drawspec fences show as code | agreed | 2026-10-26 |
 | D-14 | UI in English for v1, all strings in one file; translations later | agreed | 2026-10-26 |
 | D-15 | Safe raw HTML is kept, as on GitHub; everything else is stripped | agreed | 2026-10-26 |
+| D-16 | Mermaid drawn lazily near the viewport (owner, T15) | agreed | 2026-10-27 |
+| D-17 | Folder scope is recursive: opening a file allows Markdown in its folder and subfolders, including via recent files (owner, T7 review) | agreed | 2026-10-27 |
 
 ---
 
@@ -325,7 +327,7 @@ plugin's file; both are recreated with defaults when missing.
 | A hostile document runs script or reads files | Med | High | DOMPurify with an explicit allowlist, strict CSP, Mermaid `securityLevel: 'strict'`, filesystem scope limited to opened files' folders (the `image:` protocol serves only image files there), external links handed to the OS | security: XSS fixture (`script_execution_from_document == 0`) + Rust test refusing paths outside scope |
 | A markdown-it plugin is unmaintained or misrenders against GitHub | Med | Med | Pin exact versions; the feature fixture covers each construct; a broken plugin is vendored into `src/render/plugins/` and fixed there | unit (fixture snapshot) |
 | GFM spec examples fail on markdown-it's linkify or tag-filter behaviour | Med | Low | Configure linkify to GFM's rules; add a small tag-filter rule; any example still failing is listed and justified in the test file, not silently skipped | unit (`gfm_extension_examples_pass_rate == 1.0`) |
-| A 1 MB document or 20 Mermaid diagrams freeze the window | Med | Med | Mermaid lazy-loaded and rendered one diagram per animation frame; parsing moves to a Web Worker if `render_ms_1MB` fails | perf benchmark (T15) |
+| A 1 MB document or 20 Mermaid diagrams freeze the window | Med | Med | Mermaid lazy-loaded and drawn as diagrams approach the view, one per animation frame (D-16); parsing moves to a Web Worker if `render_ms_1MB` fails | perf benchmark (T15) |
 | Find in page: `window.find` is unreliable in WebKitGTK | High | Low | Own find: text search over a `TreeWalker`, matches wrapped in `<mark>`, Enter / Shift+Enter cycle | unit + Playwright WebKit |
 | The AppImage misbehaves on some GPUs or distros (known WebKitGTK/EGL issues) | Med | Low | `.deb` is the gated package; AppImage size reported, issues documented in the README | manual on Ubuntu 24.04 VM |
 | Local SVG inlining lets an SVG's styles leak into the page | Low | Low | Sanitised with DOMPurify's SVG profile; IDs prefixed per image; `<style>` inside SVGs stripped | unit |

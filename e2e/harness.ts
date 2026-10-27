@@ -9,8 +9,10 @@ import { Shell } from "../src/ui/shell";
 import { bigDocument } from "./big";
 
 export interface Timing {
-  /** From the start of the render until all of it is in, every diagram drawn, and painted.
-   * Off-screen parts of a large document may still be laid out by estimate. */
+  /** From the start of the render until all of it is in and painted, before any diagram. */
+  interactiveMs: number;
+  /** Until the diagrams near the view are drawn too, and painted. Off-screen parts of a large
+   * document may still be laid out by estimate. */
   totalMs: number;
   /** Until the off-screen parts are laid out too, in the background. */
   settledMs: number;
@@ -61,7 +63,13 @@ window.harness = {
     setTimeout(beat, 0);
     await frame();
     const start = performance.now();
-    const { settled } = await render(source);
+    const { ready, settled } = await renderDocument(
+      document.getElementById("doc") as HTMLElement,
+      source,
+    );
+    await frame();
+    const interactiveMs = performance.now() - start;
+    await ready;
     await frame();
     const totalMs = performance.now() - start;
     await settled;
@@ -69,7 +77,7 @@ window.harness = {
     const settledMs = performance.now() - start;
     beating = false;
     beat();
-    return { totalMs, settledMs, longestTaskMs };
+    return { interactiveMs, totalMs, settledMs, longestTaskMs };
   },
   async app(files, launch, config = {}) {
     const { backend, state } = fakeBackend(files, launch);

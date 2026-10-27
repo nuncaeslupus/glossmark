@@ -1,6 +1,6 @@
 import { Anchors, type Enhanced, enhance, enhancePart, renderMermaid } from "./enhance";
 import type { ImagePolicy } from "./enhance/images";
-import { preloadMermaid } from "./enhance/mermaid";
+import { scroller } from "./enhance/scroll";
 import type { ParseRequest, ParseResult } from "./parse.worker";
 import { render, renderChunks } from "./pipeline";
 import { sanitizeFragment } from "./sanitize";
@@ -105,7 +105,6 @@ export async function renderDocument(
 
   const anchors = new Anchors();
   const stopped = { outline: anchors.outline, ready: done, settled: done };
-  preloadMermaid(source);
   const chunks = await parseLarge(source);
   const boxes: HTMLElement[] = [];
   let deadline = performance.now() + SLICE_MS;
@@ -126,17 +125,10 @@ export async function renderDocument(
   root.replaceChildren(...boxes);
   anchors.link(root);
   const ready = renderMermaid(root);
-  // After the diagrams: drawn into laid-out boxes, each would lay out the document again.
+  // After the diagrams near the view: drawn into laid-out boxes, each would lay out the
+  // document again.
   const after = () => settle(root, boxes, live);
   return { outline: anchors.outline, ready, settled: ready.then(after, after) };
-}
-
-/** The scrolling box `el` is in. */
-function scroller(el: HTMLElement): Element {
-  for (let p = el.parentElement; p; p = p.parentElement) {
-    if (/auto|scroll/.test(getComputedStyle(p).overflowY)) return p;
-  }
-  return document.scrollingElement ?? document.documentElement;
 }
 
 /** The first child of `parent` that reaches below `top`, by binary search. */

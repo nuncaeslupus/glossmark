@@ -3,9 +3,12 @@ import { expect, type Page, test } from "@playwright/test";
 // `emulateMedia({ media: "print" })` and computed styles, so WebKit (the app's engine) checks
 // the print stylesheet too: Playwright's `page.pdf()` is Chromium-only.
 
-async function open(page: Page, theme: "light" | "dark") {
+/** Opens the fixture and scrolls its diagram near the view, so it is drawn. With `far`, a
+ * second diagram far below is never scrolled to. */
+async function open(page: Page, theme: "light" | "dark", far = false) {
   await page.emulateMedia({ colorScheme: theme });
-  await page.goto(`/e2e/theme.html?theme=${theme}`);
+  await page.goto(`/e2e/theme.html?theme=${theme}${far ? "&far" : ""}`);
+  await page.locator(".sheet :is(pre.mermaid-pending, .mermaid)").first().scrollIntoViewIfNeeded();
   await expect(page.locator(".sheet .mermaid > svg")).toHaveCount(1);
 }
 
@@ -79,31 +82,38 @@ test("test_print_keeps_blocks_whole", async ({ page }) => {
 
 test("test_print_draws_diagrams_light", async ({ page }) => {
   // The stub records the diagram's fill at the moment print() runs.
+  // The stub records every diagram's fill, and the fences still waiting, when print() runs.
   await page.addInitScript(() => {
-    const w = window as unknown as { printed: number; printedFill: string };
+    const w = window as unknown as { printed: number; printedFills: string[]; left: number };
     w.printed = 0;
     window.print = () => {
       w.printed++;
-      const el = document.querySelector(".sheet .mermaid > svg .node :is(rect, polygon)");
-      w.printedFill = el ? getComputedStyle(el).fill : "";
+      w.printedFills = [...document.querySelectorAll(".sheet .mermaid > svg")].map((svg) => {
+        const el = svg.querySelector(".node :is(rect, polygon)");
+        return el ? getComputedStyle(el).fill : "";
+      });
+      w.left = document.querySelectorAll(".sheet pre.mermaid-pending").length;
     };
   });
   await open(page, "light");
   const node = page.locator(".sheet .mermaid > svg .node :is(rect, polygon)").first();
   const fill = () => node.evaluate((el) => getComputedStyle(el).fill);
   const light = await fill();
-  await open(page, "dark");
+  await open(page, "dark", true);
   const dark = await fill();
   expect(dark).not.toBe(light);
+  await expect(page.locator(".sheet pre.mermaid-pending")).toHaveCount(1);
 
   await page.locator(".bar-button[data-action=print]").click();
   await expect
     .poll(() => page.evaluate(() => (window as unknown as { printed: number }).printed))
     .toBe(1);
-  const printedFill = await page.evaluate(
-    () => (window as unknown as { printedFill: string }).printedFill,
-  );
-  expect(printedFill, "drawn light when print() runs").toBe(light);
+  const printed = await page.evaluate(() => {
+    const w = window as unknown as { printedFills: string[]; left: number };
+    return { fills: w.printedFills, left: w.left };
+  });
+  // Both drawn light, the one never scrolled to included.
+  expect(printed, "drawn light when print() runs").toEqual({ fills: [light, light], left: 0 });
   // Restored once print() returns, even without `afterprint`.
   await expect.poll(fill).toBe(dark);
 });

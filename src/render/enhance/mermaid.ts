@@ -1,7 +1,13 @@
+import { scroller } from "./scroll";
+
 const FENCES = "pre > code.language-mermaid";
 const DRAWN = ".mermaid[data-source]";
-// A Mermaid fence in Markdown source, found before it is parsed.
-const SOURCE_FENCE = /^ {0,3}(?:`{3,}|~{3,})\s*mermaid\b/m;
+/** On a fence's `pre` until its diagram is drawn: the source holds its place meanwhile. */
+const PENDING = "mermaid-pending";
+/** How near the view a diagram is drawn: one view's height above and below. */
+const NEAR = "100% 0px";
+/** How long `renderMermaid` waits to learn which diagrams are near the view. */
+const SEEN_MS = 1000;
 
 type Mermaid = typeof import("mermaid")["default"];
 
@@ -13,6 +19,15 @@ let drawnDark = false;
 let forPaper = false;
 // One draw at a time: `initialize` sets the theme for every `render` after it.
 let queue: Promise<void> = Promise.resolve();
+
+/** Fences waiting for their diagram, by `pre`, with what to call once it is drawn. */
+const pending = new Map<HTMLElement, () => void>();
+/** Pending fences near the view, in the order they came near. */
+const near = new Set<HTMLElement>();
+let draining: Promise<void> | null = null;
+const observers = new Map<Element, IntersectionObserver>();
+/** Called with the `pre`s an observer has reported on at least once. */
+let onSeen: ((pres: HTMLElement[]) => void)[] = [];
 
 const nextFrame = () =>
   new Promise<void>((resolve) =>
@@ -40,29 +55,9 @@ function load(): Promise<Mermaid> {
   return loading;
 }
 
-/** Start loading Mermaid if `source` has a diagram, while the UI thread waits on the parse. */
-export function preloadMermaid(source: string): void {
-  if (SOURCE_FENCE.test(source)) load().catch(() => {});
-}
-
-/** Draws each item in turn, one per frame, so a document with many never freezes the window.
- * Mermaid measures its drawing in the page: on a stage of its own, with layout contained,
- * that never lays out the document again. */
-async function drawEach<T>(items: T[], each: (item: T, stage: HTMLElement) => Promise<void>) {
-  const stage = document.createElement("div");
-  stage.className = "mermaid-stage";
-  document.body.append(stage);
-  try {
-    for (const [i, item] of items.entries()) {
-      if (i > 0) await nextFrame();
-      await each(item, stage);
-    }
-  } finally {
-    stage.remove();
-  }
-}
-
-/** Draws `source` with the page's current theme; throws when it does not parse. */
+/** Draws `source` with the page's current theme; throws when it does not parse. Mermaid
+ * measures its drawing in the page: on a stage of its own, with layout contained, that never
+ * lays out the document again. */
 async function draw(m: Mermaid, source: string, stage: HTMLElement): Promise<string> {
   const id = `glossmark-mermaid-${++count}`;
   try {
@@ -71,6 +66,25 @@ async function draw(m: Mermaid, source: string, stage: HTMLElement): Promise<str
     // A failed draw can leave Mermaid's temporary element behind.
     stage.replaceChildren();
     throw error;
+  }
+}
+
+/** Runs `each` on items as `next` hands them out, one per frame, so many diagrams never
+ * freeze the window. */
+async function onePerFrame<T>(
+  next: () => T | undefined,
+  each: (item: T, stage: HTMLElement) => Promise<void>,
+) {
+  const stage = document.createElement("div");
+  stage.className = "mermaid-stage";
+  document.body.append(stage);
+  try {
+    for (let item = next(), first = true; item !== undefined; item = next(), first = false) {
+      if (!first) await nextFrame();
+      await each(item, stage);
+    }
+  } finally {
+    stage.remove();
   }
 }
 
@@ -84,24 +98,99 @@ function initialize(m: Mermaid): void {
   });
 }
 
-/** Redraws every diagram if the page turned light or dark since: Mermaid bakes its colours in. */
+/** Draws the fences near the view, nearest first come, until none are left; Mermaid is
+ * imported on the first. */
+function drain(): Promise<void> {
+  draining ??= enqueue(async () => {
+    try {
+      const m = await load();
+      initialize(m);
+      const next = () => {
+        const [pre] = near;
+        if (pre) near.delete(pre);
+        return pre;
+      };
+      await onePerFrame(next, (pre, stage) => drawFence(m, pre, stage));
+    } finally {
+      draining = null;
+      // Fences that came near while the last one was drawn.
+      if (near.size > 0) void drain();
+    }
+  });
+  return draining;
+}
+
+async function drawFence(m: Mermaid, pre: HTMLElement, stage: HTMLElement): Promise<void> {
+  const done = pending.get(pre);
+  pending.delete(pre);
+  for (const observer of observers.values()) observer.unobserve(pre);
+  pre.classList.remove(PENDING);
+  try {
+    if (!pre.isConnected) return;
+    const source = pre.querySelector("code")?.textContent ?? "";
+    try {
+      const svg = await draw(m, source, stage);
+      const figure = document.createElement("div");
+      figure.className = "mermaid";
+      figure.dataset.source = source;
+      figure.innerHTML = svg;
+      pre.replaceWith(figure);
+    } catch (error) {
+      pre.classList.add("mermaid-error");
+      pre.title = String(error);
+    }
+  } finally {
+    done?.();
+  }
+}
+
+/** The fence comes near the view: drawn in turn. */
+function want(pre: HTMLElement): void {
+  if (!pending.has(pre)) return;
+  near.add(pre);
+  void drain();
+}
+
+function observer(view: Element): IntersectionObserver {
+  let found = observers.get(view);
+  if (!found) {
+    // The page's own scrolling is the implicit root; a scrolling box is its own.
+    const root = view === document.scrollingElement ? null : view;
+    found = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) if (e.isIntersecting) want(e.target as HTMLElement);
+        const pres = entries.map((e) => e.target as HTMLElement);
+        for (const seen of onSeen) seen(pres);
+      },
+      { root, rootMargin: NEAR },
+    );
+    observers.set(view, found);
+  }
+  return found;
+}
+
+/** Redraws every diagram if the page turned light or dark since: Mermaid bakes its colours in.
+ * Fences not drawn yet take the theme of the moment they are reached. */
 function redraw(): Promise<void> {
   if (!mermaid || dark() === drawnDark) return queue;
   const m = mermaid;
   return enqueue(async () => {
     initialize(m);
     const figures = [...document.querySelectorAll<HTMLElement>(DRAWN)];
-    await drawEach(figures, async (figure, stage) => {
-      try {
-        figure.innerHTML = await draw(m, figure.dataset.source ?? "", stage);
-        figure.classList.remove("mermaid-error");
-      } catch (error) {
-        // The old drawing stays, in the other theme, so it is marked as a first draw's would be.
-        figure.classList.add("mermaid-error");
-        figure.title = String(error);
-        console.error(error);
-      }
-    });
+    await onePerFrame(
+      () => figures.shift(),
+      async (figure, stage) => {
+        try {
+          figure.innerHTML = await draw(m, figure.dataset.source ?? "", stage);
+          figure.classList.remove("mermaid-error");
+        } catch (error) {
+          // The old drawing stays, in the other theme, so it is marked as a first draw's would be.
+          figure.classList.add("mermaid-error");
+          figure.title = String(error);
+          console.error(error);
+        }
+      },
+    );
   });
 }
 
@@ -113,9 +202,10 @@ function followTheme(): void {
   matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => void redraw());
 }
 
-/** Redraws the diagrams light for paper; the returned function puts the screen theme back.
- * Mermaid draws asynchronously, so this is awaited before `print()`: `beforeprint` cannot
- * wait. `afterprint` restores too, for a webview whose `print()` does not block. */
+/** Draws every diagram, light, for paper, those never scrolled near included; the returned
+ * function puts the screen theme back. Mermaid draws asynchronously, so this is awaited
+ * before `print()`: `beforeprint` cannot wait. `afterprint` restores too, for a webview
+ * whose `print()` does not block. */
 export async function diagramsForPaper(): Promise<() => void> {
   forPaper = true;
   const back = () => {
@@ -124,35 +214,65 @@ export async function diagramsForPaper(): Promise<() => void> {
     void redraw();
   };
   addEventListener("afterprint", back, { once: true });
+  // Drawn ones first, so the pending ones are not drawn twice.
   await redraw();
+  for (const pre of pending.keys()) if (pre.isConnected) near.add(pre);
+  if (near.size > 0) await drain();
   return back;
 }
 
-/** Replace each `mermaid` fence with its diagram, in the page's light or dark theme. Mermaid
- * (~2 MB) is imported only when the document has one. Its SVG is inserted after sanitising:
- * trusted code drew it, with `securityLevel: 'strict'` so labels cannot carry HTML or script.
- * A diagram that fails to parse stays as its source. */
+/** Turn each `mermaid` fence into its diagram, in the page's light or dark theme, once it
+ * comes within a view's height of the view. Mermaid (~2 MB) is imported only when the first
+ * diagram does. Its SVG is inserted after sanitising: trusted code drew it, with
+ * `securityLevel: 'strict'` so labels cannot carry HTML or script. A diagram that fails to
+ * parse stays as its source. Settles once the diagrams near the view now are drawn. */
 export async function renderMermaid(root: ParentNode): Promise<void> {
-  const fences = [...root.querySelectorAll<HTMLElement>(FENCES)];
-  if (fences.length === 0) return;
-  const m = await load();
-  return enqueue(async () => {
-    initialize(m);
-    await drawEach(fences, async (code, stage) => {
-      const pre = code.parentElement;
-      if (!pre) return;
-      const source = code.textContent ?? "";
-      try {
-        const svg = await draw(m, source, stage);
-        const figure = document.createElement("div");
-        figure.className = "mermaid";
-        figure.dataset.source = source;
-        figure.innerHTML = svg;
-        pre.replaceWith(figure);
-      } catch (error) {
-        pre.classList.add("mermaid-error");
-        pre.title = String(error);
-      }
-    });
+  prune();
+  const pres = [...root.querySelectorAll<HTMLElement>(FENCES)]
+    .map((code) => code.parentElement as HTMLElement)
+    .filter((pre) => pre && !pending.has(pre));
+  if (pres.length === 0) return;
+  const drawn = pres.map(
+    (pre) =>
+      new Promise<void>((resolve) => {
+        pending.set(pre, resolve);
+        pre.classList.add(PENDING);
+      }),
+  );
+  if (typeof IntersectionObserver !== "function") {
+    for (const pre of pres) want(pre);
+    await Promise.all(drawn);
+    return;
+  }
+
+  // Which of these the observer finds near the view on its first report, at the latest
+  // after `SEEN_MS`: a sheet that is not shown is never reported on.
+  const unseen = new Set(pres);
+  await new Promise<void>((resolve) => {
+    const seen = (reported: HTMLElement[]) => {
+      for (const pre of reported) unseen.delete(pre);
+      if (unseen.size === 0) finish();
+    };
+    const timer = setTimeout(() => finish(), SEEN_MS);
+    const finish = () => {
+      clearTimeout(timer);
+      onSeen = onSeen.filter((f) => f !== seen);
+      resolve();
+    };
+    onSeen.push(seen);
+    for (const pre of pres) observer(scroller(pre)).observe(pre);
   });
+  // Those no longer pending are being drawn, or are drawn.
+  await Promise.all(drawn.filter((_, i) => !pending.has(pres[i]) || near.has(pres[i])));
+}
+
+/** Forgets fences of documents no longer shown. */
+function prune(): void {
+  for (const [pre, done] of pending) {
+    if (pre.isConnected) continue;
+    for (const observer of observers.values()) observer.unobserve(pre);
+    pending.delete(pre);
+    near.delete(pre);
+    done();
+  }
 }

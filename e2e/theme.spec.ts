@@ -15,6 +15,8 @@ async function open(page: Page, setting: string, os: Scheme) {
   await page.emulateMedia({ colorScheme: os });
   await page.goto(`/e2e/theme.html?theme=${setting}`);
   await expect(page.locator(".sheet svg[role=img] text")).toHaveCount(1);
+  // The diagram is drawn once it nears the view.
+  await page.locator(".sheet :is(pre.mermaid-pending, .mermaid)").scrollIntoViewIfNeeded();
   await expect(page.locator(".sheet .mermaid > svg")).toHaveCount(1);
 }
 
