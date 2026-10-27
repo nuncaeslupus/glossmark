@@ -3,6 +3,17 @@
 <!-- Written at session end. A new session reading this file can resume without
      additional context. -->
 
+## This session (local, 2026-10-27)
+
+- **T18 WebKit render freeze (t-1c0e5a17, #36)** → PR #38, open, CI running. Profiled on
+  WebKitGTK: the chunked render is sliced correctly; the unsliceable freeze is Mermaid's
+  **first `m.render()`** — a ~0.6 s cold JSC compile of its lazy chunks (dagre, elk, rough)
+  that no slicing breaks up — and a 1 MB layout alone is ~2 s. So the 1500/200 ms metric is
+  not reachable on WebKit. **Owner's call (Option A)**: assert WebKit-specific budgets above
+  the measured floor as a regression guard, deliberately looser than the metric the gate
+  still names. `e2e/perf.spec.ts` now asserts (not reports) per-project bounds; the
+  `WEBKIT_BUDGETS` env branch is gone (gate still passes it, now a no-op). Gate: 5 passed.
+
 ## Last session (cloud, overnight 2026-10-27)
 
 Merged, one PR per task, each with a pre-PR adversarial review:
@@ -15,14 +26,13 @@ T13 reading tools (#32), T9 signature theme (#33), T10 print (#34), T15 performa
 
 - **T17 Acceptance (t-b222ec6c, #18)**: needs the owner's computer: fresh-VM .deb install,
   sign-offs (print parity, theme vs GitHub).
-- **T18 WebKit render freeze (t-1c0e5a17, #36)**: WebKit misses the T15 timing bounds on CI
-  (1 MB: ~5 s, longest task ~1.1 s). Owner profiles on WebKitGTK; gate runs with
-  `WEBKIT_BUDGETS=1`.
+- **T18 (t-1c0e5a17, #36)**: PR #38 open; merge once CI is green. This was the last open task.
 
 ## Decisions taken
 
 - Mermaid is drawn lazily as it nears the view (D-16); T7 scope stays recursive (D-17).
-- WebKit perf timings are reported, not asserted, until T18 lands.
+- WebKit perf timings are asserted as of T18 (#38), at WebKit-specific budgets above the
+  measured floor — a regression guard, looser than the 1500/200 ms metric (owner's call).
 - Render boxes are 16 KB (`CHUNK_CHARS`): each box's first layout is the 1 MB render's
   longest task.
 
