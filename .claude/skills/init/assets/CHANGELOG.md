@@ -18,6 +18,48 @@ being a changelog nobody reads.
 
 Format: `## [X.Y.Z] - YYYY-MM-DD`, newest first, plain bullets below.
 
+## [5.14.0] - 2026-10-27
+
+### Added
+- **Overnight repo audit** (`repo-audit`, `references/overnight.md`):
+  - `audit_estimate.py` prices a scope before anything runs: files, lines, ≈ tokens (12 per line, a starting value to tune) and workers.
+  - The audit asks for scope and a token ceiling first, then runs one subsystem at a time, riskiest first, checking the budget before each.
+  - A run that stops early reports what it did not cover, and never edits code.
+- **`review_metrics.py`:** one line per risk tier for the last N days, so you can see whether relaxing a tier raises reverts.
+  - From git: merges, reverts and fix-ups within 7 days.
+  - From digest records: mean review rounds and who found the problems.
+- **Digest:** the header now carries the 30-day metrics line, and `render --audit <ledger>` adds the night's audit findings as a card above the PRs.
+
+## [5.13.0] - 2026-10-27
+
+### Added
+- **Lean-code rules** (`references/lean-code.md`, loaded only when implementing or reviewing).
+  - Before writing code, a four-step check: is it needed at all → does the stdlib or platform already do it → does the repo already have it → only then the minimum that passes the gate.
+  - One-line rules: smallest diff, delete before adding, no speculative options, no impossible-state guards, no unrequested refactors, no comments restating code, no dependency for a few lines.
+  - A never-cut list: validation, error handling, security, accessibility, tests.
+- **Reviewer `SCOPE` tag:** code a task did not need is reported as `RISK | … — SCOPE: …` with the lines that could go. It never blocks on its own; the author removes it or answers why it stays.
+- **Digest size flag:** add `expected_lines` (your estimate, written before implementing) to the record notes. A PR over twice that shows `⚠ 2.4x expected size` on its card, and a green mark turns amber.
+
+## [5.12.0] - 2026-10-27
+
+### Added
+- **Review digest: decide on a night's work without opening GitHub.**
+  - `digest.py record` stores each PR's facts in a hidden block in its body: risk tier, a red/amber/green mark, state, a summary of at most 60 words, each problem found (who found it, how it was fixed, which commit), what is still open, and how to undo it.
+  - `digest.py render` turns open and recently merged PRs into one page: folded cards, red first, each with **Approve / Deny / Question**. It also makes a Markdown version for chat.
+  - Agents render it at session end, at the token-budget stop and every `digest-every` merges (default 5).
+- **`apply_decisions.py` acts on what you decided**, from the page's exported file or typed lines like `approve 42; deny 43: split it`.
+  - An approval only counts for the commit you saw; if the PR changed since, it is reported as stale.
+  - Approved PRs merge in dependency order. A denied PR is closed; a denied merged PR gets a revert PR.
+  - Questions are posted on the PR for the next session to answer.
+- **`[review] digest-decisions = true`** makes a digest approval count as your human approval. This lets `solo-gated` work when agents open PRs with your own GitHub account. It is off by default; `/init` offers it with the solo presets.
+- Config: `digest-delivery` (`file` | `chat` | `both`) and `digest-every`.
+
+## [5.11.0] - 2026-10-27
+
+### Added
+- **Risk-tiered approval (`[review] preset`).** `/init` now asks who approves what: `solo-trust` (the agent merges every PR; high-risk merges are flagged `Ratify: pending` for you to confirm later), `solo-gated` (you approve medium- and high-risk PRs), `team` (0/1/2 human approvals by tier) or `manual`. A PR's tier comes from its changed files (`risk-paths`, `risk-lines`, new `always-human-paths` and `low-paths`); `approval-low|medium|high` override a row. Human approvals only count on the head commit and never from a bot or the PR author. Merge commits now carry `Risk-tier` / `Reviewed-by` / `Approved-by` trailers. `review_policy.py explain` prints your effective flow. **Nothing changes until you set a preset** — re-run `/init --interview` or add `preset = "…"` under `[review]` in `arsenal/config.toml`.
+- **Note on any paragraph in an annotatable reader.** Every paragraph, list item and table in a spec or plan reader has a ✎ at its right; tapping it opens a note box right below that spot, so you write while the text that prompted the note stays in view. The export quotes the paragraph each note is about (`> ¶ “…”`), `--notes` re-seeds them, and a note whose paragraph a later revision rewrote is kept at the end of its section instead of dropped. Regenerate a reader to get it.
+
 ## [5.10.9] - 2026-10-25
 
 ### Changed
