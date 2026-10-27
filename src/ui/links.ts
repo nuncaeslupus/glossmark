@@ -1,4 +1,5 @@
 // Link routing and per-tab history (D-8). Pure: the shell performs what `route` returns.
+import { ID_PREFIX, Slugger } from "../render/enhance/slug";
 
 export type LinkKind = "external" | "fragment" | "markdown" | "wiki" | "file";
 
@@ -77,22 +78,14 @@ export function route(link: Element, from: string, gesture: Gesture): LinkAction
   return { type: gesture === "click" ? "navigate" : "newTab", entry };
 }
 
-/** GitHub's heading id for `text`: lower case, spaces to `-`, punctuation dropped. */
-export function slug(text: string): string {
-  return text
-    .trim()
-    .toLowerCase()
-    .replace(/[^\p{L}\p{M}\p{N}_\- ]/gu, "")
-    .replace(/ /g, "-");
-}
-
 /**
  * The element a `#fragment` names: the exact id first, then its GitHub slug (so
  * `[[Page#My Section]]` finds `my-section`), each with and without `user-content-`.
  */
 export function findTarget(sheet: Element, fragment: string): Element | null {
   const id = decode(fragment);
-  const ids = [id, `user-content-${id}`, slug(id), `user-content-${slug(id)}`];
+  const slug = new Slugger().slug(id);
+  const ids = [id, ID_PREFIX + id, slug, ID_PREFIX + slug];
   for (const want of ids.filter(Boolean)) {
     const found = [...sheet.querySelectorAll("[id], a[name]")].find(
       (n) => n.id === want || n.getAttribute("name") === want,

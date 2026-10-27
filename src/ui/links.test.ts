@@ -102,9 +102,9 @@ describe("links", () => {
     const heading = () => root.querySelector(".sheet h1")?.textContent;
     expect(backButton(root)?.disabled).toBe(true);
 
-    press(root.querySelector(".sheet a"));
+    press(root.querySelector(".sheet a:not(.anchor)"));
     await settle();
-    press(root.querySelector(".sheet a"));
+    press(root.querySelector(".sheet a:not(.anchor)"));
     await settle();
     expect(heading()).toBe("C");
     expect(root.querySelectorAll(".tab")).toHaveLength(1);
@@ -127,7 +127,7 @@ describe("links", () => {
     await settle();
     expect(heading()).toBe("B");
     // A new link drops the forward entries.
-    press(root.querySelector(".sheet a"));
+    press(root.querySelector(".sheet a:not(.anchor)"));
     await settle();
     expect(heading()).toBe("C");
     expect(forwardButton(root)?.disabled).toBe(true);
@@ -139,7 +139,7 @@ describe("links", () => {
     const canvas = () => root.querySelector<HTMLElement>(".canvas:not([hidden])");
     const a = canvas();
     if (a) a.scrollTop = 120;
-    press(root.querySelector(".sheet a"));
+    press(root.querySelector(".sheet a:not(.anchor)"));
     await settle();
     expect(canvas()?.scrollTop).toBe(0);
     press(backButton(root));
@@ -157,7 +157,7 @@ describe("links", () => {
     const { root } = await open(files, ["/n/a.md"]);
     const scroll = vi.fn();
     Element.prototype.scrollIntoView = scroll;
-    const [b, c] = root.querySelectorAll(".sheet a");
+    const [b, c] = root.querySelectorAll(".sheet a:not(.anchor)");
 
     expect(press(b, { ctrlKey: true }).defaultPrevented).toBe(true);
     await settle();
@@ -182,7 +182,7 @@ describe("links", () => {
     const { root } = await open(files, ["/n/a.md"]);
     Element.prototype.scrollIntoView = vi.fn();
     const notice = () => root.querySelector(".bar .notice")?.textContent;
-    const links = () => root.querySelectorAll(".sheet a");
+    const links = () => root.querySelectorAll(".sheet a:not(.anchor)");
 
     press(links()[1]);
     expect(notice()).toBe(strings.notices.sectionNotFound);
@@ -230,12 +230,12 @@ describe("links", () => {
     Element.prototype.scrollIntoView = scroll;
     const canvas = () => root.querySelector<HTMLElement>(".canvas:not([hidden])");
 
-    press(root.querySelector(".sheet a"));
+    press(root.querySelector(".sheet a:not(.anchor)"));
     await settle();
     expect(scroll).toHaveBeenCalledTimes(1);
     const b = canvas();
     if (b) b.scrollTop = 300;
-    press(root.querySelector(".sheet a"));
+    press(root.querySelector(".sheet a:not(.anchor)"));
     await settle();
     press(backButton(root));
     await settle();
@@ -256,7 +256,7 @@ describe("links", () => {
       activeOnScroll.push(root.querySelector(".tab.active .tab-label")?.textContent);
     };
 
-    press(root.querySelector(".canvas:not([hidden]) .sheet a"), { ctrlKey: true });
+    press(root.querySelector(".canvas:not([hidden]) .sheet a:not(.anchor)"), { ctrlKey: true });
     await settle();
     expect(root.querySelector(".bar .notice")?.textContent).toBe("");
     expect(activeOnScroll).toEqual([]);
