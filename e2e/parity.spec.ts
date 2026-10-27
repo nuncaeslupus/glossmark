@@ -52,3 +52,10 @@ test("img height attribute sizes the image", async ({ page }) => {
   expect(wide?.width).toBeLessThan(4000);
   expect(wide?.height).toBeCloseTo((wide?.width ?? 0) / 2, 0);
 });
+
+test("body text is sans-serif", async ({ page }) => {
+  // The owner's call: body text in the headings' sans (Inter), as on GitHub.
+  await page.goto("/e2e/theme.html");
+  const p = page.locator(".sheet p").first();
+  await expect(p).toHaveCSS("font-family", /^"?Inter Variable/);
+});
