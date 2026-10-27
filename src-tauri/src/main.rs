@@ -7,7 +7,6 @@ mod scope;
 mod watch;
 
 use commands::AppState;
-use commands::OpenFiles;
 use tauri::{DragDropEvent, Emitter, Manager, WindowEvent};
 
 fn main() {
@@ -28,8 +27,9 @@ fn main() {
             if let WindowEvent::DragDrop(DragDropEvent::Drop { paths, .. }) = event {
                 if let Some(state) = window.try_state::<AppState>() {
                     // Emitted after the scope grows, so the tabs' reads cannot race it.
-                    let paths = state.open(paths);
-                    let _ = window.emit("open-files", OpenFiles { paths });
+                    if let Some(files) = state.dropped(paths) {
+                        let _ = window.emit("open-files", files);
+                    }
                 }
             }
         })

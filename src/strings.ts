@@ -6,6 +6,11 @@ export const strings = {
   recentFiles: "Recent files",
   documentError: "This document could not be opened.",
   zoomPercent: (percent: number) => `${percent}%`,
+  notices: {
+    openFailed: "The Open dialog could not be shown.",
+    settingsUnavailable: "Settings could not be read; recent files will not be kept.",
+    recentFilesNotSaved: "Recent files could not be saved.",
+  },
   menus: {
     file: "File",
     view: "View",

@@ -136,6 +136,12 @@ button:disabled {
   text-overflow: ellipsis;
 }
 
+.notice {
+  margin-right: 8px;
+  opacity: 0.8;
+  white-space: nowrap;
+}
+
 .zoom {
   min-width: 3rem;
   text-align: center;

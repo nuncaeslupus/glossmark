@@ -97,12 +97,14 @@ export function barButtons(): ActionId[] {
 
 /** Whether a keydown matches an action's `key`, e.g. `Ctrl+O`. */
 export function matchesKey(key: string, e: KeyboardEvent): boolean {
-  // ponytail: Shift is not compared (`e.key` already reflects it), and no key is `+` itself.
+  // ponytail: no key is `+` itself; `Ctrl` means Cmd on macOS.
   const parts = key.split("+");
   const main = parts.pop() ?? "";
+  const ctrl = /Mac/.test(navigator.platform) ? e.metaKey : e.ctrlKey;
   return (
     e.key.toLowerCase() === main.toLowerCase() &&
-    e.ctrlKey === parts.includes("Ctrl") &&
-    e.altKey === parts.includes("Alt")
+    ctrl === parts.includes("Ctrl") &&
+    e.altKey === parts.includes("Alt") &&
+    e.shiftKey === parts.includes("Shift")
   );
 }

@@ -23,7 +23,8 @@ export interface Backend {
   getConfig(): Promise<Config>;
   setConfig(config: Config): Promise<void>;
   openExternal(url: string): Promise<void>;
-  onOpenFiles(handler: (paths: string[]) => void): Promise<void>;
+  /** Resolves to the function that stops listening. */
+  onOpenFiles(handler: (paths: string[]) => void): Promise<() => void>;
 }
 
 interface OpenFiles {
@@ -37,8 +38,7 @@ export const tauriBackend: Backend = {
   getConfig: () => invoke<Config>("get_config"),
   setConfig: (config) => invoke<void>("set_config", { config }),
   openExternal: (url) => invoke<void>("open_external", { url }),
-  onOpenFiles: (handler) =>
-    listen<OpenFiles>("open-files", (e) => handler(e.payload.paths)).then(() => undefined),
+  onOpenFiles: (handler) => listen<OpenFiles>("open-files", (e) => handler(e.payload.paths)),
 };
 
 /** The message of an `IpcError` (`{kind, message}`), or of anything else thrown. */

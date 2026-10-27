@@ -5,6 +5,7 @@ import { type ActionId, actions, bar, matchesKey, menus } from "./definition";
 import { type Backend, type Config, errorMessage } from "./ipc";
 
 const MAX_RECENT_FILES = 10;
+const NOTICE_MS = 6000;
 
 interface Tab {
   path: string;
@@ -47,6 +48,12 @@ export class Shell {
   private readonly empty = h("main", "empty");
   private readonly title = userText("span", "title", "");
   private readonly menuBar = h("div", "menus");
+  private readonly notice = h("span", "notice");
+  private noticeTimer: ReturnType<typeof setTimeout> | undefined;
+  private dialogOpen = false;
+  private disposed = false;
+  private readonly listeners = new AbortController();
+  private unlisten: () => void = () => {};
 
   // Actions without a handler are drawn disabled until their task lands (T12, T13).
   private readonly handlers: Partial<Record<ActionId, () => void>> = {
@@ -62,22 +69,49 @@ export class Shell {
     this.tabStrip.setAttribute("role", "tablist");
     this.view.append(this.empty);
     root.replaceChildren(this.tabStrip, this.buildBar(), this.view);
-    this.view.addEventListener("click", (e) => this.onLinkClick(e));
-    this.view.addEventListener("auxclick", (e) => this.onLinkClick(e));
+    this.notice.setAttribute("role", "status");
+    const signal = this.listeners.signal;
+    this.view.addEventListener("click", (e) => this.onLinkClick(e), { signal });
+    this.view.addEventListener("auxclick", (e) => this.onLinkClick(e), { signal });
     const doc = root.ownerDocument;
-    doc.addEventListener("keydown", (e) => this.onKey(e));
-    doc.addEventListener("click", (e) => {
+    doc.addEventListener("keydown", (e) => this.onKey(e), { signal });
+    const outside = (e: Event) => {
       if (!(e.target instanceof Element && this.menuBar.contains(e.target))) this.closeMenus();
-    });
+    };
+    doc.addEventListener("click", outside, { signal });
     this.update();
   }
 
   /** Listens for `open-files` first, so a second launch during startup is not lost. */
   async start(): Promise<void> {
-    await this.backend.onOpenFiles((paths) => void this.openPaths(paths));
-    this.config = await this.backend.getConfig().catch(() => null);
+    const unlisten = await this.backend.onOpenFiles((paths) => {
+      if (!this.disposed) void this.openPaths(paths);
+    });
+    if (this.disposed) unlisten();
+    else this.unlisten = unlisten;
+    this.config = await this.backend.getConfig().catch(() => {
+      this.show(strings.notices.settingsUnavailable);
+      return null;
+    });
     this.update();
     await this.openPaths(await this.backend.takeOpenFiles());
+  }
+
+  /** Removes the window's listeners; the shell does nothing afterwards. */
+  dispose(): void {
+    this.disposed = true;
+    this.listeners.abort();
+    this.unlisten();
+    clearTimeout(this.noticeTimer);
+  }
+
+  /** A one-line message in the bar that fades on its own: never a dialog (D-11). */
+  private show(message: string): void {
+    this.notice.textContent = message;
+    clearTimeout(this.noticeTimer);
+    this.noticeTimer = setTimeout(() => {
+      this.notice.replaceChildren();
+    }, NOTICE_MS);
   }
 
   /** Opens each path in a new tab, or focuses its tab; the last one becomes active. */
@@ -96,16 +130,31 @@ export class Shell {
   }
 
   private async openDialog(): Promise<void> {
-    await this.openPaths(await this.backend.openDialog().catch(() => []));
+    // A second Ctrl+O while the dialog is up does nothing.
+    if (this.dialogOpen) return;
+    this.dialogOpen = true;
+    let paths: string[] = [];
+    try {
+      paths = await this.backend.openDialog();
+    } catch {
+      this.show(strings.notices.openFailed);
+    } finally {
+      this.dialogOpen = false;
+    }
+    await this.openPaths(paths);
   }
 
   /** `read_document` → render → sanitise → insert. Errors stay in the sheet, never a dialog. */
   private async load(tab: Tab): Promise<void> {
+    // A tab closed while its read was in flight takes no result.
+    const open = () => !this.disposed && this.tabs.includes(tab);
     try {
       const doc = await this.backend.readDocument(tab.path);
+      if (!open()) return;
       tab.sheet.innerHTML = sanitize(render(doc.text));
       this.remember(doc.path);
     } catch (err) {
+      if (!open()) return;
       const box = h("div", "doc-error");
       box.append(h("p", "", strings.documentError), userText("p", "", errorMessage(err)));
       tab.sheet.replaceChildren(box);
@@ -116,7 +165,9 @@ export class Shell {
     if (!this.config) return;
     const recent = [path, ...this.config.recentFiles.filter((p) => p !== path)];
     this.config = { ...this.config, recentFiles: recent.slice(0, MAX_RECENT_FILES) };
-    void this.backend.setConfig(this.config).catch(() => undefined);
+    void this.backend
+      .setConfig(this.config)
+      .catch(() => this.show(strings.notices.recentFilesNotSaved));
   }
 
   private addTab(path: string): Tab {
@@ -181,10 +232,10 @@ export class Shell {
     const header = h("header", "bar");
     for (const item of bar) {
       if (item.kind === "button") header.append(this.actionButton(item.action, "bar-button"));
-      else if (item.kind === "title") header.append(this.title);
+      else if (item.kind === "title") header.append(this.title, this.notice);
       else if (item.kind === "menus") header.append(this.buildMenus());
       // ponytail: zoom is T13; until then the readout shows the unscaled sheet.
-      else header.append(userText("span", "zoom", strings.zoomPercent(100)));
+      else header.append(h("span", "zoom", strings.zoomPercent(100)));
     }
     return header;
   }

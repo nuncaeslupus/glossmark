@@ -23,7 +23,7 @@ describe("simplicity budget (D-11)", () => {
 
     // The shell draws exactly what the definition says.
     const root = document.createElement("div");
-    new Shell(root, fakeBackend({}).backend);
+    new Shell(root, fakeBackend({}).backend).dispose();
     expect(root.querySelectorAll(".bar .bar-button")).toHaveLength(toolbarButtons);
     expect(root.querySelectorAll(".bar")).toHaveLength(1);
 
