@@ -1,0 +1,36 @@
+name: tag
+
+# A merge to main that bumps the version in tauri.conf.json tags it as v<version> and starts the
+# release. Pre-release tags (v0.1.0-rc.1) are still pushed by hand.
+on:
+  push:
+    branches: [main]
+    paths: ['src-tauri/tauri.conf.json']
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  tag:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          version() { sed -n 's/^  "version": "\(.*\)",$/\1/p'; }
+          new=$(version < src-tauri/tauri.conf.json)
+          old=$(git show "$BEFORE:src-tauri/tauri.conf.json" 2>/dev/null | version || true)
+          if [ "$new" = "$old" ] || git rev-parse -q --verify "refs/tags/v$new" >/dev/null; then
+            echo "version $new unchanged or already tagged; nothing to do"
+            exit 0
+          fi
+          bash scripts/check_release.sh --version-only "v$new"
+          git tag "v$new"
+          git push origin "v$new"
+          gh workflow run release.yml --ref "v$new"
