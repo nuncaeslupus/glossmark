@@ -107,6 +107,27 @@ jobs:
             src-tauri/target/release/bundle/appimage/*.AppImage
           retention-days: 7
 
+  # Export on macOS (S-4 T5) prints through WKWebView: build that path and run the export tests there.
+  macos:
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          key: macos
+      - run: npm ci
+      # generate_context! reads the frontend bundle.
+      - run: npm run build
+      - run: cargo test export
+        working-directory: src-tauri
+
   # The render pipeline in real browsers: WebKit (the app's engine family) and Chromium.
   e2e:
     runs-on: ubuntu-24.04

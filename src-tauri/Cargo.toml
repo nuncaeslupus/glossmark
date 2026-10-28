@@ -25,5 +25,12 @@ url = "2"
 gtk = "0.18"
 webkit2gtk = "2.0"
 
+# Export prints through WKWebView on macOS; the versions Tauri already links.
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.6"
+objc2-app-kit = { version = "0.3", default-features = false, features = ["std", "NSPrintInfo", "NSPrintOperation", "NSResponder", "NSView", "NSWindow"] }
+objc2-foundation = { version = "0.3", default-features = false, features = ["std", "NSDictionary", "NSGeometry", "NSObject", "NSString", "NSURL"] }
+objc2-web-kit = { version = "0.3", default-features = false, features = ["std", "objc2-app-kit", "WKWebView"] }
+
 [dev-dependencies]
 tempfile = "3"
