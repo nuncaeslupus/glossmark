@@ -208,3 +208,67 @@ secrets, updater IPC, `print_to_pdf` per OS) and tasks gated on the success crit
 | D-29 | Export to PDF works on Windows (WebView2) and macOS (WKWebView) before their builds ship | agreed |
 | D-30 | Print and Export paginate well: headings keep with the text that follows, no widow or orphan lines, and code blocks, table rows, images and diagrams are not split where they fit on one page (S-1, task t-6723dbe0) | agreed |
 | D-31 | The Tauri updater is on in every build that can replace itself (AppImage, .msi/.exe, .dmg), including the winget and Homebrew installs, which use the same binaries; the cask declares `auto_updates true`. It is off under Flatpak, Snap and the .deb (apt) | agreed |
+
+## 5. Contracts
+
+### API contracts
+
+#### Event `update-available`
+
+- **When**: once, after first paint, only when `updater::enabled()` is true and `latest.json`
+  names a newer version whose signature verifies.
+- **Payload**:
+  ```json
+  { "version": "0.1.1" }
+  ```
+- **Backwards compatible**: yes. The event is new, and an older frontend ignores it.
+
+#### Command `install_update()`
+
+- **Request**: none.
+- **Response**: never returns on success, because the app restarts into the new version.
+- **Errors**: `IpcError { kind: "Io", message }` when the download, the verification or the
+  install fails. The frontend shows it as a notice, and the running version keeps working.
+- **Backwards compatible**: yes. The command is new.
+
+#### Command `export_pdf(path)` (unchanged)
+
+The contract is the same on every OS: the path must be the Save dialog's last answer and must end
+in `.pdf`. On success, Windows and macOS write a paginated PDF instead of returning `Io`.
+
+### Inter-service contracts
+
+| Caller | Callee | Protocol | Contract | Failure handling |
+|--------|--------|----------|----------|-----------------|
+| App | GitHub Releases | HTTPS GET | `releases/latest/download/latest.json` (Tauri updater schema v2), plus the bundle URL and `.sig` it names | Offline or an HTTP error: no notice and no retry until the next start |
+| `release.yml` | GitHub Releases | `tauri-action` | Draft Release named `Glossmark vX.Y.Z`, then un-drafted by the smoke job | A failed build or smoke test leaves a draft. Nothing is published |
+| `channels.yml` | Tap repo, winget-pkgs, `gh-pages`, Snap Store | git push, komac PR, `snapcraft upload` | Release assets and their sha256 only | Each job fails alone. Rerunning it is safe because each job is idempotent per version |
+| Flathub checker | GitHub Releases | HTTPS | `x-checker-data` follows the `latest` release's .deb | Flathub opens no PR. The lag gate (T12) shows it |
+
+### Configuration
+
+| Name | Where | Purpose |
+|------|-------|---------|
+| `plugins.updater.pubkey`, `plugins.updater.endpoints` | `tauri.conf.json` | Updater verification key and feed |
+| `bundle.createUpdaterArtifacts: true` | `tauri.conf.json` | `.sig` files and `latest.json` |
+| `bundle.targets` gains `msi`, `nsis`, `dmg`, `app`; `bundle.macOS.signingIdentity: "-"` | `tauri.conf.json` | Windows and macOS bundles; ad-hoc signing so Apple Silicon runs them |
+| `TAURI_SIGNING_PRIVATE_KEY`, `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`, `APT_GPG_PRIVATE_KEY`, `HOMEBREW_TAP_TOKEN`, `WINGET_TOKEN`, `SNAPCRAFT_STORE_CREDENTIALS` | Actions secrets | Release and channel credentials, never in the repo |
+
+### Database migrations
+
+| Service | Database | Change | Reversible | Forward-compatible |
+|---------|----------|--------|------------|-------------------|
+| — | none | No stored data changes; the config file is untouched | yes | yes |
+
+## 6. Risks & Validation
+
+| Risk | Likelihood | Impact | Mitigation | Validation |
+|------|-----------|--------|------------|------------|
+| The updater signing key is lost, so no existing install can verify an update again | Low | High | The owner keeps an offline copy of the key and its password, and T7 records where | Manual: T7 checklist |
+| The updater signing key leaks, so someone could sign a malicious update | Low | High | The key lives only in secrets, behind a password. Rotation means shipping a new pubkey in a release signed with the old key | Security: `secrets_in_repo == 0` (gitleaks) |
+| SmartScreen or Gatekeeper warnings scare users off | High | Med | README steps, cask caveats, and SignPath (T13) for Windows | Manual |
+| Flathub rejects a repackaged .deb | Med | Med | Follow their policy for prebuilt open-source apps. If a reviewer insists on a source build, that becomes a follow-up task | Manual: review outcome in T12 |
+| Snap strict confinement blocks files outside home or removable media | Med | Low | README says so. `personal-files` or classic confinement can be requested later if users ask | Manual |
+| The macOS print API returns one long page, or blank pages for content below the fold | Med | Med | Use `printOperation` and not `createPDF`. Diagrams are drawn first, as on Linux (`diagramsForPaper`) | Owner judges `export_pdf_pages_delta <= 1` (T5) |
+| The updater fights a channel's own updates | Low | Med | D-31: off under Flatpak, Snap and `/usr`. The cask declares `auto_updates true`, so brew leaves the app alone | Unit: `test_updater_is_off_in_flatpak_snap_and_usr` |
+| A broken release reaches users | Low | High | Draft until every smoke job passes. Rollback: delete the release, or publish `vX.Y.Z+1`, since `latest.json` follows the latest release | CI: `install_smoke_failures == 0` |

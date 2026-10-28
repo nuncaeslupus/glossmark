@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<meta name="arsenal-source-sha256" content="7ae6e2f91d5dd5ea08e62f73365f3f411e98fd3f9823bfaaa1e92818354cf53a">
+<meta name="arsenal-source-sha256" content="4f1a378cae533c1fc97f39a86c3c6c3e18ed64750eab26eeaab1b9562aba5db5">
 <title>Glossmark — Specification (annotatable)</title>
 <style>
 :root{
@@ -194,7 +194,7 @@ li>.note.bnote{margin:6px 0}
     <button class="btn primary" id="btn-export">Save / Export</button>
   </div>
 </div>
-<div class="statusbar"><div class="wrap"><span class="count" id="count">0 / 8 notes</span><span class="hint"> · notes save automatically; <strong>Save / Export</strong> keeps a file you can send back</span></div></div>
+<div class="statusbar"><div class="wrap"><span class="count" id="count">0 / 13 notes</span><span class="hint"> · notes save automatically; <strong>Save / Export</strong> keeps a file you can send back</span></div></div>
 <div id="warnbar"><div class="wrap"><strong>Heads up —</strong> this browser isn't storing your notes automatically (private/incognito mode or restricted file view). Tap <strong>Save / Export</strong> regularly.</div></div>
 
 <div class="wrap">
@@ -224,6 +224,12 @@ li>.note.bnote{margin:6px 0}
 <li class="sub"><a href="#s-spec-option-c-build-every-channel-fro">Option C: Build every channel from source</a></li>
 <li class="sub"><a href="#s-spec-comparison">Comparison</a></li>
 <li><a href="#s-spec-4">§4 Recommendation</a></li>
+<li><a href="#s-spec-5">§5 Contracts</a></li>
+<li class="sub"><a href="#s-spec-api-contracts">API contracts</a></li>
+<li class="sub"><a href="#s-spec-inter-service-contracts">Inter-service contracts</a></li>
+<li class="sub"><a href="#s-spec-configuration">Configuration</a></li>
+<li class="sub"><a href="#s-spec-database-migrations">Database migrations</a></li>
+<li><a href="#s-spec-6">§6 Risks &amp; Validation</a></li>
 </ul>
 </details>
   <section class="part">
@@ -627,6 +633,210 @@ secrets, updater IPC, <code>print_to_pdf</code> per OS) and tasks gated on the s
 </tbody>
 </table></div>
 <div class="note" data-for="s-spec-4"><label class="note-head" for="n-s-spec-4"><span class="note-ico" aria-hidden="true">✎</span><span class="note-label">Your note</span><span class="note-ref">SPEC §4</span></label><textarea class="note-ta" data-key="s-spec-4" id="n-s-spec-4" data-label="§4 Recommendation" data-part="Spec" rows="1" placeholder="Add a note on this section…"></textarea></div>
+</article>
+<article class="sec l2 bare" id="s-spec-5" data-ref="SPEC §5" data-label="§5 Contracts" data-part="Spec">
+<h3 class="sec-h"><span class="chip">§5</span><span class="sec-title">Contracts</span></h3>
+</article>
+<article class="sec l3" id="s-spec-api-contracts" data-ref="SPEC › API contracts" data-label="API contracts" data-part="Spec">
+<h4 class="sec-h"><span class="chip">▸</span><span class="sec-title">API contracts</span></h4>
+<div class="sec-body"><h4>Event <code>update-available</code></h4>
+<ul>
+<li><strong>When</strong>: once, after first paint, only when <code>updater::enabled()</code> is true and <code>latest.json</code>
+  names a newer version whose signature verifies.</li>
+<li><strong>Payload</strong>:
+  <code>json
+  { "version": "0.1.1" }</code></li>
+<li><strong>Backwards compatible</strong>: yes. The event is new, and an older frontend ignores it.</li>
+</ul>
+<h4>Command <code>install_update()</code></h4>
+<ul>
+<li><strong>Request</strong>: none.</li>
+<li><strong>Response</strong>: never returns on success, because the app restarts into the new version.</li>
+<li><strong>Errors</strong>: <code>IpcError { kind: "Io", message }</code> when the download, the verification or the
+  install fails. The frontend shows it as a notice, and the running version keeps working.</li>
+<li><strong>Backwards compatible</strong>: yes. The command is new.</li>
+</ul>
+<h4>Command <code>export_pdf(path)</code> (unchanged)</h4>
+<p>The contract is the same on every OS: the path must be the Save dialog's last answer and must end
+in <code>.pdf</code>. On success, Windows and macOS write a paginated PDF instead of returning <code>Io</code>.</p></div>
+<div class="note" data-for="s-spec-api-contracts"><label class="note-head" for="n-s-spec-api-contracts"><span class="note-ico" aria-hidden="true">✎</span><span class="note-label">Your note</span><span class="note-ref">SPEC › API contracts</span></label><textarea class="note-ta" data-key="s-spec-api-contracts" id="n-s-spec-api-contracts" data-label="API contracts" data-part="Spec" rows="1" placeholder="Add a note on this section…"></textarea></div>
+</article>
+<article class="sec l3" id="s-spec-inter-service-contracts" data-ref="SPEC › Inter-service contracts" data-label="Inter-service contracts" data-part="Spec">
+<h4 class="sec-h"><span class="chip">▸</span><span class="sec-title">Inter-service contracts</span></h4>
+<div class="sec-body"><table>
+<thead>
+<tr>
+<th>Caller</th>
+<th>Callee</th>
+<th>Protocol</th>
+<th>Contract</th>
+<th>Failure handling</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>App</td>
+<td>GitHub Releases</td>
+<td>HTTPS GET</td>
+<td><code>releases/latest/download/latest.json</code> (Tauri updater schema v2), plus the bundle URL and <code>.sig</code> it names</td>
+<td>Offline or an HTTP error: no notice and no retry until the next start</td>
+</tr>
+<tr>
+<td><code>release.yml</code></td>
+<td>GitHub Releases</td>
+<td><code>tauri-action</code></td>
+<td>Draft Release named <code>Glossmark vX.Y.Z</code>, then un-drafted by the smoke job</td>
+<td>A failed build or smoke test leaves a draft. Nothing is published</td>
+</tr>
+<tr>
+<td><code>channels.yml</code></td>
+<td>Tap repo, winget-pkgs, <code>gh-pages</code>, Snap Store</td>
+<td>git push, komac PR, <code>snapcraft upload</code></td>
+<td>Release assets and their sha256 only</td>
+<td>Each job fails alone. Rerunning it is safe because each job is idempotent per version</td>
+</tr>
+<tr>
+<td>Flathub checker</td>
+<td>GitHub Releases</td>
+<td>HTTPS</td>
+<td><code>x-checker-data</code> follows the <code>latest</code> release's .deb</td>
+<td>Flathub opens no PR. The lag gate (T12) shows it</td>
+</tr>
+</tbody>
+</table></div>
+<div class="note" data-for="s-spec-inter-service-contracts"><label class="note-head" for="n-s-spec-inter-service-contracts"><span class="note-ico" aria-hidden="true">✎</span><span class="note-label">Your note</span><span class="note-ref">SPEC › Inter-service contracts</span></label><textarea class="note-ta" data-key="s-spec-inter-service-contracts" id="n-s-spec-inter-service-contracts" data-label="Inter-service contracts" data-part="Spec" rows="1" placeholder="Add a note on this section…"></textarea></div>
+</article>
+<article class="sec l3" id="s-spec-configuration" data-ref="SPEC › Configuration" data-label="Configuration" data-part="Spec">
+<h4 class="sec-h"><span class="chip">▸</span><span class="sec-title">Configuration</span></h4>
+<div class="sec-body"><table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Where</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>plugins.updater.pubkey</code>, <code>plugins.updater.endpoints</code></td>
+<td><code>tauri.conf.json</code></td>
+<td>Updater verification key and feed</td>
+</tr>
+<tr>
+<td><code>bundle.createUpdaterArtifacts: true</code></td>
+<td><code>tauri.conf.json</code></td>
+<td><code>.sig</code> files and <code>latest.json</code></td>
+</tr>
+<tr>
+<td><code>bundle.targets</code> gains <code>msi</code>, <code>nsis</code>, <code>dmg</code>, <code>app</code>; <code>bundle.macOS.signingIdentity: "-"</code></td>
+<td><code>tauri.conf.json</code></td>
+<td>Windows and macOS bundles; ad-hoc signing so Apple Silicon runs them</td>
+</tr>
+<tr>
+<td><code>TAURI_SIGNING_PRIVATE_KEY</code>, <code>TAURI_SIGNING_PRIVATE_KEY_PASSWORD</code>, <code>APT_GPG_PRIVATE_KEY</code>, <code>HOMEBREW_TAP_TOKEN</code>, <code>WINGET_TOKEN</code>, <code>SNAPCRAFT_STORE_CREDENTIALS</code></td>
+<td>Actions secrets</td>
+<td>Release and channel credentials, never in the repo</td>
+</tr>
+</tbody>
+</table></div>
+<div class="note" data-for="s-spec-configuration"><label class="note-head" for="n-s-spec-configuration"><span class="note-ico" aria-hidden="true">✎</span><span class="note-label">Your note</span><span class="note-ref">SPEC › Configuration</span></label><textarea class="note-ta" data-key="s-spec-configuration" id="n-s-spec-configuration" data-label="Configuration" data-part="Spec" rows="1" placeholder="Add a note on this section…"></textarea></div>
+</article>
+<article class="sec l3" id="s-spec-database-migrations" data-ref="SPEC › Database migrations" data-label="Database migrations" data-part="Spec">
+<h4 class="sec-h"><span class="chip">▸</span><span class="sec-title">Database migrations</span></h4>
+<div class="sec-body"><table>
+<thead>
+<tr>
+<th>Service</th>
+<th>Database</th>
+<th>Change</th>
+<th>Reversible</th>
+<th>Forward-compatible</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>—</td>
+<td>none</td>
+<td>No stored data changes; the config file is untouched</td>
+<td>yes</td>
+<td>yes</td>
+</tr>
+</tbody>
+</table></div>
+<div class="note" data-for="s-spec-database-migrations"><label class="note-head" for="n-s-spec-database-migrations"><span class="note-ico" aria-hidden="true">✎</span><span class="note-label">Your note</span><span class="note-ref">SPEC › Database migrations</span></label><textarea class="note-ta" data-key="s-spec-database-migrations" id="n-s-spec-database-migrations" data-label="Database migrations" data-part="Spec" rows="1" placeholder="Add a note on this section…"></textarea></div>
+</article>
+<article class="sec l2" id="s-spec-6" data-ref="SPEC §6" data-label="§6 Risks &amp; Validation" data-part="Spec">
+<h3 class="sec-h"><span class="chip">§6</span><span class="sec-title">Risks &amp; Validation</span></h3>
+<div class="sec-body"><table>
+<thead>
+<tr>
+<th>Risk</th>
+<th>Likelihood</th>
+<th>Impact</th>
+<th>Mitigation</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The updater signing key is lost, so no existing install can verify an update again</td>
+<td>Low</td>
+<td>High</td>
+<td>The owner keeps an offline copy of the key and its password, and T7 records where</td>
+<td>Manual: T7 checklist</td>
+</tr>
+<tr>
+<td>The updater signing key leaks, so someone could sign a malicious update</td>
+<td>Low</td>
+<td>High</td>
+<td>The key lives only in secrets, behind a password. Rotation means shipping a new pubkey in a release signed with the old key</td>
+<td>Security: <code>secrets_in_repo == 0</code> (gitleaks)</td>
+</tr>
+<tr>
+<td>SmartScreen or Gatekeeper warnings scare users off</td>
+<td>High</td>
+<td>Med</td>
+<td>README steps, cask caveats, and SignPath (T13) for Windows</td>
+<td>Manual</td>
+</tr>
+<tr>
+<td>Flathub rejects a repackaged .deb</td>
+<td>Med</td>
+<td>Med</td>
+<td>Follow their policy for prebuilt open-source apps. If a reviewer insists on a source build, that becomes a follow-up task</td>
+<td>Manual: review outcome in T12</td>
+</tr>
+<tr>
+<td>Snap strict confinement blocks files outside home or removable media</td>
+<td>Med</td>
+<td>Low</td>
+<td>README says so. <code>personal-files</code> or classic confinement can be requested later if users ask</td>
+<td>Manual</td>
+</tr>
+<tr>
+<td>The macOS print API returns one long page, or blank pages for content below the fold</td>
+<td>Med</td>
+<td>Med</td>
+<td>Use <code>printOperation</code> and not <code>createPDF</code>. Diagrams are drawn first, as on Linux (<code>diagramsForPaper</code>)</td>
+<td>Owner judges <code>export_pdf_pages_delta &lt;= 1</code> (T5)</td>
+</tr>
+<tr>
+<td>The updater fights a channel's own updates</td>
+<td>Low</td>
+<td>Med</td>
+<td>D-31: off under Flatpak, Snap and <code>/usr</code>. The cask declares <code>auto_updates true</code>, so brew leaves the app alone</td>
+<td>Unit: <code>test_updater_is_off_in_flatpak_snap_and_usr</code></td>
+</tr>
+<tr>
+<td>A broken release reaches users</td>
+<td>Low</td>
+<td>High</td>
+<td>Draft until every smoke job passes. Rollback: delete the release, or publish <code>vX.Y.Z+1</code>, since <code>latest.json</code> follows the latest release</td>
+<td>CI: <code>install_smoke_failures == 0</code></td>
+</tr>
+</tbody>
+</table></div>
+<div class="note" data-for="s-spec-6"><label class="note-head" for="n-s-spec-6"><span class="note-ico" aria-hidden="true">✎</span><span class="note-label">Your note</span><span class="note-ref">SPEC §6</span></label><textarea class="note-ta" data-key="s-spec-6" id="n-s-spec-6" data-label="§6 Risks &amp; Validation" data-part="Spec" rows="1" placeholder="Add a note on this section…"></textarea></div>
 </article>
 </section>
 </div>
