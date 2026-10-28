@@ -6,6 +6,7 @@ priority: 5
 deps: [t-8f5ad4b0]
 tags: [PACKAGING]
 workspace: packaging
+status: merged
 ---
 
 Updater (D-28, D-31): `tauri-plugin-updater` with the public key and the `latest.json` endpoint, and the signing key in secrets. `updater::enabled()` is false under `FLATPAK_ID`, `SNAP` or an executable below `/usr`. A check after first paint emits `update-available`, and More shows "Restart to update to x.y.z"

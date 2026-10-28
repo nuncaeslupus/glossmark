@@ -184,6 +184,9 @@ export class Shell {
       this.backend.onDocumentChanged((change) => {
         if (!this.disposed) this.onDocumentChanged(change);
       }),
+      this.backend.onUpdateAvailable(({ version }) => {
+        if (!this.disposed) this.offerUpdate(version);
+      }),
     ]);
     if (this.disposed) for (const stop of unlisten) stop();
     else this.unlisten = unlisten;
@@ -203,6 +206,8 @@ export class Shell {
     );
     this.update();
     await this.openPaths(await this.backend.takeOpenFiles());
+    // After first paint, so the request cannot delay it; offline is no notice (D-31).
+    this.backend.checkUpdate().catch(() => {});
   }
 
   /** Removes the window's listeners; the shell does nothing afterwards. */
@@ -824,6 +829,24 @@ export class Shell {
     });
     this.menuBar.append(button, list);
     return this.menuBar;
+  }
+
+  /** More › Restart to update to x.y.z, in its own section at the end; a later version replaces it. */
+  private offerUpdate(version: string): void {
+    const list = this.menuBar.querySelector(".menu");
+    const offered = list?.querySelector('[data-action="update"]');
+    if (offered) offered.textContent = strings.restartToUpdate(version);
+    if (!list || offered) return;
+    const rule = h("div", "menu-rule");
+    rule.setAttribute("role", "separator");
+    const item = h("button", "menu-item", strings.restartToUpdate(version));
+    item.setAttribute("role", "menuitem");
+    item.dataset.action = "update";
+    item.addEventListener("click", () => {
+      this.closeMenus();
+      this.backend.installUpdate().catch(() => this.show(strings.notices.updateFailed));
+    });
+    list.append(rule, item);
   }
 
   private closeMenus(): void {

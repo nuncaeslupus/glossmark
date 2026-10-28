@@ -270,3 +270,29 @@ describe("remote images setting", () => {
     expect(notice(root)).toBe(strings.notices.settingNotSaved);
   });
 });
+
+describe("update item", () => {
+  it("test_update_item_appears_only_when_available", async () => {
+    const { root, state } = await open({ "/n/a.md": "# A" }, ["/n/a.md"]);
+    // The check runs once the window is drawn (D-31), and finds nothing yet.
+    expect(state.updateChecks).toBe(1);
+    const item = () => root.querySelector<HTMLElement>('.menu [data-action="update"]');
+    expect(item()).toBeNull();
+
+    state.emitUpdateAvailable({ version: "0.1.1" });
+    expect(item()?.textContent).toBe(strings.restartToUpdate("0.1.1"));
+    click(item());
+    await settle();
+    expect(state.installs).toBe(1);
+
+    // A failed install is a notice; the running version keeps working.
+    state.fail.installUpdate = { kind: "io", message: "bad signature" };
+    click(item());
+    await settle();
+    expect(notice(root)).toBe(strings.notices.updateFailed);
+    // A second event updates the item rather than adding one.
+    state.emitUpdateAvailable({ version: "0.1.2" });
+    expect(root.querySelectorAll('.menu [data-action="update"]')).toHaveLength(1);
+    expect(item()?.textContent).toBe(strings.restartToUpdate("0.1.2"));
+  });
+});

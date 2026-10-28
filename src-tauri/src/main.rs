@@ -6,6 +6,7 @@ mod export;
 mod external;
 mod image;
 mod scope;
+mod updater;
 mod watch;
 
 use commands::AppState;
@@ -18,6 +19,7 @@ fn main() {
         ))
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
             let state = AppState::new(app.handle())?;
             let cwd = std::env::current_dir()?;
@@ -58,6 +60,8 @@ fn main() {
             commands::set_config,
             commands::read_user_css,
             commands::open_external,
+            commands::check_update,
+            commands::install_update,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Glossmark");
