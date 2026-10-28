@@ -5,6 +5,7 @@ label: "README install section"
 priority: 10
 tags: [PACKAGING]
 workspace: packaging
+status: merged
 ---
 
 README Install section: Releases per OS, the channel commands, and the unsigned-app steps ("More info › Run anyway"; "Privacy & Security › Open Anyway")

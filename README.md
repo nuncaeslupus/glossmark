@@ -22,6 +22,33 @@ that makes `.md` files read like a well-typeset document instead of plain text.
 - Tabs with back/forward, outline sidebar, live reload, zoom, print to PDF
 - Built with [Tauri v2](https://v2.tauri.app/)
 
+## Install
+
+Every release is on [GitHub Releases](https://github.com/nuncaeslupus/glossmark/releases). The
+AppImage, .msi/.exe and .dmg update themselves; the other channels update through their store.
+
+### Linux
+
+- **Releases**: the `.deb` (`sudo apt install ./glossmark_*.deb`) or the AppImage (`chmod +x`, then run it)
+- **Flathub** (coming soon): `flatpak install flathub io.github.nuncaeslupus.glossmark`
+- **Snap** (coming soon): `sudo snap install glossmark`
+- **apt repo** (coming soon): add the repo, then `sudo apt install glossmark`
+
+### Windows
+
+- **Releases**: the `.msi` or `.exe` installer
+- **winget** (coming soon): `winget install nuncaeslupus.Glossmark`
+
+The app is not code-signed yet, so SmartScreen may warn on first run: click **More info → Run anyway**.
+
+### macOS
+
+- **Releases**: the `.dmg`; drag Glossmark to Applications
+- **Homebrew** (coming soon): `brew install --cask nuncaeslupus/tap/glossmark`
+
+The app is not notarized, so macOS blocks the first launch. Open **System Settings › Privacy &
+Security** and click **Open Anyway**, or run `xattr -dr com.apple.quarantine /Applications/Glossmark.app`.
+
 ## License
 
 [MIT](LICENSE)
