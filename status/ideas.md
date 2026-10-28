@@ -63,7 +63,7 @@
 | S-1 | Viewer v1            | A, B, E, F | specified | status/specification.md |
 | S-2 | Diagram rendering    | B      | dropped   |              |
 | S-3 | Editing              | C      | parked    |              |
-| S-4 | Packaging and stores | D      | parked    |              |
+| S-4 | Packaging and stores | D      | specified | arsenal/project/packaging/spec.md |
 
 ## Decision log
 
@@ -90,3 +90,11 @@
 | D-21 | Find and Print use the familiar icons, Material Symbols as in Chrome's PDF viewer (I-27) | agreed | 2026-10-28 | S-1 |
 | D-22 | Ctrl+Tab / Ctrl+Shift+Tab switch to the next / previous tab (I-28) | agreed | 2026-10-28 | S-1 |
 | D-23 | A simple SVG logo, the app icons generated from it, and a README hero screenshot (I-38); owner approves the look | agreed | 2026-10-28 | S-4 |
+| D-24 | First release through GitHub Releases: a version tag builds .deb/AppImage, .msi/.exe and .dmg on CI runners; the free channels follow; no paid signing or Apple Developer program (owner: a free app) | agreed | 2026-10-28 | S-4 |
+| D-25 | Windows ships unsigned at first (SmartScreen "Run anyway"); apply to SignPath Foundation's free open-source signing in parallel and turn it on once approved | agreed | 2026-10-28 | S-4 |
+| D-26 | First wave of free channels after Releases: winget (Windows), Flathub (Linux), our own Homebrew tap (macOS; the main cask list drops apps that fail Gatekeeper) | agreed | 2026-10-28 | S-4 |
+| D-27 | Ubuntu: also a snap in the Snap Store (App Center) and a signed apt repo on GitHub Pages that CI updates on each tag | agreed | 2026-10-28 | S-4 |
+| D-28 | Direct downloads (AppImage, .msi/.exe, .dmg) update themselves through the Tauri updater, with a free update-signing key in CI secrets; the updater is off in builds for winget, Flathub, Homebrew, Snap and apt, which update through their channel | superseded by D-31 | 2026-10-28 | S-4 |
+| D-29 | Export to PDF works on Windows (WebView2) and macOS (WKWebView) before their builds ship | agreed | 2026-10-28 | S-4 |
+| D-30 | Print and Export paginate well: headings keep with the text that follows, no widow or orphan lines, and code blocks, table rows, images and diagrams are not split where they fit on one page | agreed | 2026-10-28 | S-1 |
+| D-31 | The Tauri updater is on in every build that can replace itself (AppImage, .msi/.exe, .dmg), including the winget and Homebrew installs, which use the same binaries; the cask declares `auto_updates true`. It is off under Flatpak, Snap and the .deb (apt) | agreed | 2026-10-28 | S-4 |
