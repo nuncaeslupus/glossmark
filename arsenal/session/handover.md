@@ -23,7 +23,8 @@
 - D-19 as built: left ☰ title ←→ · centre − % + Find · right Export Print ⋮.
 - Export: the Save dialog runs in Rust; `export_pdf` writes only that dialog's last answer.
 - PR review (owner, 2026-10-28): ask `@coderabbitai review`; if CodeRabbit still does not
-  review, review the PR ourselves, then merge when green.
+  review, review the PR ourselves, then merge once `bash claude-arsenal/bin/merge_ready.sh <pr>`
+  exits 0.
 
 ## Gotchas
 
