@@ -4,7 +4,7 @@
 **Specification**: `arsenal/project/packaging/spec.md` (approved r2, Option B)
 **Author**: Claude Opus 5.5, with the owner
 **Revision**: 1
-**Status**: draft
+**Status**: approved (2026-10-28, revision 1) — without annotations
 **Revision log**:
 - r1 — first draft
 
