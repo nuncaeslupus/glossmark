@@ -34,6 +34,7 @@ format:
 
 test: dist
 	npm test
+	for t in scripts/*.test.sh; do bash "$$t" || exit 1; done
 	$(call rust,$(CARGO) test)
 
 clean:
