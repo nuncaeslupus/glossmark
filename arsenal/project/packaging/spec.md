@@ -3,10 +3,11 @@
 **Date**: 2026-10-28
 **Ticket / PR**: S-4 (status/ideas.md)
 **Author**: Claude Opus 5.5, with the owner
-**Revision**: 1
-**Status**: draft
+**Revision**: 2
+**Status**: approved (2026-10-28, revision 2) — without annotations
 **Revision log**:
 - r1 — first draft, from the explore-idea decisions D-10 and D-23 to D-30
+- r2 — owner resolved the updater question in chat: D-31 supersedes D-28; approved without annotations
 
 > Review record. Each round of reviewer notes makes a new revision: bump
 > **Revision**, add a log line naming the export it applied
@@ -159,7 +160,7 @@ split into separate tasks.
    `https://github.com/nuncaeslupus/glossmark/releases/latest/download/latest.json` and the public
    key in `tauri.conf.json`. The private key and its password go in Actions secrets. The updater
    runs only where the app can replace itself (AppImage, the Windows installers, the macOS
-   .app). It is off when `FLATPAK_ID` or `SNAP` is set, or when the binary sits under `/usr`
+   .app). Per D-31 it is off when `FLATPAK_ID` or `SNAP` is set, or when the binary sits under `/usr`
    (the .deb, whether installed from apt or by hand).
 3. **Export on Windows and macOS (D-29).**
    - **Windows**: WebView2 `ICoreWebView2_7::PrintToPdf` with print settings, through
@@ -185,13 +186,8 @@ secrets, updater IPC, `print_to_pdf` per OS) and tasks gated on the success crit
 
 **Open questions**
 
-- **D-28 says the updater is off "in builds for winget and Homebrew".** Those channels install the
-  same .msi and .dmg as the Release. Turning the updater off there would mean building and
-  hosting a second Windows and macOS binary per release. The recommendation is to keep one
-  binary with the updater on. winget tolerates self-updating apps. The cask declares
-  `auto_updates true`, so `brew upgrade` leaves the app alone and the app updates itself. Snap,
-  Flatpak and apt stay as D-28 says. If the owner agrees, this becomes D-31 and supersedes that
-  part of D-28. If not, the plan doubles the Windows and macOS builds.
+- **Resolved (D-31)**: the updater stays on in the winget and Homebrew installs, so there is one
+  binary per OS. The cask declares `auto_updates true`.
 - **Unsigned on macOS.** Since macOS 15, right-click › Open no longer bypasses Gatekeeper for an
   unsigned app. The user goes to System Settings › Privacy & Security › Open Anyway once. This is
   accepted by D-24, and the README and the cask caveats say it.
@@ -208,6 +204,7 @@ secrets, updater IPC, `print_to_pdf` per OS) and tasks gated on the success crit
 | D-25 | Windows ships unsigned at first (SmartScreen "Run anyway"); apply to SignPath Foundation's free open-source signing in parallel and turn it on once approved | agreed |
 | D-26 | First wave of free channels after Releases: winget (Windows), Flathub (Linux), our own Homebrew tap (macOS; the main cask list drops apps that fail Gatekeeper) | agreed |
 | D-27 | Ubuntu: also a snap in the Snap Store (App Center) and a signed apt repo on GitHub Pages that CI updates on each tag | agreed |
-| D-28 | Direct downloads (AppImage, .msi/.exe, .dmg) update themselves through the Tauri updater, with a free update-signing key in CI secrets; the updater is off in builds for winget, Flathub, Homebrew, Snap and apt, which update through their channel | agreed |
+| D-28 | Direct downloads (AppImage, .msi/.exe, .dmg) update themselves through the Tauri updater, with a free update-signing key in CI secrets; the updater is off in builds for winget, Flathub, Homebrew, Snap and apt, which update through their channel | superseded by D-31 |
 | D-29 | Export to PDF works on Windows (WebView2) and macOS (WKWebView) before their builds ship | agreed |
 | D-30 | Print and Export paginate well: headings keep with the text that follows, no widow or orphan lines, and code blocks, table rows, images and diagrams are not split where they fit on one page (S-1, task t-6723dbe0) | agreed |
+| D-31 | The Tauri updater is on in every build that can replace itself (AppImage, .msi/.exe, .dmg), including the winget and Homebrew installs, which use the same binaries; the cask declares `auto_updates true`. It is off under Flatpak, Snap and the .deb (apt) | agreed |
