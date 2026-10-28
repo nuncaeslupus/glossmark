@@ -47,9 +47,17 @@ test_missing_asset_is_listed() {
   grep -q '^release_assets_missing=1$' <<<"$out" || fail "${FUNCNAME[0]}" "wrong count: $out"
 }
 
+test_readme_names_each_os() {
+  grep -q '^## Install' README.md || fail "${FUNCNAME[0]}" "no Install heading"
+  for os in Linux Windows macOS; do
+    grep -q "^### $os" README.md || fail "${FUNCNAME[0]}" "no $os subsection"
+  done
+}
+
 test_release_tag_must_match_version
 test_complete_release_has_no_missing_assets
 test_missing_asset_is_listed
+test_readme_names_each_os
 
 if [ "$failures" -gt 0 ]; then
   echo "$failures failure(s)"
