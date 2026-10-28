@@ -94,3 +94,4 @@
 | D-25 | Windows ships unsigned at first (SmartScreen "Run anyway"); apply to SignPath Foundation's free open-source signing in parallel and turn it on once approved | agreed | 2026-10-28 | S-4 |
 | D-26 | First wave of free channels after Releases: winget (Windows), Flathub (Linux), our own Homebrew tap (macOS; the main cask list drops apps that fail Gatekeeper) | agreed | 2026-10-28 | S-4 |
 | D-27 | Ubuntu: also a snap in the Snap Store (App Center) and a signed apt repo on GitHub Pages that CI updates on each tag | agreed | 2026-10-28 | S-4 |
+| D-28 | Direct downloads (AppImage, .msi/.exe, .dmg) update themselves through the Tauri updater, with a free update-signing key in CI secrets; the updater is off in builds for winget, Flathub, Homebrew, Snap and apt, which update through their channel | agreed | 2026-10-28 | S-4 |
