@@ -1,7 +1,7 @@
 name: release
 
-# A `v*` tag builds every OS's bundles into one draft Release (S-4 T1). The Release stays a draft:
-# the install smoke jobs (T2) un-draft it. Bundles are unsigned for now (D-24); macOS is ad-hoc
+# A `v*` tag builds every OS's bundles into one draft Release (S-4 T1). Each build job then installs
+# its own bundle and smoke-tests it (T2); `publish` un-drafts the Release only after all of them pass. Bundles are unsigned for now (D-24); macOS is ad-hoc
 # signed (`signingIdentity "-"`) so Apple Silicon runs it.
 # tag.yml dispatches it on the tag it pushes: a tag pushed with GITHUB_TOKEN triggers no `push` run.
 on:
@@ -80,6 +80,27 @@ jobs:
         with:
           releaseId: ${{ needs.draft.outputs.release-id }}
           args: ${{ matrix.args }}
+      # Install smoke (T2): install the bundle just built, open the README with it, and require the
+      # app to be alive at 10 s (scripts/smoke.sh).
+      - if: runner.os == 'Linux'
+        run: |
+          sudo apt-get install -y ./src-tauri/target/release/bundle/deb/*.deb
+          xvfb-run -a bash scripts/smoke.sh glossmark README.md
+      - if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $msi = (Get-ChildItem src-tauri/target/release/bundle/msi/*.msi)[0].FullName
+          $p = Start-Process msiexec -ArgumentList "/i `"$msi`" /qn" -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "msiexec exited $($p.ExitCode)" }
+      - if: runner.os == 'Windows'
+        run: bash scripts/smoke.sh "/c/Program Files/Glossmark/glossmark.exe" README.md
+        shell: bash
+      - if: runner.os == 'macOS'
+        run: |
+          hdiutil attach -nobrowse -mountpoint /tmp/glossmark-dmg src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg
+          cp -R /tmp/glossmark-dmg/Glossmark.app /Applications/
+          hdiutil detach /tmp/glossmark-dmg
+          bash scripts/smoke.sh /Applications/Glossmark.app/Contents/MacOS/glossmark README.md
 
   # Fails when any bundle is missing; the size table goes to the job summary.
   assets:
@@ -91,3 +112,13 @@ jobs:
       - env:
           GH_TOKEN: ${{ github.token }}
         run: bash scripts/check_release.sh "$GITHUB_REF_NAME" | tee -a "$GITHUB_STEP_SUMMARY"
+
+  # Every bundle is present and every install smoke passed: the Release goes public.
+  publish:
+    needs: [draft, assets]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X PATCH "repos/$GITHUB_REPOSITORY/releases/${{ needs.draft.outputs.release-id }}" -F draft=false --jq .html_url
