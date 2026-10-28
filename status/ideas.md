@@ -63,7 +63,7 @@
 | S-1 | Viewer v1            | A, B, E, F | specified | status/specification.md |
 | S-2 | Diagram rendering    | B      | dropped   |              |
 | S-3 | Editing              | C      | parked    |              |
-| S-4 | Packaging and stores | D      | exploring |              |
+| S-4 | Packaging and stores | D      | specified | arsenal/project/packaging/spec.md |
 
 ## Decision log
 
