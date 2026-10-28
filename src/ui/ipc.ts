@@ -22,6 +22,11 @@ export interface DocumentChanged {
   deleted?: boolean;
 }
 
+/** Payload of `update-available`: the newer version the updater found. */
+export interface UpdateAvailable {
+  version: string;
+}
+
 /** The Rust core, as the shell sees it; tests pass a fake. */
 export interface Backend {
   takeOpenFiles(): Promise<string[]>;
@@ -43,9 +48,14 @@ export interface Backend {
   /** Watching is reference-counted in the core: each `watch` needs its own `unwatch`. */
   watch(path: string): Promise<void>;
   unwatch(path: string): Promise<void>;
+  /** Asks for `latest.json` once; a newer version arrives as `update-available`. */
+  checkUpdate(): Promise<void>;
+  /** Installs the newer version and restarts into it; settles only on failure. */
+  installUpdate(): Promise<void>;
   /** Resolves to the function that stops listening. */
   onOpenFiles(handler: (paths: string[]) => void): Promise<() => void>;
   onDocumentChanged(handler: (change: DocumentChanged) => void): Promise<() => void>;
+  onUpdateAvailable(handler: (update: UpdateAvailable) => void): Promise<() => void>;
 }
 
 interface OpenFiles {
@@ -66,9 +76,13 @@ export const tauriBackend: Backend = {
   openExternal: (url) => invoke<void>("open_external", { url }),
   watch: (path) => invoke<void>("watch", { path }),
   unwatch: (path) => invoke<void>("unwatch", { path }),
+  checkUpdate: () => invoke<void>("check_update"),
+  installUpdate: () => invoke<void>("install_update"),
   onOpenFiles: (handler) => listen<OpenFiles>("open-files", (e) => handler(e.payload.paths)),
   onDocumentChanged: (handler) =>
     listen<DocumentChanged>("document-changed", (e) => handler(e.payload)),
+  onUpdateAvailable: (handler) =>
+    listen<UpdateAvailable>("update-available", (e) => handler(e.payload)),
 };
 
 /** The message of an `IpcError` (`{kind, message}`), or of anything else thrown. */

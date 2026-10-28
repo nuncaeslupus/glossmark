@@ -55,14 +55,17 @@ describe("boot", () => {
   it("test_app_boot_listens_then_opens_launch_files", async () => {
     const root = document.createElement("div");
     await start(root);
-    expect(calls.slice(0, 5)).toEqual([
+    expect(calls.slice(0, 6)).toEqual([
       "listen open-files",
       "listen document-changed",
+      "listen update-available",
       "get_config",
       "read_user_css",
       "take_open_files",
     ]);
     expect(calls).toContain("watch");
+    // The update check waits until the launch files are drawn.
+    expect(calls.at(-1)).toBe("check_update");
     expect(root.querySelector(".sheet h1")?.textContent).toBe("/n/a.md");
 
     onOpenFiles({ payload: { paths: ["/n/b.md", "/n/a.md"] } });

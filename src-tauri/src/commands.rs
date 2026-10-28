@@ -5,6 +5,7 @@ use crate::export;
 use crate::external;
 use crate::image;
 use crate::scope::{self, Scope};
+use crate::updater;
 use crate::watch::{self, Registry};
 use notify_debouncer_mini::notify::{RecommendedWatcher, RecursiveMode};
 use notify_debouncer_mini::Debouncer;
@@ -165,6 +166,18 @@ pub async fn export_pdf<R: Runtime>(
         .get_webview_window("main")
         .ok_or_else(|| IpcError::new(ErrorKind::Io, "no window to export"))?;
     export::print_to_pdf(&window, &path)
+}
+
+/// Called once after first paint; a newer version arrives as `update-available`.
+#[tauri::command]
+pub async fn check_update<R: Runtime>(app: AppHandle<R>) -> Result<(), IpcError> {
+    updater::check(&app).await
+}
+
+/// More › Restart to update. Returns only on failure: on success the app restarts.
+#[tauri::command]
+pub async fn install_update<R: Runtime>(app: AppHandle<R>) -> Result<(), IpcError> {
+    updater::install(&app).await
 }
 
 /// Brings files into `scope` and returns the canonical paths it accepted.

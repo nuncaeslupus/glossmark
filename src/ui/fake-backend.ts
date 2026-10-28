@@ -1,4 +1,4 @@
-import type { Backend, Config, DocumentChanged } from "./ipc";
+import type { Backend, Config, DocumentChanged, UpdateAvailable } from "./ipc";
 
 /** Where the fake's `image:` protocol URLs point (Tauri's Windows form, so a browser can route it). */
 export const FAKE_IMAGE_ORIGIN = "http://image.localhost";
@@ -7,6 +7,7 @@ export const FAKE_IMAGE_ORIGIN = "http://image.localhost";
 export function fakeBackend(files: Record<string, string>, launch: string[] = []) {
   let openFiles: (paths: string[]) => void = () => {};
   let documentChanged: (change: DocumentChanged) => void = () => {};
+  let updateAvailable: (update: UpdateAvailable) => void = () => {};
   const mtimes: Record<string, number> = {};
   let clock = 1000;
   const state = {
@@ -27,8 +28,12 @@ export function fakeBackend(files: Record<string, string>, launch: string[] = []
     exported: [] as string[],
     reads: 0,
     unwatchCalls: 0,
+    updateChecks: 0,
+    installs: 0,
     /** When set, the matching call rejects with this error. */
-    fail: {} as Partial<Record<"openDialog" | "getConfig" | "setConfig" | "readUserCss", unknown>>,
+    fail: {} as Partial<
+      Record<"openDialog" | "getConfig" | "setConfig" | "readUserCss" | "installUpdate", unknown>
+    >,
     /** When set, reads wait for it. */
     readGate: undefined as Promise<void> | undefined,
     /** Watchers per path, as the core counts them. */
@@ -37,6 +42,7 @@ export function fakeBackend(files: Record<string, string>, launch: string[] = []
     unwatchable: [] as string[],
     emitOpenFiles: (paths: string[]) => openFiles(paths),
     emitDocumentChanged: (change: DocumentChanged) => documentChanged(change),
+    emitUpdateAvailable: (update: UpdateAvailable) => updateAvailable(update),
     /** When set, the next read takes the file as it is now, then waits for this. */
     nextReadWaits: undefined as Promise<void> | undefined,
     /** An external save, by default with a newer mtime, and the event if the path is watched. */
@@ -109,6 +115,13 @@ export function fakeBackend(files: Record<string, string>, launch: string[] = []
       state.unwatchCalls++;
       if (state.watched[path]) state.watched[path]--;
     },
+    checkUpdate: async () => {
+      state.updateChecks++;
+    },
+    installUpdate: async () => {
+      failing("installUpdate");
+      state.installs++;
+    },
     onOpenFiles: async (handler) => {
       openFiles = handler;
       return () => {
@@ -119,6 +132,12 @@ export function fakeBackend(files: Record<string, string>, launch: string[] = []
       documentChanged = handler;
       return () => {
         documentChanged = () => {};
+      };
+    },
+    onUpdateAvailable: async (handler) => {
+      updateAvailable = handler;
+      return () => {
+        updateAvailable = () => {};
       };
     },
   };
