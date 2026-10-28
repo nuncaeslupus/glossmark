@@ -17,10 +17,18 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["deb", "appimage"],
-    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.png"],
+    "targets": ["deb", "appimage", "msi", "nsis", "dmg", "app"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
     "category": "Utility",
     "shortDescription": "A Markdown viewer that reads like a well-typeset document",
+    "macOS": { "signingIdentity": "-" },
     "linux": {
       "deb": { "desktopTemplate": "linux/glossmark.desktop" }
     }
