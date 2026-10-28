@@ -20,7 +20,8 @@ export function classify(docPath: string, src: string): Target | null {
     const url = new URL(src.trim(), base);
     if (url.protocol !== "file:") return { remote: url.href };
     if (url.host) return { remote: `https://${url.host}${url.pathname}${url.search}` };
-    return { local: decodeURIComponent(url.pathname) };
+    // A Windows path comes back as `/C:/…`; the drive letter has to lead again.
+    return { local: decodeURIComponent(url.pathname).replace(/^\/([A-Za-z]:)/, "$1") };
   } catch {
     return null;
   }

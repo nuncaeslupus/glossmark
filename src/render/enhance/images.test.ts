@@ -65,4 +65,9 @@ describe("imagePolicy", () => {
     expect(classify("/a/doc.md", "//host/x.png")).toEqual({ remote: "https://host/x.png" });
     expect(classify("/a/doc.md", "%E0%A4%A")).toBeNull();
   });
+
+  it("test_classify_windows_path_keeps_the_drive_letter_first", () => {
+    expect(classify("C:\\a b\\doc.md", "docs/x.png")).toEqual({ local: "C:/a b/docs/x.png" });
+    expect(classify("C:\\a\\doc.md", "/x.png")).toEqual({ local: "C:/x.png" });
+  });
 });
