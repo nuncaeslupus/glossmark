@@ -16,6 +16,7 @@ export const strings = {
     sectionNotFound: "That section is not in this document.",
     notMarkdown: "Only Markdown files open in Glossmark.",
     watchFailed: "Changes to this file will not be shown.",
+    updateFailed: "The update could not be installed.",
   },
   // One line at the top of a sheet that keeps showing the last version (live reload).
   fileNotices: {
@@ -23,6 +24,7 @@ export const strings = {
     reloadFailed: "This file could not be reloaded. Showing the last version.",
   },
   more: "More",
+  restartToUpdate: (version: string) => `Restart to update to ${version}`,
   actions: {
     open: "Open…",
     print: "Print…",

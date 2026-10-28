@@ -64,7 +64,8 @@ jobs:
       # run and bundles WebKitGTK (~80 MB), so it is the slow, network-dependent part of this job.
       # It is built and its size reported, not gated (spec: `.deb` is the gated package).
       - timeout-minutes: 30
-        run: npm run tauri build -- --bundles deb,appimage
+        # Updater signing needs the private key, which only the release workflow gets.
+        run: npm run tauri build -- --bundles deb,appimage --config '{"bundle":{"createUpdaterArtifacts":false}}'
       - name: Package sizes (fails when the .deb exceeds 20 MB)
         run: |
           shopt -s nullglob

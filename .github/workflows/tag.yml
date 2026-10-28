@@ -1,11 +1,16 @@
 name: tag
 
 # A merge to main that bumps the version in tauri.conf.json tags it as v<version> and starts the
-# release. Pre-release tags (v0.1.0-rc.1) are still pushed by hand.
+# release. Run it by hand (Actions → tag → Run workflow) to push a given tag, e.g. v0.1.0-rc.1.
 on:
   push:
     branches: [main]
     paths: ['src-tauri/tauri.conf.json']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag to push, e.g. v0.1.0-rc.1 (must match the configs' version)
+        required: true
 
 permissions:
   contents: write
@@ -22,15 +27,22 @@ jobs:
       - env:
           GH_TOKEN: ${{ github.token }}
           BEFORE: ${{ github.event.before }}
+          TAG: ${{ inputs.tag }}
         run: |
-          version() { sed -n 's/^  "version": "\(.*\)",$/\1/p'; }
-          new=$(version < src-tauri/tauri.conf.json)
-          old=$(git show "$BEFORE:src-tauri/tauri.conf.json" 2>/dev/null | version || true)
-          if [ "$new" = "$old" ] || git rev-parse -q --verify "refs/tags/v$new" >/dev/null; then
-            echo "version $new unchanged or already tagged; nothing to do"
-            exit 0
+          if [ -z "$TAG" ]; then
+            version() { sed -n 's/^  "version": "\(.*\)",$/\1/p'; }
+            new=$(version < src-tauri/tauri.conf.json)
+            old=$(git show "$BEFORE:src-tauri/tauri.conf.json" 2>/dev/null | version || true)
+            if [ "$new" = "$old" ] || git rev-parse -q --verify "refs/tags/v$new" >/dev/null; then
+              echo "version $new unchanged or already tagged; nothing to do"
+              exit 0
+            fi
+            TAG=v$new
+          elif git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+            echo "::error::$TAG already exists"
+            exit 1
           fi
-          bash scripts/check_release.sh --version-only "v$new"
-          git tag "v$new"
-          git push origin "v$new"
-          gh workflow run release.yml --ref "v$new"
+          bash scripts/check_release.sh --version-only "$TAG"
+          git tag "$TAG"
+          git push origin "$TAG"
+          gh workflow run release.yml --ref "$TAG"

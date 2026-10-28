@@ -21,7 +21,7 @@ dist:
 	npm run build
 
 build:
-	npm run tauri build
+	npm run tauri build -- --config '{"bundle":{"createUpdaterArtifacts":false}}'
 
 lint: dist
 	npm exec -- biome check .
@@ -34,6 +34,7 @@ format:
 
 test: dist
 	npm test
+	for t in scripts/*.test.sh; do bash "$$t" || exit 1; done
 	$(call rust,$(CARGO) test)
 
 clean:
