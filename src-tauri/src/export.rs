@@ -73,9 +73,62 @@ pub fn print_to_pdf<R: Runtime>(window: &WebviewWindow<R>, path: &Path) -> Resul
         .map_err(failed)
 }
 
-#[cfg(not(target_os = "linux"))]
+/// WebView2's `PrintToPdf` (D-29): A4 portrait with backgrounds, the page margins from
+/// `print.css`. Returns once the file is written.
+#[cfg(windows)]
+pub fn print_to_pdf<R: Runtime>(window: &WebviewWindow<R>, path: &Path) -> Result<(), IpcError> {
+    use webview2_com::Microsoft::Web::WebView2::Win32::{
+        ICoreWebView2Environment6, ICoreWebView2_7, COREWEBVIEW2_PRINT_ORIENTATION_PORTRAIT,
+    };
+    use webview2_com::PrintToPdfCompletedHandler;
+    use windows_core::{Interface, HSTRING};
+
+    let failed = |message: String| IpcError::new(ErrorKind::Io, message);
+    let file = HSTRING::from(path.as_os_str());
+    let shown = path.display().to_string();
+    let (tx, rx) = std::sync::mpsc::channel();
+    window
+        .with_webview(move |webview| {
+            let done = tx.clone();
+            let started = (|| unsafe {
+                let core = webview
+                    .controller()
+                    .CoreWebView2()?
+                    .cast::<ICoreWebView2_7>()?;
+                let settings = webview
+                    .environment()
+                    .cast::<ICoreWebView2Environment6>()?
+                    .CreatePrintSettings()?;
+                settings.SetOrientation(COREWEBVIEW2_PRINT_ORIENTATION_PORTRAIT)?;
+                // A4, in inches.
+                settings.SetPageWidth(8.27)?;
+                settings.SetPageHeight(11.69)?;
+                settings.SetShouldPrintBackgrounds(true)?;
+                settings.SetShouldPrintHeaderAndFooter(false)?;
+                let handler =
+                    PrintToPdfCompletedHandler::create(Box::new(move |result, written| {
+                        let _ = done.send(match result {
+                            Err(e) => Err(e.to_string()),
+                            Ok(()) if !written => Err(format!("{shown} could not be written")),
+                            Ok(()) => Ok(()),
+                        });
+                        Ok(())
+                    }));
+                core.PrintToPdf(&file, &settings, &handler)
+            })();
+            if let Err(e) = started {
+                let _ = tx.send(Err(e.to_string()));
+            }
+        })
+        .map_err(|e| failed(e.to_string()))?;
+    rx.recv()
+        .map_err(|e| failed(e.to_string()))?
+        .map_err(failed)
+}
+
+#[cfg(not(any(target_os = "linux", windows)))]
 pub fn print_to_pdf<R: Runtime>(_: &WebviewWindow<R>, _: &Path) -> Result<(), IpcError> {
-    // ponytail: Linux first (D-4); Windows and macOS print to PDF through their own webviews.
+    // ponytail: Linux and Windows first (D-4, D-29); macOS prints to PDF through WKWebView.
     Err(IpcError::new(
         ErrorKind::Io,
         "Export to PDF is not available on this platform yet",
@@ -102,6 +155,23 @@ mod tests {
         );
         assert!(target(picked(), "/etc/other.pdf").is_err());
         assert!(target(None, "/out/notes.pdf").is_err());
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn test_export_target_rules_hold_on_windows() {
+        let picked = || Some(PathBuf::from(r"C:\out\notes.pdf"));
+        assert!(target(picked(), r"C:\out\notes.pdf").is_ok());
+        assert!(target(picked(), r"C:\out\other.pdf").is_err());
+        assert!(target(
+            Some(PathBuf::from(r"C:\out\notes.txt")),
+            r"C:\out\notes.txt"
+        )
+        .is_err());
+        assert_eq!(
+            with_pdf_extension(PathBuf::from(r"C:\out\notes")),
+            PathBuf::from(r"C:\out\notes.pdf")
+        );
     }
 
     #[test]

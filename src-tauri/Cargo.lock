@@ -1344,6 +1344,8 @@ dependencies = [
  "tempfile",
  "url",
  "webkit2gtk",
+ "webview2-com",
+ "windows-core",
 ]
 
 [[package]]
