@@ -5,6 +5,7 @@ label: "release workflow"
 priority: 5
 tags: [PACKAGING]
 workspace: packaging
+status: merged
 ---
 
 `release.yml`: a `v*` tag builds .deb, AppImage, .msi, NSIS .exe and a universal ad-hoc-signed .dmg into a draft Release. It fails when the tag differs from `tauri.conf.json` or `Cargo.toml`, and reports each bundle's size. `scripts/check_release.sh <tag>` lists any missing asset. Proven on the tag `v0.1.0-rc.1`
