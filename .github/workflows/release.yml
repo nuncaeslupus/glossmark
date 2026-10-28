@@ -3,9 +3,11 @@ name: release
 # A `v*` tag builds every OS's bundles into one draft Release (S-4 T1). The Release stays a draft:
 # the install smoke jobs (T2) un-draft it. Bundles are unsigned for now (D-24); macOS is ad-hoc
 # signed (`signingIdentity "-"`) so Apple Silicon runs it.
+# tag.yml dispatches it on the tag it pushes: a tag pushed with GITHUB_TOKEN triggers no `push` run.
 on:
   push:
     tags: ['v*']
+  workflow_dispatch:
 
 concurrency:
   group: release-${{ github.ref }}
