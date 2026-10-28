@@ -28,6 +28,9 @@
       "icons/icon.ico"
     ],
     "category": "Utility",
+    "fileAssociations": [
+      { "ext": ["md", "markdown"], "name": "Markdown document", "mimeType": "text/markdown", "role": "Viewer" }
+    ],
     "shortDescription": "A Markdown viewer that reads like a well-typeset document",
     "macOS": { "signingIdentity": "-" },
     "linux": {
