@@ -92,3 +92,5 @@
 | D-23 | A simple SVG logo, the app icons generated from it, and a README hero screenshot (I-38); owner approves the look | agreed | 2026-10-28 | S-4 |
 | D-24 | First release through GitHub Releases: a version tag builds .deb/AppImage, .msi/.exe and .dmg on CI runners; the free channels follow; no paid signing or Apple Developer program (owner: a free app) | agreed | 2026-10-28 | S-4 |
 | D-25 | Windows ships unsigned at first (SmartScreen "Run anyway"); apply to SignPath Foundation's free open-source signing in parallel and turn it on once approved | agreed | 2026-10-28 | S-4 |
+| D-26 | First wave of free channels after Releases: winget (Windows), Flathub (Linux), our own Homebrew tap (macOS; the main cask list drops apps that fail Gatekeeper) | agreed | 2026-10-28 | S-4 |
+| D-27 | Ubuntu: also a snap in the Snap Store (App Center) and a signed apt repo on GitHub Pages that CI updates on each tag | agreed | 2026-10-28 | S-4 |
