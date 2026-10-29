@@ -4,7 +4,7 @@ import { matchesKey } from "./definition";
 import { fakeBackend, settle } from "./fake-backend";
 import { clearMatches, highlightMatches } from "./find";
 import { Shell } from "./shell";
-import { fitWidth, stepZoom } from "./zoom";
+import { sheetLayout, stepZoom } from "./zoom";
 
 const shells: Shell[] = [];
 afterEach(() => {
@@ -107,22 +107,40 @@ describe("reading tools", () => {
     expect(stepZoom(300, 1)).toBe(300);
     expect(stepZoom(50, -1)).toBe(50);
     expect(stepZoom(133, -1)).toBe(125);
-    expect(fitWidth(864)).toBe(100);
-    expect(fitWidth(0)).toBe(50);
+    // A book page while the window has room; the canvas width, less its margins, once zoom
+    // would push past it (the lines rewrap); the whole canvas when wide.
+    expect(sheetLayout(2000, 100, false)).toEqual({ maxWidth: 816, padScale: 1 });
+    expect(sheetLayout(2000, 200, false)).toEqual({ maxWidth: 816, padScale: 1 });
+    expect(sheetLayout(1000, 200, false)).toEqual({ maxWidth: 476, padScale: 476 / 816 });
+    expect(sheetLayout(2000, 100, true)).toEqual({ maxWidth: 1952, padScale: 1 });
+    expect(sheetLayout(0, 100, false).maxWidth).toBe(160);
+    expect(sheetLayout(0, 300, false).maxWidth).toBe(54);
   });
 
-  it("test_ctrl_9_fits_sheet_to_width", async () => {
-    const { root } = await open({ "/n/a.md": "# A" }, ["/n/a.md"]);
-    layout(root.querySelector(".canvas") as Element, { clientWidth: 1680 });
+  it("test_sheet_rewraps_and_ctrl_9_widens_it", async () => {
+    const { root, state } = await open({ "/n/a.md": "# A" }, ["/n/a.md"]);
+    const view = root.querySelector<HTMLElement>(".view");
+    const max = () => view?.style.getPropertyValue("--sheet-max");
+    layout(root.querySelector(".canvas") as Element, { clientWidth: 1000 });
+    window.dispatchEvent(new Event("resize"));
+    expect(max()).toBe("816px");
+    // Zooming in keeps the sheet inside the window: the lines rewrap, nothing scrolls sideways.
+    press({ key: "=", ctrlKey: true });
+    press({ key: "=", ctrlKey: true });
+    expect(root.querySelector(".bar .zoom")?.textContent).toBe(strings.zoomPercent(125));
+    expect(max()).toBe(`${Math.floor(952 / 1.25)}px`);
+    // The readout returns to 100%.
+    root.querySelector<HTMLElement>(".bar .zoom")?.click();
+    expect(max()).toBe("816px");
+    // Ctrl+9 (or the bar's toggle) gives the sheet the whole window, and is remembered.
     press({ key: "9", ctrlKey: true });
-    expect(root.querySelector(".bar .zoom")?.textContent).toBe(strings.zoomPercent(200));
-    expect(root.querySelector<HTMLElement>(".view")?.style.getPropertyValue("--zoom")).toBe("2");
-    // The readout is the same switch: a click returns to 100%, and fits again.
-    const readout = root.querySelector<HTMLElement>(".bar .zoom");
-    readout?.click();
-    expect(readout?.textContent).toBe(strings.zoomPercent(100));
-    readout?.click();
-    expect(readout?.textContent).toBe(strings.zoomPercent(200));
+    expect(max()).toBe("952px");
+    const toggle = root.querySelector('.bar [data-action="wideSheet"]');
+    expect(toggle?.getAttribute("aria-pressed")).toBe("true");
+    await settle();
+    expect(state.config.wideSheet).toBe(true);
+    click(toggle);
+    expect(max()).toBe("816px");
   });
 
   it("test_remote_images_menu_toggles_setting", async () => {

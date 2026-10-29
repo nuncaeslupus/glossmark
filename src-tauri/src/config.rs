@@ -24,6 +24,8 @@ pub struct Config {
     pub theme: Theme,
     pub default_zoom: u32,
     pub remote_images: bool,
+    /// The sheet fills the window instead of keeping a book's line length.
+    pub wide_sheet: bool,
     pub recent_files: Vec<String>,
 }
 
@@ -34,6 +36,7 @@ impl Default for Config {
             theme: Theme::System,
             default_zoom: 100,
             remote_images: true,
+            wide_sheet: false,
             recent_files: Vec::new(),
         }
     }

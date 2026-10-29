@@ -11,7 +11,7 @@ import { type Backend, type Config, type Doc, type DocumentChanged, errorMessage
 import { type Entry, findTarget, type Gesture, History, route } from "./links";
 import { currentSection, type Section, sections } from "./outline";
 import { restoreScroll, scrollAnchor, watchFile } from "./watch";
-import { clampZoom, fitWidth, stepZoom } from "./zoom";
+import { clampZoom, sheetLayout, stepZoom } from "./zoom";
 
 const MAX_RECENT_FILES = 10;
 const NOTICE_MS = 6000;
@@ -93,6 +93,9 @@ export class Shell {
   /** The title bar, Chrome's way: the tab strip, room to drag the window, its buttons. */
   private readonly titleBar = h("div", "titlebar");
   private stopResize = () => {};
+  /** Re-sizes the sheet when its canvas changes width: the outline, a scrollbar, the window. */
+  private readonly canvasWidth =
+    typeof ResizeObserver === "undefined" ? null : new ResizeObserver(() => this.layoutSheet());
   private readonly tabStrip = h("nav", "tabs");
   private readonly view = h("div", "view");
   private readonly empty = h("main", "empty");
@@ -119,6 +122,11 @@ export class Shell {
   private sectionHeld = false;
   private saveTimer: ReturnType<typeof setTimeout> | undefined;
   private remoteItem: HTMLElement | null = null;
+  /** The sheet fills the window rather than keeping a book's line length. */
+  private wide = false;
+  /** The "New tab" entry in the strip, showing the start page, and the tab it was opened from. */
+  private startTab: HTMLElement | null = null;
+  private returnTo: Tab | null = null;
   private shortcutsPanel: HTMLElement | null = null;
   private themeItem: HTMLElement | null = null;
   private sourceItem: HTMLElement | null = null;
@@ -134,7 +142,7 @@ export class Shell {
     open: () => void this.openDialog(),
     print: () => void this.print(),
     export: () => void this.exportPdf(),
-    closeTab: () => this.active && this.close(this.active),
+    closeTab: () => (this.active ? this.close(this.active) : this.closeStartTab()),
     nextTab: () => this.cycleTab(1),
     previousTab: () => this.cycleTab(-1),
     outline: () => {
@@ -146,7 +154,11 @@ export class Shell {
     zoomOut: () => this.setZoom(stepZoom(this.zoom, -1)),
     zoomIn: () => this.setZoom(stepZoom(this.zoom, 1)),
     zoomReset: () => this.setZoom(100),
-    fitWidth: () => this.active && this.setZoom(fitWidth(this.active.canvas.clientWidth)),
+    newTab: () => this.openStartTab(),
+    wideSheet: () => {
+      this.wide = !this.wide;
+      this.saveSettings();
+    },
     find: () => this.openFind(),
     findNext: () => this.stepFind(1),
     findPrevious: () => this.stepFind(-1),
@@ -182,6 +194,7 @@ export class Shell {
       if (!(e.target instanceof Element && inside(e.target))) this.closeMenus();
     };
     doc.addEventListener("click", outside, { signal });
+    doc.defaultView?.addEventListener("resize", () => this.layoutSheet(), { signal });
     this.update();
   }
 
@@ -209,6 +222,7 @@ export class Shell {
     if (this.config) {
       this.theme = THEMES.includes(this.config.theme) ? this.config.theme : "system";
       this.zoom = clampZoom(this.config.defaultZoom);
+      this.wide = this.config.wideSheet === true;
     }
     await this.backend.readUserCss().then(
       (css) => applyUserCss(this.root.ownerDocument, css),
@@ -226,6 +240,7 @@ export class Shell {
     this.listeners.abort();
     for (const stop of this.unlisten) stop();
     this.stopResize();
+    this.canvasWidth?.disconnect();
     for (const tab of this.tabs) this.watch(tab, null);
     clearTimeout(this.noticeTimer);
     clearTimeout(this.findTimer);
@@ -280,6 +295,8 @@ export class Shell {
       }
     }
     if (!last) return;
+    // An already-open file chosen from the New tab: that tab has nothing left to show.
+    if (this.startTab && this.active === null) this.closeStartTab();
     const tab = last;
     this.activate(tab);
     await Promise.all(added.map((t) => this.load(t)));
@@ -508,7 +525,12 @@ export class Shell {
     clearTimeout(this.saveTimer);
     this.saveTimer = undefined;
     if (!this.config) return;
-    this.config = { ...this.config, theme: this.theme, defaultZoom: this.zoom };
+    this.config = {
+      ...this.config,
+      theme: this.theme,
+      defaultZoom: this.zoom,
+      wideSheet: this.wide,
+    };
     void this.backend
       .setConfig(this.config)
       .catch(() => this.show(strings.notices.settingNotSaved));
@@ -742,9 +764,51 @@ export class Shell {
     });
 
     this.tabs.push(tab);
-    this.tabStrip.append(handle);
+    // A file opened from the start page takes the "New tab" entry's place.
+    if (this.startTab && this.active === null) {
+      this.startTab.replaceWith(handle);
+      this.startTab = null;
+    } else this.tabStrip.append(handle);
     this.view.append(canvas);
+    this.canvasWidth?.observe(canvas);
     return tab;
+  }
+
+  /** A "New tab" in the strip showing the start page (Open, drop, recent files); opening a
+   * file there turns it into that file's tab. */
+  private openStartTab(): void {
+    if (!this.startTab) {
+      const handle = h("div", "tab start-tab");
+      handle.setAttribute("role", "tab");
+      const label = h("button", "tab-label", strings.actions.newTab);
+      label.addEventListener("click", () => {
+        if (this.active) this.returnTo = this.active;
+        this.active = null;
+        this.update();
+      });
+      const close = iconButton("tab-close", strings.icons.closeTab);
+      close.title = strings.actions.closeTab;
+      close.setAttribute("aria-label", strings.actions.closeTab);
+      close.addEventListener("click", () => this.closeStartTab());
+      handle.append(label, close);
+      this.tabStrip.append(handle);
+      this.startTab = handle;
+    }
+    if (this.active) this.returnTo = this.active;
+    this.active = null;
+    this.update();
+    this.startTab.scrollIntoView?.({ inline: "nearest" });
+  }
+
+  private closeStartTab(): void {
+    this.startTab?.remove();
+    this.startTab = null;
+    if (!this.active) {
+      const back = this.returnTo && this.tabs.includes(this.returnTo) ? this.returnTo : null;
+      this.active = back ?? this.tabs.at(-1) ?? null;
+    }
+    this.returnTo = null;
+    this.update();
   }
 
   private activate(tab: Tab): void {
@@ -765,7 +829,12 @@ export class Shell {
 
   /** Ctrl+Tab and Ctrl+Shift+Tab, wrapping at the ends. */
   private cycleTab(step: number): void {
-    if (!this.active) return;
+    if (!this.active) {
+      const back = this.returnTo && this.tabs.includes(this.returnTo) ? this.returnTo : null;
+      const tab = back ?? this.tabs[0];
+      if (tab) this.activate(tab);
+      return;
+    }
     const n = this.tabs.length;
     const tab = this.tabs[(this.tabs.indexOf(this.active) + step + n) % n];
     if (tab) this.activate(tab);
@@ -774,6 +843,7 @@ export class Shell {
   private close(tab: Tab): void {
     const index = this.tabs.indexOf(tab);
     this.tabs.splice(index, 1);
+    this.canvasWidth?.unobserve(tab.canvas);
     this.watch(tab, null);
     tab.handle.remove();
     tab.canvas.remove();
@@ -782,6 +852,9 @@ export class Shell {
   }
 
   private enabled(id: ActionId): boolean {
+    // The New tab can be closed or left like any other tab.
+    const tabbing = id === "closeTab" || id === "nextTab" || id === "previousTab";
+    if (tabbing && this.startTab && !this.active) return id === "closeTab" || this.tabs.length > 0;
     if (actions[id].needsDocument && !this.active) return false;
     if (id === "back") return this.active?.history.canGoBack === true;
     if (id === "forward") return this.active?.history.canGoForward === true;
@@ -851,7 +924,9 @@ export class Shell {
     mark.src = logo;
     mark.alt = "";
     brand.append(mark, h("span", "", strings.appName));
-    this.titleBar.append(brand, this.tabStrip, drag);
+    // "+" sits right after the last tab, before the empty strip that drags the window.
+    const plus = this.actionButton("newTab", "new-tab");
+    this.titleBar.append(brand, this.tabStrip, plus, drag);
     const controls = this.backend.window;
     // The window moves by the bar, not by the tabs on it; a double-click maximizes.
     const handles = [this.titleBar, brand, this.tabStrip, drag];
@@ -930,10 +1005,7 @@ export class Shell {
         else if (item.kind === "more") zone.append(this.buildMore());
         else {
           this.zoomReadout.title = strings.zoomToggle;
-          this.zoomReadout.addEventListener("click", () => {
-            const fit = this.active && fitWidth(this.active.canvas.clientWidth);
-            if (fit) this.setZoom(this.zoom === fit ? 100 : fit);
-          });
+          this.zoomReadout.addEventListener("click", () => this.setZoom(100));
           zone.append(this.zoomReadout);
         }
       }
@@ -1003,6 +1075,7 @@ export class Shell {
           this.sourceItem = item;
           item.setAttribute("role", "menuitemcheckbox");
         }
+        if (id === "wideSheet") item.setAttribute("role", "menuitemcheckbox");
         if (id === "remoteImages") {
           this.remoteItem = item;
           item.setAttribute("role", "menuitemcheckbox");
@@ -1139,6 +1212,8 @@ export class Shell {
       tab.handle.setAttribute("aria-selected", String(tab === active));
       tab.canvas.hidden = tab !== active;
     }
+    this.startTab?.classList.toggle("active", active === null);
+    this.startTab?.setAttribute("aria-selected", String(active === null));
     this.empty.hidden = active !== null;
     if (!active) this.drawEmpty();
     this.root.ownerDocument.title = active
@@ -1159,6 +1234,18 @@ export class Shell {
     }
     this.applySettings();
     this.drawOutline();
+    // After the outline, which moves the canvas's edge.
+    this.layoutSheet();
+  }
+
+  /** Sizes the sheet to the window: text scales with the zoom and lines rewrap, so the sheet
+   * never runs past the canvas (no sideways scrolling). */
+  private layoutSheet(): void {
+    const width = this.active?.canvas.clientWidth ?? 0;
+    if (width <= 0) return;
+    const { maxWidth, padScale } = sheetLayout(width, this.zoom, this.wide);
+    this.view.style.setProperty("--sheet-max", `${maxWidth}px`);
+    this.view.style.setProperty("--sheet-pad", String(padScale));
   }
 
   private applySettings(): void {
@@ -1166,6 +1253,12 @@ export class Shell {
     if (this.theme === "system") delete html.dataset.theme;
     else html.dataset.theme = this.theme;
     this.view.style.setProperty("--zoom", String(this.zoom / 100));
+    for (const el of this.root.querySelectorAll('[data-action="wideSheet"]')) {
+      el.setAttribute(
+        el.getAttribute("role") === "menuitemcheckbox" ? "aria-checked" : "aria-pressed",
+        String(this.wide),
+      );
+    }
     this.zoomReadout.textContent = strings.zoomPercent(this.zoom);
     if (this.themeItem) this.themeItem.textContent = strings.themes[this.theme];
     this.remoteItem?.setAttribute("aria-checked", String(this.config?.remoteImages ?? true));

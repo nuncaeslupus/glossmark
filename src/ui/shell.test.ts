@@ -30,6 +30,7 @@ async function open(
 
 const notice = (root: Element) => root.querySelector(".bar .notice")?.textContent;
 const key = (init: KeyboardEventInit) => new KeyboardEvent("keydown", init);
+const press = (init: KeyboardEventInit) => document.dispatchEvent(key(init));
 
 function click(el: Element | null, init: MouseEventInit = {}): MouseEvent {
   const e = new MouseEvent("click", { bubbles: true, cancelable: true, button: 0, ...init });
@@ -50,7 +51,7 @@ describe("shell", () => {
     );
     expect(zones).toEqual([
       ["outline", "back", "forward"],
-      ["zoomOut", "zoom", "zoomIn"],
+      ["zoomOut", "zoom", "zoomIn", "wideSheet"],
       ["find", "export", "print", "menu-button"],
     ]);
     // One ⋮ More button replaces the text menus, and lists every one of their commands.
@@ -87,6 +88,39 @@ describe("shell", () => {
     click(exportButton);
     for (let i = 0; i < 5; i++) await settle();
     expect(state.exported).toEqual(["/out/notes.pdf"]);
+  });
+
+  it("test_new_tab_shows_start_page_and_becomes_the_opened_file", async () => {
+    const { root, state } = await open({ "/n/a.md": "# A", "/n/b.md": "# B" }, ["/n/a.md"]);
+    const labels = () => [...root.querySelectorAll(".tabs .tab-label")].map((l) => l.textContent);
+    const empty = () => root.querySelector<HTMLElement>(".empty");
+    // "+" adds a selected "New tab" showing the start page; the file's tab stays.
+    click(root.querySelector(".titlebar .new-tab"));
+    expect(labels()).toEqual(["a.md", strings.actions.newTab]);
+    expect(root.querySelector(".tab.active .tab-label")?.textContent).toBe(strings.actions.newTab);
+    expect(empty()?.hidden).toBe(false);
+    // Opening a file from it turns it into that file's tab.
+    state.dialogPaths = ["/n/b.md"];
+    press({ key: "o", ctrlKey: true });
+    for (let i = 0; i < 5; i++) await settle();
+    expect(labels()).toEqual(["a.md", "b.md"]);
+    expect(empty()?.hidden).toBe(true);
+    // Closing a "New tab" returns to the tab it was opened from.
+    press({ key: "t", ctrlKey: true });
+    click(root.querySelector(".start-tab .tab-close"));
+    expect(labels()).toEqual(["a.md", "b.md"]);
+    expect(root.querySelector(".tab.active .tab-label")?.textContent).toBe("b.md");
+    // Ctrl+W closes a New tab too.
+    press({ key: "t", ctrlKey: true });
+    press({ key: "w", ctrlKey: true });
+    expect(labels()).toEqual(["a.md", "b.md"]);
+    // Opening an already-open file from it leaves no orphan New tab behind.
+    press({ key: "t", ctrlKey: true });
+    state.dialogPaths = ["/n/a.md"];
+    press({ key: "o", ctrlKey: true });
+    for (let i = 0; i < 5; i++) await settle();
+    expect(labels()).toEqual(["a.md", "b.md"]);
+    expect(root.querySelector(".tab.active .tab-label")?.textContent).toBe("a.md");
   });
 
   it("test_print_uses_the_cores_page_where_offered", async () => {
