@@ -45,6 +45,8 @@ export interface Backend {
   /** `$XDG_CONFIG_HOME/glossmark/user.css`, or `null` when there is none. */
   readUserCss(): Promise<string | null>;
   openExternal(url: string): Promise<void>;
+  /** Opens the system file manager at an open document, with it selected. */
+  revealFile(path: string): Promise<void>;
   /** Watching is reference-counted in the core: each `watch` needs its own `unwatch`. */
   watch(path: string): Promise<void>;
   unwatch(path: string): Promise<void>;
@@ -74,6 +76,7 @@ export const tauriBackend: Backend = {
   setConfig: (config) => invoke<void>("set_config", { config }),
   readUserCss: () => invoke<{ css: string | null }>("read_user_css").then((r) => r.css),
   openExternal: (url) => invoke<void>("open_external", { url }),
+  revealFile: (path) => invoke<void>("reveal_file", { path }),
   watch: (path) => invoke<void>("watch", { path }),
   unwatch: (path) => invoke<void>("unwatch", { path }),
   checkUpdate: () => invoke<void>("check_update"),

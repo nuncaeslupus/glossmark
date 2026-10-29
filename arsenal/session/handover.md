@@ -20,7 +20,9 @@
 
 ## Decisions taken
 
-- D-19 as built: left ☰ title ←→ · centre − % + Find · right Export Print ⋮.
+- D-19 as built: left ☰ ←→ · centre − % + Find · right Export Print ⋮. No title in the bar:
+  the tab names the file; its ▾ (active tab) and right-click give Show in Finder / File
+  Explorer / File Manager and Copy path (`reveal_file` reveals open documents only).
 - Export: the Save dialog runs in Rust; `export_pdf` writes only that dialog's last answer.
 - PR review (owner, 2026-10-28): ask `@coderabbitai review`; if CodeRabbit still does not
   review, review the PR ourselves, then merge once `bash claude-arsenal/bin/merge_ready.sh <pr>`

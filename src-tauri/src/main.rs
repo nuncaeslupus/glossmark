@@ -60,6 +60,7 @@ fn main() {
             commands::set_config,
             commands::read_user_css,
             commands::open_external,
+            commands::reveal_file,
             commands::check_update,
             commands::install_update,
         ])
