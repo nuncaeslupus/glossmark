@@ -184,6 +184,9 @@ button:disabled {
 
 .tab-close,
 .tab-menu {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 1.5rem;
   height: 1.5rem;
   margin-right: 4px;
@@ -232,6 +235,9 @@ button:disabled {
 
 .bar-button,
 .menu-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   min-width: 32px;
   height: 32px;
   border-radius: 50%;
