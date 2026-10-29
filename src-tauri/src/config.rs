@@ -220,19 +220,22 @@ mod tests {
         fs::create_dir(&old).unwrap();
         fs::write(
             old.join("config.json"),
-            r#"{"version": 1, "theme": "dark"}"#,
+            r#"{"version": 1, "theme": "dark", "remoteImages": false}"#,
         )
         .unwrap();
 
-        // A file where the staging folder goes makes the copy fail: no half-made new folder.
+        // A file where the staging folder goes makes the copy fail: no half-made new folder,
+        // and the old settings stay in force, remote images included.
         let blocker = new.with_extension("migrating");
         fs::write(&blocker, "").unwrap();
-        carry_over(&old, &new);
+        let dir = settings_dir(&old, &new);
         assert!(!new.exists());
+        assert!(!load(&dir.join("config.json")).remote_images);
 
         fs::remove_file(&blocker).unwrap();
-        carry_over(&old, &new);
+        assert_eq!(settings_dir(&old, &new), new);
         assert_eq!(load(&new.join("config.json")).theme, Theme::Dark);
+        assert!(!load(&new.join("config.json")).remote_images);
         assert!(!blocker.exists());
     }
 
