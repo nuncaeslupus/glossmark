@@ -7,9 +7,9 @@
 
 @media print {
   /* Paper reads at book sizes, not screen ones: every size in the theme is rem or em, so
-   * this one value sets the body near 11pt and code near 9pt. */
+   * this one value sets Normal's body near 9pt and code near 7.5pt. */
   html {
-    font-size: 10.5pt;
+    font-size: 8.5pt;
   }
 
   .titlebar,

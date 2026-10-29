@@ -390,20 +390,19 @@ export class Shell {
     }
     panel.append(sizes);
 
+    // One action, the one the toolbar button asked for, so Print and Export stay distinct.
     const row = h("div", "print-actions");
-    const go = h("button", "print-go", strings.actions.print);
-    const save = h("button", "print-save", strings.actions.export);
+    const isExport = primary === "export";
+    const action = isExport
+      ? h("button", "print-save", strings.actions.export)
+      : h("button", "print-go", strings.actions.print);
     const cancel = h("button", "print-cancel", strings.printDialog.cancel);
-    go.addEventListener("click", () => {
+    action.addEventListener("click", () => {
       this.closePrintDialog();
-      void this.print();
-    });
-    save.addEventListener("click", () => {
-      this.closePrintDialog();
-      void this.exportPdf();
+      void (isExport ? this.exportPdf() : this.print());
     });
     cancel.addEventListener("click", () => this.closePrintDialog());
-    row.append(go, save, cancel);
+    row.append(action, cancel);
     panel.append(row);
 
     const overlay = h("div", "print-overlay");
@@ -414,7 +413,7 @@ export class Shell {
     this.view.append(overlay);
     this.printPanel = overlay;
     this.markPrintSize();
-    (primary === "export" ? save : go).focus();
+    action.focus();
   }
 
   private pickPrintSize(zoom: number): void {
