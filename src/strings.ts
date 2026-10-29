@@ -10,6 +10,7 @@ export const strings = {
   notices: {
     openFailed: "The Open dialog could not be shown.",
     exportFailed: "The PDF could not be saved.",
+    printFailed: "The document could not be printed.",
     settingsUnavailable: "Settings could not be read; recent files will not be kept.",
     userCssUnavailable: "Your user.css could not be read; showing the theme without it.",
     recentFilesNotSaved: "Recent files could not be saved.",

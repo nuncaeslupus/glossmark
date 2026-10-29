@@ -52,6 +52,7 @@ fn main() {
             commands::open_dialog,
             commands::save_dialog,
             commands::export_pdf,
+            commands::print_document,
             commands::read_document,
             commands::read_svg,
             commands::watch,

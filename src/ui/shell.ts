@@ -132,13 +132,7 @@ export class Shell {
 
   private readonly handlers: Record<ActionId, () => void> = {
     open: () => void this.openDialog(),
-    // `print()` usually blocks until the dialog closes; restoring after it covers a webview
-    // that never fires `afterprint`.
-    print: () =>
-      void diagramsForPaper().then((back) => {
-        window.print();
-        back();
-      }),
+    print: () => void this.print(),
     export: () => void this.exportPdf(),
     closeTab: () => this.active && this.close(this.active),
     nextTab: () => this.cycleTab(1),
@@ -297,6 +291,27 @@ export class Shell {
       await pending;
     } while (pending !== tab.loading);
     if (!this.disposed && this.active === tab) this.land(tab, jump);
+  }
+
+  /** Print: the same page as Export, through the system dialog where the core offers it, else
+   * the webview's own print. */
+  private async print(): Promise<void> {
+    if (this.dialogOpen || !this.active) return;
+    this.dialogOpen = true;
+    try {
+      // `print()` usually blocks until the dialog closes; restoring after it covers a webview
+      // that never fires `afterprint`.
+      const back = await diagramsForPaper();
+      try {
+        if (!(await this.backend.printDocument())) window.print();
+      } finally {
+        back();
+      }
+    } catch {
+      this.show(strings.notices.printFailed);
+    } finally {
+      this.dialogOpen = false;
+    }
   }
 
   /** Export: the print styling, saved as a PDF where the user picks (D-20). */
