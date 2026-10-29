@@ -280,6 +280,7 @@ describe("title bar", () => {
       minimize: async () => void calls.push("minimize"),
       toggleMaximize: async () => void calls.push("maximize"),
       close: async () => void calls.push("close"),
+      startDragging: async () => void calls.push("drag"),
       isMaximized: async () => calls.includes("maximize"),
       onResized: async (handler) => {
         resized = handler;
@@ -295,9 +296,36 @@ describe("title bar", () => {
     expect(bar?.firstElementChild?.className).toBe("brand");
     expect(bar?.firstElementChild?.textContent).toBe(strings.appName);
     expect(bar?.querySelector(".tabs")).not.toBeNull();
+    // Elsewhere the system's drag region; on Linux a press alone does not move the window,
+    // or GTK keeps it grabbed, while moving does.
     expect(root.querySelector(".titlebar .drag")?.hasAttribute("data-tauri-drag-region")).toBe(
       true,
     );
+    await settle();
+    const first = resized;
+    const linux = vi.spyOn(navigator, "platform", "get").mockReturnValue("Linux x86_64");
+    const root2 = document.createElement("div");
+    shells.push(new Shell(root2, fake.backend));
+    linux.mockRestore();
+    const drag = root2.querySelector(".titlebar .drag") as HTMLElement;
+    expect(drag.hasAttribute("data-tauri-drag-region")).toBe(false);
+    const mouse = (type: string, x: number, init: MouseEventInit = {}) =>
+      (type === "mousedown" ? drag : window).dispatchEvent(
+        new MouseEvent(type, { bubbles: true, clientX: x, clientY: 5, buttons: 1, ...init }),
+      );
+    mouse("mousedown", 10);
+    mouse("mouseup", 10);
+    mouse("mousemove", 40);
+    await settle();
+    expect(calls).toEqual([]);
+    mouse("mousedown", 10);
+    mouse("mousemove", 40);
+    await settle();
+    expect(calls).toEqual(["drag"]);
+    mouse("mousedown", 10, { detail: 2 });
+    await settle();
+    expect(calls).toEqual(["drag", "maximize"]);
+    calls.length = 0;
     const buttons = [...root.querySelectorAll<HTMLElement>(".window-controls button")];
     expect(buttons.map((b) => b.getAttribute("aria-label"))).toEqual([
       "Minimize",
@@ -307,7 +335,7 @@ describe("title bar", () => {
     for (const b of buttons) click(b);
     expect(calls).toEqual(["minimize", "maximize", "close"]);
     // Maximize reads Restore once the window is maximized.
-    resized();
+    first();
     await settle();
     expect(buttons[1]?.getAttribute("aria-label")).toBe(strings.windowControls.restore);
     // A menu closes when the title bar is pressed, since dragging swallows the click.
@@ -326,6 +354,7 @@ describe("title bar", () => {
       minimize: never,
       toggleMaximize: never,
       close: never,
+      startDragging: never,
       isMaximized: async () => false,
       onResized: async () => () => {},
     };

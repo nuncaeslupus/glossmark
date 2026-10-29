@@ -25,7 +25,12 @@ impl Scope {
 
     /// The canonical path of a document the frontend may read, or `not_permitted`.
     pub fn check_document(&self, path: &Path) -> Result<PathBuf, IpcError> {
-        let resolved = resolve(path).ok_or_else(|| IpcError::not_permitted(path))?;
+        // A relative path is never permitted; an absolute one that does not resolve has lost
+        // its folder, which a recent file renamed away from is the common case of.
+        let resolved = resolve(path).ok_or_else(|| match path.is_absolute() {
+            true => IpcError::not_found(path),
+            false => IpcError::not_permitted(path),
+        })?;
         if self.files.contains(&resolved) || (is_markdown(&resolved) && self.in_folders(&resolved))
         {
             Ok(resolved)
@@ -83,6 +88,19 @@ mod tests {
     use super::*;
     use crate::document::{read_document, read_svg, MAX_SVG_BYTES};
     use crate::error::ErrorKind;
+
+    #[test]
+    fn test_check_document_missing_folder_not_found() {
+        let root = tempfile::tempdir().unwrap();
+        let gone = root.path().join("renamed-away/readme.md");
+        let err = Scope::default().check_document(&gone).unwrap_err();
+        assert_eq!(err.kind, ErrorKind::NotFound);
+        assert!(err.message.contains("moved or renamed"), "{}", err.message);
+        let err = Scope::default()
+            .check_document(Path::new("readme.md"))
+            .unwrap_err();
+        assert_eq!(err.kind, ErrorKind::NotPermitted);
+    }
 
     #[test]
     fn test_read_document_outside_scope_not_permitted() {

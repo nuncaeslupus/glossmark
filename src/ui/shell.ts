@@ -793,6 +793,42 @@ export class Shell {
     return button;
   }
 
+  /** Linux: moves the window only once the mouse moves with the button held. Started on a bare
+   * press, as data-tauri-drag-region does, GTK keeps the window grabbed after the release and
+   * later clicks move the window instead of reaching the app. */
+  private dragOnMove(handles: HTMLElement[]): void {
+    const controls = this.backend.window;
+    if (!controls) return;
+    const handle = (t: EventTarget | null) =>
+      handles.includes(t as HTMLElement) || handles[1]?.contains(t as Node) === true;
+    let pressed: { x: number; y: number } | null = null;
+    const on = { signal: this.listeners.signal };
+    this.titleBar.addEventListener(
+      "mousedown",
+      (e) => {
+        if (e.button !== 0 || !handle(e.target)) return;
+        if (e.detail === 2) void Promise.resolve().then(() => controls.toggleMaximize());
+        else pressed = { x: e.clientX, y: e.clientY };
+      },
+      on,
+    );
+    window.addEventListener(
+      "mousemove",
+      (e) => {
+        if (!pressed) return;
+        if (!(e.buttons & 1)) pressed = null;
+        else if (Math.abs(e.clientX - pressed.x) + Math.abs(e.clientY - pressed.y) > 3) {
+          pressed = null;
+          void Promise.resolve()
+            .then(() => controls.startDragging())
+            .catch(() => {});
+        }
+      },
+      on,
+    );
+    window.addEventListener("mouseup", () => (pressed = null), on);
+  }
+
   private buildTitleBar(): HTMLElement {
     const drag = h("div", "drag");
     const brand = h("div", "brand");
@@ -800,9 +836,15 @@ export class Shell {
     mark.src = logo;
     mark.alt = "";
     brand.append(mark, h("span", "", strings.appName));
-    // The window moves by these, not by the tabs on them; a double-click maximizes.
-    for (const el of [this.titleBar, brand, this.tabStrip, drag]) el.dataset.tauriDragRegion = "";
     this.titleBar.append(brand, this.tabStrip, drag);
+    const controls = this.backend.window;
+    // The window moves by the bar, not by the tabs on it; a double-click maximizes.
+    const handles = [this.titleBar, brand, this.tabStrip, drag];
+    if (!/Linux/.test(navigator.platform)) {
+      for (const el of handles) el.dataset.tauriDragRegion = "";
+    } else {
+      this.dragOnMove(handles);
+    }
     // Dragging the window takes the mouse before any click, so the menus close here.
     this.titleBar.addEventListener(
       "mousedown",
@@ -819,7 +861,6 @@ export class Shell {
       },
       { passive: true, signal: this.listeners.signal },
     );
-    const controls = this.backend.window;
     // macOS keeps its own buttons, over the strip's left end.
     if (/Mac/.test(navigator.platform)) this.titleBar.classList.add("mac");
     else if (controls) {
