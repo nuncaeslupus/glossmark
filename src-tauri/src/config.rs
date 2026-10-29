@@ -57,9 +57,21 @@ pub struct UserCss {
 /// Settings from before the rename are carried over on first use.
 pub fn config_dir() -> Option<PathBuf> {
     let base = dirs::config_dir()?;
-    let dir = base.join("nacho-viewer");
-    carry_over(&base.join(OLD_DIR), &dir);
-    Some(dir)
+    Some(settings_dir(
+        &base.join(OLD_DIR),
+        &base.join("nacho-viewer"),
+    ))
+}
+
+/// `new`, after carrying the old folder over. While that has failed, the old folder: its
+/// settings still apply, rather than defaults that would turn remote images back on.
+fn settings_dir(old: &Path, new: &Path) -> PathBuf {
+    carry_over(old, new);
+    if new.exists() || !old.is_dir() {
+        new.to_path_buf()
+    } else {
+        old.to_path_buf()
+    }
 }
 
 /// The settings folder's name before the app was renamed (D-32).
