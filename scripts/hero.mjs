@@ -1,7 +1,7 @@
 // Draws the README hero (docs/hero.svg, docs/hero.png) and screenshots (docs/screenshot-*.png).
 // Run through `make hero`, which serves the e2e build the screenshots are taken from.
 import { readFileSync, writeFileSync } from "node:fs";
-import { chromium } from "playwright";
+import { chromium } from "@playwright/test";
 
 const base = process.env.HERO_URL ?? "http://localhost:4199";
 const W = 1280;

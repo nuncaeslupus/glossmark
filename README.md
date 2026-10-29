@@ -16,7 +16,6 @@
 that makes `.md` files read like a well-typeset document instead of plain text. Images and PDF
 pages come next; it stays a viewer, not an editor.
 
-
 > Status: building v1. The specification is [`status/specification.md`](status/specification.md) and
 > the task plan [`status/plan.md`](status/plan.md). `make dev` runs the app; `make lint test` is the gate.
 

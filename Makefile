@@ -42,9 +42,12 @@ clean:
 
 # The README hero and screenshots, taken from the e2e build's demo document.
 hero:
-	npm exec -- vite build --mode e2e
+	node_modules/.bin/vite build --mode e2e
 	node_modules/.bin/vite preview --mode e2e --port 4199 --strictPort & pid=$$!; \
-	  trap 'kill $$pid' EXIT; sleep 2; node scripts/hero.mjs
+	  trap 'kill $$pid' EXIT; \
+	  until curl -sf -o /dev/null http://localhost:4199/e2e/shell.html; do \
+	    kill -0 $$pid || exit 1; sleep 0.5; done; \
+	  node scripts/hero.mjs
 
 update-skills:
 	git subtree pull --prefix .claude/skills https://github.com/nuncaeslupus/my-skills.git main --squash
