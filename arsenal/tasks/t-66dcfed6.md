@@ -8,7 +8,7 @@ tags: [PACKAGING]
 workspace: packaging
 ---
 
-Rename the app from Glossmark to **Nacho Viewer** (short name Nacho) before the first public release (D-32). It covers the product name, window title, `identifier` (`io.github.nuncaeslupus.nacho-viewer`), package and binary names, the desktop file and MIME registration, the updater URL, the release workflow, the README, strings, the logo/icons (a single tortilla-chip mark) and the packaging plan. Settings move to a `nacho-viewer` folder; on first start the old `glossmark` folder is read when the new one is missing (recent files, theme, zoom, user.css). The owner renames the GitHub repo (GitHub redirects the old URL).
+Rename the app from Glossmark to **Nacho Viewer** (short name Nacho) before the first public release (D-32). It covers the product name, window title, `identifier` (`io.github.nuncaeslupus.NachoViewer`; Flathub discourages hyphens in app IDs), package and binary names (`nacho-viewer`; the bare `nacho` is taken on npm, crates.io and PyPI), the desktop file and MIME registration, the updater URL, the release workflow, the README, strings, the logo/icons (a single tortilla-chip mark) and the packaging plan. Settings move to a `nacho-viewer` folder; on first start the old `glossmark` folder is read when the new one is missing (recent files, theme, zoom, user.css). The owner renames the GitHub repo (GitHub redirects the old URL).
 
 ## Acceptance gate
 
