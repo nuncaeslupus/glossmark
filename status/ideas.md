@@ -70,9 +70,9 @@
 
 | ID  | Decision                                                     | Status | Date       | Sub-project |
 |-----|--------------------------------------------------------------|--------|------------|-------------|
-| D-1 | Name: Glossmark                                              | agreed | 2026-10-26 | S-1         |
+| D-1 | Name: Glossmark                                              | superseded by D-32 | 2026-10-26 | S-1         |
 | D-2 | Stack: Tauri v2 (system webview, small Rust backend)         | agreed | 2026-10-26 | S-1         |
-| D-3 | v1 is a viewer only; editing comes later (S-3)               | agreed | 2026-10-26 | S-1         |
+| D-3 | v1 is a viewer only; editing comes later (S-3)               | superseded by D-33 | 2026-10-26 | S-1         |
 | D-4 | Linux first, then Windows and macOS                          | agreed | 2026-10-26 | S-1         |
 | D-5 | Mermaid is in v1, lazy-loaded (S-2 folded into S-1)          | agreed | 2026-10-26 | S-1         |
 | D-6 | Page layout: a fixed-width paper sheet on a grey canvas, continuous scroll; print uses the same styling | agreed | 2026-10-26 | S-1 |

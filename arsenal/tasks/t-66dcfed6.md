@@ -15,8 +15,15 @@ Rename the app from Glossmark to **Nacho Viewer** (short name Nacho) before the 
 Gate: `old_name_in_shipped_files == 0` and the config fallback test passes.
 
 ```bash
-! git grep -il glossmark -- src src-tauri/src src-tauri/tauri.conf.json src-tauri/Cargo.toml package.json index.html .github/workflows \
-  && (cd src-tauri && cargo test config) && npm test
+set -e
+paths=(src src-tauri README.md package.json index.html .github/workflows)
+# config.rs keeps the old folder name on purpose: it is the fallback this task adds.
+rc=0; git grep -qi glossmark -- "${paths[@]}" ':!src-tauri/src/config.rs' || rc=$?
+[ "$rc" -eq 1 ] || { echo "old name still in shipped files (git grep exit $rc)"; exit 1; }
+if git ls-files -- "${paths[@]}" | grep -qi glossmark; then echo "old name in a file name"; exit 1; fi
+grep -q 'fn test_config_falls_back_to_glossmark_folder' src-tauri/src/config.rs
+(cd src-tauri && cargo test test_config_falls_back_to_glossmark_folder -- --exact)
+npm test
 ```
 
 ## Tests
