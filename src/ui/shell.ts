@@ -372,8 +372,10 @@ export class Shell {
     const panel = h("section", "print-dialog");
     panel.setAttribute("role", "dialog");
     panel.setAttribute("aria-modal", "true");
-    panel.setAttribute("aria-label", strings.printDialog.title);
-    panel.append(h("h2", "", strings.printDialog.title));
+    const title =
+      primary === "export" ? strings.printDialog.exportTitle : strings.printDialog.title;
+    panel.setAttribute("aria-label", title);
+    panel.append(h("h2", "", title));
 
     const sizes = h("div", "print-sizes");
     sizes.setAttribute("role", "radiogroup");

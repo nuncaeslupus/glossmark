@@ -79,6 +79,7 @@ export const strings = {
   // The print dialog (D-20): pick a paper text size, then print or save as PDF.
   printDialog: {
     title: "Print",
+    exportTitle: "Export PDF",
     size: "Text size",
     small: "Small",
     normal: "Normal",
