@@ -33,6 +33,9 @@ export interface WindowControls {
   minimize(): Promise<void>;
   toggleMaximize(): Promise<void>;
   close(): Promise<void>;
+  isMaximized(): Promise<boolean>;
+  /** Resolves to the function that stops listening. */
+  onResized(handler: () => void): Promise<() => void>;
 }
 
 export interface Backend {
@@ -90,6 +93,8 @@ export const tauriBackend: Backend = {
     minimize: () => getCurrentWindow().minimize(),
     toggleMaximize: () => getCurrentWindow().toggleMaximize(),
     close: () => getCurrentWindow().close(),
+    isMaximized: () => getCurrentWindow().isMaximized(),
+    onResized: (handler) => getCurrentWindow().onResized(() => handler()),
   },
   watch: (path) => invoke<void>("watch", { path }),
   unwatch: (path) => invoke<void>("unwatch", { path }),

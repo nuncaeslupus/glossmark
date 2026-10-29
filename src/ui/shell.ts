@@ -92,6 +92,7 @@ export class Shell {
   private config: Config | null = null;
   /** The title bar, Chrome's way: the tab strip, room to drag the window, its buttons. */
   private readonly titleBar = h("div", "titlebar");
+  private stopResize = () => {};
   private readonly tabStrip = h("nav", "tabs");
   private readonly view = h("div", "view");
   private readonly empty = h("main", "empty");
@@ -230,6 +231,7 @@ export class Shell {
     this.disposed = true;
     this.listeners.abort();
     for (const stop of this.unlisten) stop();
+    this.stopResize();
     for (const tab of this.tabs) this.watch(tab, null);
     clearTimeout(this.noticeTimer);
     clearTimeout(this.findTimer);
@@ -801,6 +803,22 @@ export class Shell {
     // The window moves by these, not by the tabs on them; a double-click maximizes.
     for (const el of [this.titleBar, brand, this.tabStrip, drag]) el.dataset.tauriDragRegion = "";
     this.titleBar.append(brand, this.tabStrip, drag);
+    // Dragging the window takes the mouse before any click, so the menus close here.
+    this.titleBar.addEventListener(
+      "mousedown",
+      (e) => {
+        if (!(e.target instanceof Element && e.target.closest(".tab-menu"))) this.closeMenus();
+      },
+      { capture: true, signal: this.listeners.signal },
+    );
+    // No scrollbar to grab on a drag region: the wheel scrolls the tabs sideways.
+    this.tabStrip.addEventListener(
+      "wheel",
+      (e) => {
+        this.tabStrip.scrollLeft += e.deltaY;
+      },
+      { passive: true, signal: this.listeners.signal },
+    );
     const controls = this.backend.window;
     // macOS keeps its own buttons, over the strip's left end.
     if (/Mac/.test(navigator.platform)) this.titleBar.classList.add("mac");
@@ -821,6 +839,27 @@ export class Shell {
       }
       box.lastElementChild?.classList.add("window-close");
       this.titleBar.append(box);
+      // Maximize turns into Restore while the window is maximized, as on Chrome.
+      const maximize = box.children[1] as HTMLButtonElement;
+      const sync = () =>
+        Promise.resolve()
+          .then(() => controls.isMaximized())
+          .then((max) => {
+            const label = max ? w.restore : w.maximize;
+            const icon = iconButton("window-button", max ? i.restore : i.maximize);
+            maximize.replaceChildren(...icon.childNodes);
+            maximize.title = label;
+            maximize.setAttribute("aria-label", label);
+          })
+          .catch(() => {});
+      void sync();
+      Promise.resolve()
+        .then(() => controls.onResized(() => void sync()))
+        .then((stop) => {
+          if (this.disposed) stop();
+          else this.stopResize = stop;
+        })
+        .catch(() => {});
     }
     return this.titleBar;
   }

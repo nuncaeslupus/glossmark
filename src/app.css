@@ -113,6 +113,11 @@ button:disabled {
   padding: 4px 4px 0;
   font-size: 0.8125rem;
   overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .drag {
