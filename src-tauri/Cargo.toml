@@ -1,5 +1,5 @@
 [package]
-name = "glossmark"
+name = "nacho-viewer"
 version = "0.1.0"
 description = "A Markdown viewer that reads like a well-typeset document"
 license = "MIT"

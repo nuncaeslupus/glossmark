@@ -1,9 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
-  <rect x="32" y="32" width="960" height="960" rx="216" fill="#1f2328"/>
-  <path d="M272 160h336l144 144v560H272z" fill="#fff"/>
-  <path d="M608 160v144h144z" fill="#c9d1d9"/>
-  <rect x="336" y="380" width="232" height="56" rx="28" fill="#1f2328"/>
-  <path d="M316 500h388l-20 128H296z" fill="#f5c400"/>
-  <rect x="336" y="536" width="352" height="56" rx="28" fill="#1f2328"/>
-  <rect x="336" y="692" width="300" height="56" rx="28" fill="#1f2328"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="135 190 794 794">
+  <!-- The mark: one tortilla chip, point down, with toasted orange spots -->
+  <g transform="translate(512 512) scale(1.25) rotate(165) translate(-520 -600)">
+    <path d="M503 323 Q520 300 537 324 Q554 347 571 371 Q587 394 595 423 Q602 452 625 473 Q647 493 655 522 Q663 551 680 574 Q697 598 716 620 Q734 643 743 672 Q751 700 765 725 Q780 750 751 757 Q722 765 693 758 Q664 752 636 758 Q607 764 578 763 Q549 763 520 758 Q491 752 462 746 Q433 740 404 751 Q376 762 347 760 Q318 759 289 754 Q260 750 276 726 Q292 702 311 680 Q330 657 339 629 Q349 601 361 575 Q373 548 395 528 Q418 508 419 475 Q421 443 446 424 Q472 406 479 376 Q485 347 503 323Z" fill="#f8cf4f" stroke="#e07f24" stroke-width="28" stroke-linejoin="round"/>
+    <g fill="#e8742a"><circle cx="500" cy="400" r="15"/><circle cx="585" cy="500" r="11"/><circle cx="660" cy="690" r="16"/><circle cx="360" cy="700" r="12"/><circle cx="530" cy="610" r="9"/><circle cx="450" cy="560" r="14"/><circle cx="590" cy="720" r="10"/><circle cx="705" cy="715" r="8"/><circle cx="395" cy="640" r="7"/><circle cx="470" cy="690" r="10"/></g>
+  </g>
 </svg>

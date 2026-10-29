@@ -3,7 +3,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Glossmark",
+        "title": "Nacho Viewer",
         "width": 1000,
         "height": 800,
         "decorations": true,

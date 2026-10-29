@@ -16,7 +16,7 @@ pub enum Theme {
     Dark,
 }
 
-/// `$XDG_CONFIG_HOME/glossmark/config.json`.
+/// `$XDG_CONFIG_HOME/nacho-viewer/config.json`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct Config {
@@ -53,8 +53,49 @@ pub struct UserCss {
     pub css: Option<String>,
 }
 
+/// The app's settings folder, `$XDG_CONFIG_HOME/nacho-viewer` (or the platform's equivalent).
+/// Settings from before the rename are carried over on first use.
 pub fn config_dir() -> Option<PathBuf> {
-    dirs::config_dir().map(|d| d.join("glossmark"))
+    let base = dirs::config_dir()?;
+    Some(settings_dir(
+        &base.join(OLD_DIR),
+        &base.join("nacho-viewer"),
+    ))
+}
+
+/// `new`, after carrying the old folder over. While that has failed, the old folder: its
+/// settings still apply, rather than defaults that would turn remote images back on.
+fn settings_dir(old: &Path, new: &Path) -> PathBuf {
+    carry_over(old, new);
+    if new.exists() || !old.is_dir() {
+        new.to_path_buf()
+    } else {
+        old.to_path_buf()
+    }
+}
+
+/// The settings folder's name before the app was renamed (D-32).
+const OLD_DIR: &str = "glossmark";
+
+/// Copies the settings and user.css from the folder used before the rename into `new`, once:
+/// only while `new` does not exist. The old folder is left as it was. The files go to a staging
+/// folder that becomes `new` only once every copy succeeded, so a failed copy (a full disk) is
+/// retried next time instead of leaving a half-made folder whose defaults would undo the user's
+/// settings, such as turning remote images back on.
+fn carry_over(old: &Path, new: &Path) {
+    if new.exists() || !old.is_dir() {
+        return;
+    }
+    let staging = new.with_extension("migrating");
+    let _ = fs::remove_dir_all(&staging);
+    let copied = fs::create_dir_all(&staging).is_ok()
+        && ["config.json", "user.css"].iter().all(|name| {
+            let from = old.join(name);
+            !from.is_file() || fs::copy(&from, staging.join(name)).is_ok()
+        });
+    if !copied || fs::rename(&staging, new).is_err() {
+        let _ = fs::remove_dir_all(&staging);
+    }
 }
 
 /// Reads the config. A missing or unreadable file gives the defaults and is left alone; a file
@@ -139,6 +180,66 @@ mod tests {
     }
 
     #[test]
+    fn test_config_falls_back_to_glossmark_folder() {
+        let base = tempfile::tempdir().unwrap();
+        let (old, new) = (base.path().join(OLD_DIR), base.path().join("nacho-viewer"));
+        fs::create_dir(&old).unwrap();
+        fs::write(
+            old.join("config.json"),
+            r#"{"version": 1, "theme": "dark"}"#,
+        )
+        .unwrap();
+        fs::write(old.join("user.css"), "body { color: red }").unwrap();
+
+        // Only the old folder: its settings and user.css are read through the new one.
+        carry_over(&old, &new);
+        assert_eq!(load(&new.join("config.json")).theme, Theme::Dark);
+        assert_eq!(
+            read_user_css(&new.join("user.css")).unwrap().css.as_deref(),
+            Some("body { color: red }")
+        );
+        assert!(
+            old.join("config.json").is_file(),
+            "the old folder is left as it was"
+        );
+
+        // Both folders: the new one wins and is not overwritten.
+        fs::write(
+            new.join("config.json"),
+            r#"{"version": 1, "theme": "light"}"#,
+        )
+        .unwrap();
+        carry_over(&old, &new);
+        assert_eq!(load(&new.join("config.json")).theme, Theme::Light);
+    }
+
+    #[test]
+    fn test_config_failed_carry_over_is_retried() {
+        let base = tempfile::tempdir().unwrap();
+        let (old, new) = (base.path().join(OLD_DIR), base.path().join("nacho-viewer"));
+        fs::create_dir(&old).unwrap();
+        fs::write(
+            old.join("config.json"),
+            r#"{"version": 1, "theme": "dark", "remoteImages": false}"#,
+        )
+        .unwrap();
+
+        // A file where the staging folder goes makes the copy fail: no half-made new folder,
+        // and the old settings stay in force, remote images included.
+        let blocker = new.with_extension("migrating");
+        fs::write(&blocker, "").unwrap();
+        let dir = settings_dir(&old, &new);
+        assert!(!new.exists());
+        assert!(!load(&dir.join("config.json")).remote_images);
+
+        fs::remove_file(&blocker).unwrap();
+        assert_eq!(settings_dir(&old, &new), new);
+        assert_eq!(load(&new.join("config.json")).theme, Theme::Dark);
+        assert!(!load(&new.join("config.json")).remote_images);
+        assert!(!blocker.exists());
+    }
+
+    #[test]
     fn test_config_read_error_keeps_file() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("config.json");
@@ -151,7 +252,7 @@ mod tests {
     #[test]
     fn test_config_round_trips_and_normalises() {
         let dir = tempfile::tempdir().unwrap();
-        let path = dir.path().join("glossmark/config.json");
+        let path = dir.path().join("nacho-viewer/config.json");
         let config = Config {
             theme: Theme::Dark,
             default_zoom: 1000,
