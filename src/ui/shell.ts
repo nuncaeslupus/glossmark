@@ -673,7 +673,7 @@ export class Shell {
       this.openFileMenu(at.left, at.bottom, pathOf(tab));
       menu.setAttribute("aria-expanded", "true");
     });
-    label.addEventListener("contextmenu", (e) => {
+    handle.addEventListener("contextmenu", (e) => {
       e.preventDefault();
       this.openFileMenu(e.clientX, e.clientY, pathOf(tab));
     });
@@ -879,9 +879,12 @@ export class Shell {
   private openFileMenu(x: number, y: number, path: string): void {
     this.closeMenus();
     this.fileMenuPath = path;
-    this.fileMenu.style.left = `${x}px`;
-    this.fileMenu.style.top = `${y}px`;
     this.fileMenu.hidden = false;
+    // Kept inside the window when opened near its right or bottom edge.
+    const { innerWidth, innerHeight } = this.root.ownerDocument.defaultView ?? window;
+    const { width, height } = this.fileMenu.getBoundingClientRect();
+    this.fileMenu.style.left = `${Math.max(0, Math.min(x, innerWidth - width))}px`;
+    this.fileMenu.style.top = `${Math.max(0, Math.min(y, innerHeight - height))}px`;
   }
 
   /** More › Restart to update to x.y.z, in its own section at the end; a later version replaces it. */

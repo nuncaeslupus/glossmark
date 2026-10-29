@@ -263,7 +263,8 @@ describe("file menu", () => {
     expect(menu?.hidden).toBe(true);
 
     // Right-clicking the tab's name offers the same menu, for that tab's file.
-    expect(rightClick(label).defaultPrevented).toBe(true);
+    // Anywhere on the tab, its buttons included.
+    expect(rightClick(root.querySelector(".tab-close")).defaultPrevented).toBe(true);
     expect(menu?.hidden).toBe(false);
     click(items[1] ?? null);
     await settle();

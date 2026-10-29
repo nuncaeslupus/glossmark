@@ -274,17 +274,20 @@ pub fn open_external(url: String, app: AppHandle) -> Result<(), IpcError> {
         .map_err(|e| IpcError::new(ErrorKind::Io, e.to_string()))
 }
 
-/// Only an open document may be shown, so the page cannot probe other paths.
+/// Only an open document may be shown, so the page cannot probe other paths. The file
+/// manager can be slow to answer, so the call waits off the main thread.
 #[tauri::command]
-pub fn reveal_file(
+pub async fn reveal_file(
     path: String,
     state: State<'_, AppState>,
     app: AppHandle,
 ) -> Result<(), IpcError> {
     let path = lock(&state.scope).check_document(Path::new(&path))?;
-    app.opener()
-        .reveal_item_in_dir(path)
-        .map_err(|e| IpcError::new(ErrorKind::Io, e.to_string()))
+    let io = |e: String| IpcError::new(ErrorKind::Io, e);
+    tauri::async_runtime::spawn_blocking(move || app.opener().reveal_item_in_dir(path))
+        .await
+        .map_err(|e| io(e.to_string()))?
+        .map_err(|e| io(e.to_string()))
 }
 
 #[cfg(test)]
