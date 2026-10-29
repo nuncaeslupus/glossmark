@@ -274,6 +274,19 @@ pub fn open_external(url: String, app: AppHandle) -> Result<(), IpcError> {
         .map_err(|e| IpcError::new(ErrorKind::Io, e.to_string()))
 }
 
+/// Only an open document may be shown, so the page cannot probe other paths.
+#[tauri::command]
+pub fn reveal_file(
+    path: String,
+    state: State<'_, AppState>,
+    app: AppHandle,
+) -> Result<(), IpcError> {
+    let path = lock(&state.scope).check_document(Path::new(&path))?;
+    app.opener()
+        .reveal_item_in_dir(path)
+        .map_err(|e| IpcError::new(ErrorKind::Io, e.to_string()))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

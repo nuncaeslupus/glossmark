@@ -86,8 +86,10 @@ export class Shell {
   private readonly tabStrip = h("nav", "tabs");
   private readonly view = h("div", "view");
   private readonly empty = h("main", "empty");
-  private readonly title = userText("span", "title", "");
   private readonly menuBar = h("div", "menu-wrap");
+  /** A tab's ▾, or a right-click on it: show its file in the file manager, or copy its path. */
+  private readonly fileMenu = h("div", "menu file-menu");
+  private fileMenuPath = "";
   private readonly notice = h("span", "notice");
   private readonly zoomReadout = h("span", "zoom");
   private readonly outlinePanel = h("nav", "outline");
@@ -169,7 +171,8 @@ export class Shell {
     const doc = root.ownerDocument;
     doc.addEventListener("keydown", (e) => this.onKey(e), { signal });
     const outside = (e: Event) => {
-      if (!(e.target instanceof Element && this.menuBar.contains(e.target))) this.closeMenus();
+      const inside = (el: Element) => this.menuBar.contains(el) || el.closest(".tab-menu");
+      if (!(e.target instanceof Element && inside(e.target))) this.closeMenus();
     };
     doc.addEventListener("click", outside, { signal });
     this.update();
@@ -642,8 +645,13 @@ export class Shell {
     handle.setAttribute("role", "tab");
     // Named in update(), since following a link changes the tab's file.
     const label = userText("button", "tab-label", "");
+    const menu = iconButton("tab-menu", strings.icons.fileMenu);
+    menu.title = strings.fileMenu.button;
+    menu.setAttribute("aria-label", strings.fileMenu.button);
+    menu.setAttribute("aria-haspopup", "menu");
+    menu.setAttribute("aria-expanded", "false");
     const close = this.actionButton("closeTab", "tab-close");
-    handle.append(label, close);
+    handle.append(label, menu, close);
 
     const canvas = h("div", "canvas");
     const sheet = h("article", "sheet");
@@ -659,6 +667,16 @@ export class Shell {
       loading: Promise.resolve(),
     };
     label.addEventListener("click", () => this.activate(tab));
+    menu.addEventListener("click", () => {
+      if (!this.fileMenu.hidden) return this.closeMenus();
+      const at = menu.getBoundingClientRect();
+      this.openFileMenu(at.left, at.bottom, pathOf(tab));
+      menu.setAttribute("aria-expanded", "true");
+    });
+    label.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+      this.openFileMenu(e.clientX, e.clientY, pathOf(tab));
+    });
     canvas.addEventListener(
       "scroll",
       () => {
@@ -744,7 +762,7 @@ export class Shell {
       const zone = h("div", "zone");
       for (const item of items) {
         if (item.kind === "button") zone.append(this.actionButton(item.action, "bar-button"));
-        else if (item.kind === "title") zone.append(this.title, this.notice);
+        else if (item.kind === "notice") zone.append(this.notice);
         else if (item.kind === "more") zone.append(this.buildMore());
         else zone.append(this.zoomReadout);
       }
@@ -827,8 +845,43 @@ export class Shell {
       list.hidden = !opening;
       button.setAttribute("aria-expanded", String(opening));
     });
-    this.menuBar.append(button, list);
+    this.menuBar.append(button, list, this.buildFileMenu());
     return this.menuBar;
+  }
+
+  private buildFileMenu(): HTMLElement {
+    const menu = this.fileMenu;
+    menu.setAttribute("role", "menu");
+    menu.hidden = true;
+    const platform = navigator.platform;
+    const m = strings.fileMenu;
+    const reveal = /Mac/.test(platform)
+      ? m.revealMac
+      : /Win/.test(platform)
+        ? m.revealWindows
+        : m.revealLinux;
+    const item = (label: string, act: (path: string) => Promise<void>, failed: string) => {
+      const button = h("button", "menu-item", label);
+      button.setAttribute("role", "menuitem");
+      button.addEventListener("click", () => {
+        this.closeMenus();
+        act(this.fileMenuPath).catch(() => this.show(failed));
+      });
+      return button;
+    };
+    menu.append(
+      item(reveal, (path) => this.backend.revealFile(path), strings.notices.revealFailed),
+      item(m.copyPath, (path) => navigator.clipboard.writeText(path), strings.notices.copyFailed),
+    );
+    return menu;
+  }
+
+  private openFileMenu(x: number, y: number, path: string): void {
+    this.closeMenus();
+    this.fileMenuPath = path;
+    this.fileMenu.style.left = `${x}px`;
+    this.fileMenu.style.top = `${y}px`;
+    this.fileMenu.hidden = false;
   }
 
   /** More › Restart to update to x.y.z, in its own section at the end; a later version replaces it. */
@@ -851,7 +904,8 @@ export class Shell {
 
   private closeMenus(): void {
     for (const list of this.menuBar.querySelectorAll<HTMLElement>(".menu")) list.hidden = true;
-    for (const button of this.menuBar.querySelectorAll(".menu-button")) {
+    const buttons = this.root.querySelectorAll(".menu-button, .tab-menu");
+    for (const button of buttons) {
       button.setAttribute("aria-expanded", "false");
     }
   }
@@ -910,7 +964,6 @@ export class Shell {
     }
     this.empty.hidden = active !== null;
     if (!active) this.drawEmpty();
-    this.title.textContent = active ? basename(pathOf(active)) : "";
     this.root.ownerDocument.title = active
       ? strings.windowTitle(basename(pathOf(active)))
       : strings.appName;

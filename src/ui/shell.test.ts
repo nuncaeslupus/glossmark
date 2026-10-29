@@ -44,12 +44,12 @@ describe("shell", () => {
     const zones = [...root.querySelectorAll(".bar > .zone")].map((zone) =>
       [
         ...zone.querySelectorAll<HTMLElement>(
-          ":is([data-action], .title, .zoom, .menu-button):not(.menu *)",
+          ":is([data-action], .zoom, .menu-button):not(.menu *)",
         ),
       ].map((el) => el.dataset.action ?? el.className),
     );
     expect(zones).toEqual([
-      ["outline", "title", "back", "forward"],
+      ["outline", "back", "forward"],
       ["zoomOut", "zoom", "zoomIn", "find"],
       ["export", "print", "menu-button"],
     ]);
@@ -97,7 +97,7 @@ describe("shell", () => {
     expect(sheet?.querySelector("h1")?.textContent).toBe("Hi");
     expect(sheet?.querySelector("script")).toBeNull();
     expect(sheet?.querySelector("b")?.textContent).toBe("ok");
-    expect(root.querySelector(".bar .title")?.textContent).toBe("a.md");
+    expect(root.querySelector(".tab.active .tab-label")?.textContent).toBe("a.md");
     expect(root.querySelector<HTMLElement>("main.empty")?.hidden).toBe(true);
   });
 
@@ -228,6 +228,46 @@ describe("shell", () => {
     expect(matchesKey("Ctrl+O", key({ key: "o", ctrlKey: true, altKey: true }))).toBe(false);
     expect(matchesKey("Ctrl+O", key({ key: "o" }))).toBe(false);
     expect(matchesKey("Alt+ArrowLeft", key({ key: "ArrowLeft", altKey: true }))).toBe(true);
+  });
+});
+
+describe("file menu", () => {
+  it("test_tab_shows_path_and_offers_reveal_and_copy", async () => {
+    const { root, state } = await open({ "/d/a.md": "# A" }, ["/d/a.md"]);
+    // The file name is on the tab only, with its path as the tooltip.
+    expect(root.querySelector(".bar .title")).toBeNull();
+    const label = root.querySelector<HTMLElement>(".tab-label");
+    expect(label?.title).toBe("/d/a.md");
+    const writeText = vi.fn(async () => {});
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+
+    const menu = root.querySelector<HTMLElement>(".file-menu");
+    const rightClick = (el: Element | null) => {
+      const e = new MouseEvent("contextmenu", { bubbles: true, cancelable: true });
+      el?.dispatchEvent(e);
+      return e;
+    };
+    // ▾ right of the name opens it.
+    const button = root.querySelector(".tab .tab-menu");
+    expect(button?.previousElementSibling).toBe(label);
+    click(button);
+    expect(menu?.hidden).toBe(false);
+    const items = [...(menu?.querySelectorAll(".menu-item") ?? [])];
+    expect(items.map((i) => i.textContent)).toEqual([
+      strings.fileMenu.revealLinux,
+      strings.fileMenu.copyPath,
+    ]);
+    click(items[0] ?? null);
+    await settle();
+    expect(state.revealed).toEqual(["/d/a.md"]);
+    expect(menu?.hidden).toBe(true);
+
+    // Right-clicking the tab's name offers the same menu, for that tab's file.
+    expect(rightClick(label).defaultPrevented).toBe(true);
+    expect(menu?.hidden).toBe(false);
+    click(items[1] ?? null);
+    await settle();
+    expect(writeText).toHaveBeenCalledWith("/d/a.md");
   });
 });
 

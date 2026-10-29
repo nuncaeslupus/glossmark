@@ -93,7 +93,7 @@ export const actions: Record<ActionId, Action> = {
 
 export type BarItem =
   | { kind: "button"; action: ActionId }
-  | { kind: "title" }
+  | { kind: "notice" }
   | { kind: "more" }
   | { kind: "zoom" };
 
@@ -101,9 +101,9 @@ export type BarItem =
 export const bar: BarItem[][] = [
   [
     { kind: "button", action: "outline" },
-    { kind: "title" },
     { kind: "button", action: "back" },
     { kind: "button", action: "forward" },
+    { kind: "notice" },
   ],
   [
     { kind: "button", action: "zoomOut" },

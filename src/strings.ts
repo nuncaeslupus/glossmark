@@ -17,6 +17,8 @@ export const strings = {
     notMarkdown: "Only Markdown files open in Glossmark.",
     watchFailed: "Changes to this file will not be shown.",
     updateFailed: "The update could not be installed.",
+    revealFailed: "The file manager could not be opened.",
+    copyFailed: "The path could not be copied.",
   },
   // One line at the top of a sheet that keeps showing the last version (live reload).
   fileNotices: {
@@ -24,6 +26,14 @@ export const strings = {
     reloadFailed: "This file could not be reloaded. Showing the last version.",
   },
   more: "More",
+  // Right-click on the file name; the file manager goes by its name on each system.
+  fileMenu: {
+    revealMac: "Show in Finder",
+    revealWindows: "Show in File Explorer",
+    revealLinux: "Show in File Manager",
+    copyPath: "Copy path",
+    button: "File options",
+  },
   restartToUpdate: (version: string) => `Restart to update to ${version}`,
   actions: {
     open: "Open…",
@@ -76,6 +86,7 @@ export const strings = {
     closeTab: "×",
     export:
       "M480-320 280-520l56-58 104 104v-326h80v326l104-104 56 58-200 200ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z",
+    fileMenu: "M480-345 240-585l56-56 184 184 184-184 56 56-240 240Z",
     more: "M480-160q-33 0-56.5-23.5T400-240q0-33 23.5-56.5T480-320q33 0 56.5 23.5T560-240q0 33-23.5 56.5T480-160Zm0-240q-33 0-56.5-23.5T400-480q0-33 23.5-56.5T480-560q33 0 56.5 23.5T560-480q0 33-23.5 56.5T480-400Zm0-240q-33 0-56.5-23.5T400-720q0-33 23.5-56.5T480-800q33 0 56.5 23.5T560-720q0 33-23.5 56.5T480-640Z",
     diagramReset: "⟲",
   },

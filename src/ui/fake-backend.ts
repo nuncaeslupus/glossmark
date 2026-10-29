@@ -19,6 +19,7 @@ export function fakeBackend(files: Record<string, string>, launch: string[] = []
       recentFiles: [],
     } as Config,
     external: [] as string[],
+    revealed: [] as string[],
     userCss: null as string | null,
     dialogPaths: [] as string[],
     dialogCalls: 0,
@@ -106,6 +107,9 @@ export function fakeBackend(files: Record<string, string>, launch: string[] = []
     },
     openExternal: async (url) => {
       state.external.push(url);
+    },
+    revealFile: async (path) => {
+      state.revealed.push(path);
     },
     watch: async (path) => {
       if (state.unwatchable.includes(path)) throw { kind: "io", message: `${path}: no watch` };
