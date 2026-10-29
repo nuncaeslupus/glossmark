@@ -24,7 +24,9 @@ files=$(git ls-files -- "${paths[@]}")
 rc=0; printf '%s\n' "$files" | grep -qi glossmark || rc=$?
 [ "$rc" -eq 1 ] || { echo "old name in a file name (grep exit $rc)"; exit 1; }
 grep -q 'fn test_config_falls_back_to_glossmark_folder' src-tauri/src/config.rs
-(cd src-tauri && cargo test test_config_falls_back_to_glossmark_folder -- --exact)
+# Full path and --exact: a bare name matches nothing and would pass with 0 tests run.
+out=$(cd src-tauri && cargo test config::tests::test_config_falls_back_to_glossmark_folder -- --exact)
+printf '%s\n' "$out"; grep -q "1 passed" <<<"$out"
 npm test
 ```
 
