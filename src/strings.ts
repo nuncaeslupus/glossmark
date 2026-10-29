@@ -100,11 +100,12 @@ export const strings = {
     forward: "→",
     zoomOut: "−",
     zoomIn: "+",
-    // A page with arrows pointing out (fill the window) or in (fixed column); the toggle swaps them.
+    // A page: a double-arrow inside pushing the walls out (fill the window), or arrows outside
+    // pushing in (fixed column). The toggle swaps them.
     sheetFill:
-      "M360-760H600V-200H360ZM400-720V-240H560V-720H400ZM120-480L240-560L240-400ZM840-480L720-560L720-400Z",
+      "M360-760H600V-200H360ZM400-720V-240H560V-720H400ZM400-480L440-512L440-448ZM560-480L520-512L520-448ZM438-492H522V-468H438Z",
     sheetFixed:
-      "M360-760H600V-200H360ZM400-720V-240H560V-720H400ZM240-480L120-560L120-400ZM720-480L840-560L840-400Z",
+      "M360-760H600V-200H360ZM400-720V-240H560V-720H400ZM360-480L300-540L300-420ZM600-480L660-540L660-420Z",
     find: "M784-120 532-372q-30 24-69 38t-83 14q-109 0-184.5-75.5T120-580q0-109 75.5-184.5T380-840q109 0 184.5 75.5T640-580q0 44-14 83t-38 69l252 252-56 56ZM380-400q75 0 127.5-52.5T560-580q0-75-52.5-127.5T380-760q-75 0-127.5 52.5T200-580q0 75 52.5 127.5T380-400Z",
     findNext: "↓",
     findPrevious: "↑",
