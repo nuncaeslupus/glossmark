@@ -194,6 +194,11 @@ button:disabled {
   margin-right: 0;
 }
 
+/* The × is a text glyph; the tab font is small, so size it up on its own. */
+.tab-close {
+  font-size: 1.15rem;
+}
+
 .tab-menu svg {
   width: 18px;
   height: 18px;
