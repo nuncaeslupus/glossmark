@@ -17,13 +17,28 @@ const doc = [
   "The third needle.",
 ].join("\n\n");
 
-const files: Record<string, string> = new URLSearchParams(location.search).has("big")
-  ? {
-      "/e2e/find.md": `[Other](other.md)\n\n${bigDocument(1024 * 1024)}`,
-      "/e2e/other.md": "# Other\n\nA small document.\n",
-    }
-  : { "/e2e/find.md": doc };
+// `?demo`: the README screenshot.
+const demo = [
+  "# Field notes on typesetting",
+  "Markdown is a *writing* format. **Nacho Viewer** treats it as a *reading* one: every file opens as a page, set with care, ready to print.",
+  "> [!TIP]\n> Open any `.md` file with Nacho Viewer and it reads like a finished document.",
+  "## What a good page needs",
+  "1. A comfortable measure, around 70 characters a line\n2. Generous leading and quiet headings\n3. ==Highlights== that survive printing",
+  "| Element | Rendered as |\n| --- | --- |\n| Tables | Ruled, aligned columns |\n| Code | Highlighted, monospaced |\n| Math | Typeset with KaTeX |",
+  "```js\nconst page = render(markdown);\nprint(page); // to PDF, as seen\n```",
+  "Einstein's famous result, $E = mc^2$, sits inline with the text.",
+].join("\n\n");
+
+const params = new URLSearchParams(location.search);
+const files: Record<string, string> = params.has("demo")
+  ? { "/home/you/notes/README.md": "# Readme\n", "/home/you/notes/field-notes.md": demo }
+  : params.has("big")
+    ? {
+        "/e2e/find.md": `[Other](other.md)\n\n${bigDocument(1024 * 1024)}`,
+        "/e2e/other.md": "# Other\n\nA small document.\n",
+      }
+    : { "/e2e/find.md": doc };
 
 const root = document.getElementById("app") as HTMLElement;
-const { backend } = fakeBackend(files, ["/e2e/find.md"]);
+const { backend } = fakeBackend(files, params.has("demo") ? Object.keys(files) : ["/e2e/find.md"]);
 void new Shell(root, backend).start();
