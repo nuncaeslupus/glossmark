@@ -212,6 +212,14 @@ describe("shell", () => {
     expect(root.querySelector<HTMLElement>("main.empty")?.hidden).toBe(false);
   });
 
+  it("test_open_rejects_non_markdown", async () => {
+    const { root, shell } = await open({ "/n/a.md": "a" }, []);
+    await shell.openPaths(["/n/doc.pdf", "/n/a.md"]);
+    expect(notice(root)).toBe(strings.notices.notMarkdown);
+    expect(root.querySelectorAll(".tab")).toHaveLength(1);
+    expect(root.querySelector(".tab-label")?.textContent).toBe("a.md");
+  });
+
   it("test_recent_files_newest_first_and_capped", async () => {
     const files = Object.fromEntries([...Array(12).keys()].map((i) => [`/n/${i}.md`, "x"]));
     const { root, shell, state } = await open(files, []);

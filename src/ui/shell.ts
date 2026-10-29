@@ -8,7 +8,7 @@ import { applyUserCss } from "../themes/user-css";
 import { type ActionId, actions, bar, matchesKey, menus } from "./definition";
 import { clearMatches, highlightMatches } from "./find";
 import { type Backend, type Config, type Doc, type DocumentChanged, errorMessage } from "./ipc";
-import { type Entry, findTarget, type Gesture, History, route } from "./links";
+import { type Entry, findTarget, type Gesture, History, MARKDOWN, route } from "./links";
 import { currentSection, type Section, sections } from "./outline";
 import { restoreScroll, scrollAnchor, watchFile } from "./watch";
 import { clampZoom, sheetLayout, stepZoom } from "./zoom";
@@ -287,7 +287,10 @@ export class Shell {
 
   /** Opens each path in a new tab, or focuses its tab; the last one becomes active. */
   async openPaths(paths: string[]): Promise<void> {
-    await this.openEntries(paths.map((path) => ({ path, fragment: "", scroll: 0 })));
+    // Dialog, drop, launch args and recent files all land here; only Markdown opens (D-14).
+    const markdown = paths.filter((path) => MARKDOWN.test(path));
+    if (markdown.length < paths.length) this.show(strings.notices.notMarkdown);
+    await this.openEntries(markdown.map((path) => ({ path, fragment: "", scroll: 0 })));
   }
 
   private async openEntries(entries: Entry[]): Promise<void> {
