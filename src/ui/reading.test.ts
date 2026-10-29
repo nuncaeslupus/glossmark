@@ -244,6 +244,26 @@ describe("reading tools", () => {
     expect(highlightMatches(root, "").marks).toEqual([]);
   });
 
+  it("test_find_ignores_accents_and_case", () => {
+    const root = document.createElement("div");
+    // Precomposed, decomposed (e + combining acute), and an emoji before the match.
+    root.innerHTML = "<p>Canción, cancion, CANCIÓN, cance\u0301 😀camión</p>";
+    const text = (q: string) => highlightMatches(root, q).marks.map((m) => m.textContent);
+    expect(text("cancion")).toEqual(["Canción", "cancion", "CANCIÓN"]);
+    expect(text("canción")).toEqual(["Canción", "cancion", "CANCIÓN"]);
+    expect(text("cance")).toEqual(["cance\u0301"]);
+    expect(text("camion")).toEqual(["camión"]);
+    clearMatches(root);
+    expect(root.textContent).toBe("Canción, cancion, CANCIÓN, cance\u0301 😀camión");
+    // Final sigma matches its capital; Hangul syllables are never split; a mark outside the
+    // BMP stays with its letter.
+    root.innerHTML = "<p>ΛΌΓΟΣ λόγος 한국 a\u{1D167}b</p>";
+    expect(text("λόγος")).toEqual(["ΛΌΓΟΣ", "λόγος"]);
+    expect(text("하")).toEqual([]);
+    expect(text("한")).toEqual(["한"]);
+    expect(text("a")).toEqual(["a\u{1D167}"]);
+  });
+
   it("test_ctrl_plus_matches_zoom_in", () => {
     const key = (init: KeyboardEventInit) => new KeyboardEvent("keydown", init);
     expect(matchesKey("Ctrl+=", key({ key: "+", ctrlKey: true, shiftKey: true }))).toBe(true);
