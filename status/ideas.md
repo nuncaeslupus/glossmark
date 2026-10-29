@@ -62,8 +62,9 @@
 |-----|----------------------|--------|-----------|--------------|
 | S-1 | Viewer v1            | A, B, E, F | specified | status/specification.md |
 | S-2 | Diagram rendering    | B      | dropped   |              |
-| S-3 | Editing              | C      | parked    |              |
+| S-3 | Editing              | C      | dropped   |              |
 | S-4 | Packaging and stores | D      | specified | arsenal/project/packaging/spec.md |
+| S-5 | Images and PDF pages | A      | exploring |              |
 
 ## Decision log
 
@@ -98,3 +99,5 @@
 | D-29 | Export to PDF works on Windows (WebView2) and macOS (WKWebView) before their builds ship | agreed | 2026-10-28 | S-4 |
 | D-30 | Print and Export paginate well: headings keep with the text that follows, no widow or orphan lines, and code blocks, table rows, images and diagrams are not split where they fit on one page | agreed | 2026-10-28 | S-1 |
 | D-31 | The Tauri updater is on in every build that can replace itself (AppImage, .msi/.exe, .dmg), including the winget and Homebrew installs, which use the same binaries; the cask declares `auto_updates true`. It is off under Flatpak, Snap and the .deb (apt) | agreed | 2026-10-28 | S-4 |
+| D-32 | Rename before v0: Glossmark becomes **Nacho Viewer** (short name Nacho); a single tortilla-chip mark for the logo. The old `glossmark` settings folder is still read | agreed | 2026-10-29 | S-4 |
+| D-33 | One free universal viewer, no editor (S-3 dropped): Markdown now; images (zoom, fit, rotate and save) and PDF (view; reorder, rotate and delete pages, then save) after v0 as S-5 | agreed | 2026-10-29 | S-5 |
