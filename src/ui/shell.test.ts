@@ -272,6 +272,43 @@ describe("file menu", () => {
   });
 });
 
+describe("title bar", () => {
+  it("test_title_bar_drags_and_has_window_controls", async () => {
+    const fake = fakeBackend({});
+    const calls: string[] = [];
+    fake.backend.window = {
+      minimize: async () => void calls.push("minimize"),
+      toggleMaximize: async () => void calls.push("maximize"),
+      close: async () => void calls.push("close"),
+    };
+    const root = document.createElement("div");
+    const shell = new Shell(root, fake.backend);
+    shells.push(shell);
+    const bar = root.querySelector(".titlebar");
+    // The app's mark and name, then the tabs.
+    expect(bar?.firstElementChild?.className).toBe("brand");
+    expect(bar?.firstElementChild?.textContent).toBe(strings.appName);
+    expect(bar?.querySelector(".tabs")).not.toBeNull();
+    expect(root.querySelector(".titlebar .drag")?.hasAttribute("data-tauri-drag-region")).toBe(
+      true,
+    );
+    const buttons = [...root.querySelectorAll<HTMLElement>(".window-controls button")];
+    expect(buttons.map((b) => b.getAttribute("aria-label"))).toEqual([
+      "Minimize",
+      "Maximize",
+      "Close",
+    ]);
+    for (const b of buttons) click(b);
+    expect(calls).toEqual(["minimize", "maximize", "close"]);
+  });
+
+  it("test_title_bar_without_controls_when_system_draws_them", async () => {
+    const { root } = await open({}, []);
+    expect(root.querySelector(".titlebar")).not.toBeNull();
+    expect(root.querySelector(".window-controls")).toBeNull();
+  });
+});
+
 describe("view source", () => {
   it("test_view_source_shows_markdown_and_back", async () => {
     const { root } = await open({ "/d/a.md": "# A\n\n*b*" }, ["/d/a.md"]);
