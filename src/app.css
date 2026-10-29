@@ -66,22 +66,87 @@ button:disabled {
   cursor: default;
 }
 
-.tabs[hidden],
 .empty[hidden],
 .outline[hidden],
 .find[hidden] {
   display: none;
 }
 
-/* Tab strip, above the bar */
+/* Title bar (Chrome's): the tab strip, room to drag the window, and its buttons */
+.titlebar {
+  display: flex;
+  min-height: 36px;
+  background: var(--tabs);
+  color: var(--chrome-ink);
+  user-select: none;
+}
+
+/* The app's mark and name, at the strip's left end; dragging there moves the window */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px 0 10px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.brand > * {
+  pointer-events: none;
+}
+
+.brand img {
+  width: 18px;
+  height: 18px;
+}
+
+/* Room for macOS's own buttons */
+.titlebar.mac {
+  padding-left: 72px;
+}
+
 .tabs {
   display: flex;
   gap: 1px;
+  min-width: 0;
   padding: 4px 4px 0;
-  background: var(--tabs);
-  color: var(--chrome-ink);
   font-size: 0.8125rem;
   overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.drag {
+  flex: 1;
+  min-width: 48px;
+}
+
+.window-controls {
+  display: flex;
+}
+
+.window-button {
+  width: 46px;
+  height: 36px;
+}
+
+.window-button svg {
+  width: 20px;
+  height: 20px;
+  fill: currentcolor;
+}
+
+.window-button:hover {
+  background: var(--chrome-hover);
+}
+
+.window-close:hover {
+  background: #c42b1c;
+  color: #fff;
 }
 
 .tab {

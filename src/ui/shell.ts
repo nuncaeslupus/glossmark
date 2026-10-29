@@ -1,3 +1,4 @@
+import logo from "../../assets/icon.svg?url";
 import { renderDocument } from "../render/document";
 import { blockRemoteImages, imagePolicy } from "../render/enhance/images";
 import { diagramsForPaper } from "../render/enhance/mermaid";
@@ -89,6 +90,9 @@ export class Shell {
   private tabs: Tab[] = [];
   private active: Tab | null = null;
   private config: Config | null = null;
+  /** The title bar, Chrome's way: the tab strip, room to drag the window, its buttons. */
+  private readonly titleBar = h("div", "titlebar");
+  private stopResize = () => {};
   private readonly tabStrip = h("nav", "tabs");
   private readonly view = h("div", "view");
   private readonly empty = h("main", "empty");
@@ -172,7 +176,7 @@ export class Shell {
     this.tabStrip.setAttribute("role", "tablist");
     this.outlinePanel.setAttribute("aria-label", strings.actions.outline);
     this.view.append(this.empty, this.outlinePanel);
-    root.replaceChildren(this.tabStrip, this.buildBar(), this.view);
+    root.replaceChildren(this.buildTitleBar(), this.buildBar(), this.view);
     this.notice.setAttribute("role", "status");
     const signal = this.listeners.signal;
     this.view.addEventListener("click", (e) => this.onLinkClick(e), { signal });
@@ -227,6 +231,7 @@ export class Shell {
     this.disposed = true;
     this.listeners.abort();
     for (const stop of this.unlisten) stop();
+    this.stopResize();
     for (const tab of this.tabs) this.watch(tab, null);
     clearTimeout(this.noticeTimer);
     clearTimeout(this.findTimer);
@@ -788,6 +793,77 @@ export class Shell {
     return button;
   }
 
+  private buildTitleBar(): HTMLElement {
+    const drag = h("div", "drag");
+    const brand = h("div", "brand");
+    const mark = h("img");
+    mark.src = logo;
+    mark.alt = "";
+    brand.append(mark, h("span", "", strings.appName));
+    // The window moves by these, not by the tabs on them; a double-click maximizes.
+    for (const el of [this.titleBar, brand, this.tabStrip, drag]) el.dataset.tauriDragRegion = "";
+    this.titleBar.append(brand, this.tabStrip, drag);
+    // Dragging the window takes the mouse before any click, so the menus close here.
+    this.titleBar.addEventListener(
+      "mousedown",
+      (e) => {
+        if (!(e.target instanceof Element && e.target.closest(".tab-menu"))) this.closeMenus();
+      },
+      { capture: true, signal: this.listeners.signal },
+    );
+    // No scrollbar to grab on a drag region: the wheel scrolls the tabs sideways.
+    this.tabStrip.addEventListener(
+      "wheel",
+      (e) => {
+        this.tabStrip.scrollLeft += e.deltaY;
+      },
+      { passive: true, signal: this.listeners.signal },
+    );
+    const controls = this.backend.window;
+    // macOS keeps its own buttons, over the strip's left end.
+    if (/Mac/.test(navigator.platform)) this.titleBar.classList.add("mac");
+    else if (controls) {
+      const w = strings.windowControls;
+      const i = strings.icons;
+      const box = h("div", "window-controls");
+      for (const [label, icon, act] of [
+        [w.minimize, i.minimize, () => controls.minimize()],
+        [w.maximize, i.maximize, () => controls.toggleMaximize()],
+        [w.close, i.closeWindow, () => controls.close()],
+      ] as const) {
+        const button = iconButton("window-button", icon);
+        button.title = label;
+        button.setAttribute("aria-label", label);
+        button.addEventListener("click", () => void act());
+        box.append(button);
+      }
+      box.lastElementChild?.classList.add("window-close");
+      this.titleBar.append(box);
+      // Maximize turns into Restore while the window is maximized, as on Chrome.
+      const maximize = box.children[1] as HTMLButtonElement;
+      const sync = () =>
+        Promise.resolve()
+          .then(() => controls.isMaximized())
+          .then((max) => {
+            const label = max ? w.restore : w.maximize;
+            const icon = iconButton("window-button", max ? i.restore : i.maximize);
+            maximize.replaceChildren(...icon.childNodes);
+            maximize.title = label;
+            maximize.setAttribute("aria-label", label);
+          })
+          .catch(() => {});
+      void sync();
+      Promise.resolve()
+        .then(() => controls.onResized(() => void sync()))
+        .then((stop) => {
+          if (this.disposed) stop();
+          else this.stopResize = stop;
+        })
+        .catch(() => {});
+    }
+    return this.titleBar;
+  }
+
   private buildBar(): HTMLElement {
     const header = h("header", "bar");
     for (const items of bar) {
@@ -1000,7 +1076,6 @@ export class Shell {
 
   private update(): void {
     const { active } = this;
-    this.tabStrip.hidden = this.tabs.length === 0;
     for (const tab of this.tabs) {
       tab.label.textContent = basename(pathOf(tab));
       tab.label.title = pathOf(tab);

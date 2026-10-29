@@ -22,7 +22,7 @@ test("test_print_media_hides_app_controls", async ({ page }) => {
   await open(page, "light");
   await page.locator(".bar-button[data-action=outline]").click();
   await page.locator(".bar-button[data-action=find]").click();
-  for (const selector of [".bar", ".tabs", ".outline", ".find"]) {
+  for (const selector of [".bar", ".titlebar", ".outline", ".find"]) {
     expect(await display(page, selector), `${selector} on screen`).not.toBe("none");
   }
   // A zoomed diagram prints unzoomed, without its view controls.
@@ -32,7 +32,7 @@ test("test_print_media_hides_app_controls", async ({ page }) => {
   expect(await svg.evaluate((el) => getComputedStyle(el).transform)).toBe("none");
   for (const selector of [
     ".bar",
-    ".tabs",
+    ".titlebar",
     ".outline",
     ".find",
     ".sheet .code-block > .copy",

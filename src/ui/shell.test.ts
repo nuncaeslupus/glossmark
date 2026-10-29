@@ -272,6 +272,76 @@ describe("file menu", () => {
   });
 });
 
+describe("title bar", () => {
+  it("test_title_bar_drags_and_has_window_controls", async () => {
+    const fake = fakeBackend({});
+    const calls: string[] = [];
+    fake.backend.window = {
+      minimize: async () => void calls.push("minimize"),
+      toggleMaximize: async () => void calls.push("maximize"),
+      close: async () => void calls.push("close"),
+      isMaximized: async () => calls.includes("maximize"),
+      onResized: async (handler) => {
+        resized = handler;
+        return () => {};
+      },
+    };
+    let resized = () => {};
+    const root = document.createElement("div");
+    const shell = new Shell(root, fake.backend);
+    shells.push(shell);
+    const bar = root.querySelector(".titlebar");
+    // The app's mark and name, then the tabs.
+    expect(bar?.firstElementChild?.className).toBe("brand");
+    expect(bar?.firstElementChild?.textContent).toBe(strings.appName);
+    expect(bar?.querySelector(".tabs")).not.toBeNull();
+    expect(root.querySelector(".titlebar .drag")?.hasAttribute("data-tauri-drag-region")).toBe(
+      true,
+    );
+    const buttons = [...root.querySelectorAll<HTMLElement>(".window-controls button")];
+    expect(buttons.map((b) => b.getAttribute("aria-label"))).toEqual([
+      "Minimize",
+      "Maximize",
+      "Close",
+    ]);
+    for (const b of buttons) click(b);
+    expect(calls).toEqual(["minimize", "maximize", "close"]);
+    // Maximize reads Restore once the window is maximized.
+    resized();
+    await settle();
+    expect(buttons[1]?.getAttribute("aria-label")).toBe(strings.windowControls.restore);
+    // A menu closes when the title bar is pressed, since dragging swallows the click.
+    const more = root.querySelector<HTMLElement>(".bar .menu-button");
+    click(more);
+    root
+      .querySelector(".titlebar .drag")
+      ?.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+    expect(root.querySelector<HTMLElement>(".bar .menu")?.hidden).toBe(true);
+  });
+
+  it("test_title_bar_without_controls_when_system_draws_them", async () => {
+    const fake = fakeBackend({});
+    const never = async () => {};
+    fake.backend.window = {
+      minimize: never,
+      toggleMaximize: never,
+      close: never,
+      isMaximized: async () => false,
+      onResized: async () => () => {},
+    };
+    const platform = vi.spyOn(navigator, "platform", "get").mockReturnValue("MacIntel");
+    try {
+      const root = document.createElement("div");
+      shells.push(new Shell(root, fake.backend));
+      // macOS draws its own buttons over the strip, which leaves room for them.
+      expect(root.querySelector(".titlebar.mac")).not.toBeNull();
+      expect(root.querySelector(".window-controls")).toBeNull();
+    } finally {
+      platform.mockRestore();
+    }
+  });
+});
+
 describe("view source", () => {
   it("test_view_source_shows_markdown_and_back", async () => {
     const { root } = await open({ "/d/a.md": "# A\n\n*b*" }, ["/d/a.md"]);
