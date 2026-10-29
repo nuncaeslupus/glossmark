@@ -280,6 +280,7 @@ describe("title bar", () => {
       minimize: async () => void calls.push("minimize"),
       toggleMaximize: async () => void calls.push("maximize"),
       close: async () => void calls.push("close"),
+      startDragging: async () => void calls.push("drag"),
       isMaximized: async () => calls.includes("maximize"),
       onResized: async (handler) => {
         resized = handler;
@@ -295,9 +296,25 @@ describe("title bar", () => {
     expect(bar?.firstElementChild?.className).toBe("brand");
     expect(bar?.firstElementChild?.textContent).toBe(strings.appName);
     expect(bar?.querySelector(".tabs")).not.toBeNull();
-    expect(root.querySelector(".titlebar .drag")?.hasAttribute("data-tauri-drag-region")).toBe(
-      true,
-    );
+    // A press alone does not move the window, or GTK keeps it grabbed; moving does.
+    const drag = root.querySelector(".titlebar .drag") as HTMLElement;
+    const mouse = (type: string, x: number, init: MouseEventInit = {}) =>
+      (type === "mousedown" ? drag : window).dispatchEvent(
+        new MouseEvent(type, { bubbles: true, clientX: x, clientY: 5, buttons: 1, ...init }),
+      );
+    mouse("mousedown", 10);
+    mouse("mouseup", 10);
+    mouse("mousemove", 40);
+    await settle();
+    expect(calls).toEqual([]);
+    mouse("mousedown", 10);
+    mouse("mousemove", 40);
+    await settle();
+    expect(calls).toEqual(["drag"]);
+    mouse("mousedown", 10, { detail: 2 });
+    await settle();
+    expect(calls).toEqual(["drag", "maximize"]);
+    calls.length = 0;
     const buttons = [...root.querySelectorAll<HTMLElement>(".window-controls button")];
     expect(buttons.map((b) => b.getAttribute("aria-label"))).toEqual([
       "Minimize",
@@ -326,6 +343,7 @@ describe("title bar", () => {
       minimize: never,
       toggleMaximize: never,
       close: never,
+      startDragging: never,
       isMaximized: async () => false,
       onResized: async () => () => {},
     };

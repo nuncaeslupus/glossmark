@@ -33,6 +33,7 @@ export interface WindowControls {
   minimize(): Promise<void>;
   toggleMaximize(): Promise<void>;
   close(): Promise<void>;
+  startDragging(): Promise<void>;
   isMaximized(): Promise<boolean>;
   /** Resolves to the function that stops listening. */
   onResized(handler: () => void): Promise<() => void>;
@@ -93,6 +94,7 @@ export const tauriBackend: Backend = {
     minimize: () => getCurrentWindow().minimize(),
     toggleMaximize: () => getCurrentWindow().toggleMaximize(),
     close: () => getCurrentWindow().close(),
+    startDragging: () => getCurrentWindow().startDragging(),
     isMaximized: () => getCurrentWindow().isMaximized(),
     onResized: (handler) => getCurrentWindow().onResized(() => handler()),
   },

@@ -33,6 +33,17 @@ impl IpcError {
         )
     }
 
+    /// A path whose folder is gone, such as a recent file in a folder renamed since.
+    pub fn not_found(path: &Path) -> Self {
+        Self::new(
+            ErrorKind::NotFound,
+            format!(
+                "{} no longer exists; it may have been moved or renamed",
+                path.display()
+            ),
+        )
+    }
+
     pub fn from_io(err: &io::Error, path: &Path) -> Self {
         let kind = match err.kind() {
             io::ErrorKind::NotFound => ErrorKind::NotFound,
