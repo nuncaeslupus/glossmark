@@ -99,6 +99,24 @@
     break-inside: avoid;
   }
 
+  /* WebKit honours break-inside but ignores break-after, so a heading can still strand at a
+   * page foot. Give each heading an unsplittable band below its text (break-inside: avoid
+   * already applies above): if the band won't fit, the whole heading drops to the next page,
+   * and the negative margin lets the following text sit in the band so no gap shows. The
+   * heading thus keeps ~2 lines of its text with it.
+   * ponytail: 3rem ≈ 2 body lines; raise it if more lead text must stay with the heading. */
+  .sheet :is(h1, h2, h3, h4, h5, h6)::after {
+    content: "";
+    display: block;
+    height: 3rem;
+    margin-bottom: -3rem;
+  }
+
+  /* A table that fits a page stays whole (rule above); one that doesn't breaks between rows. */
+  .sheet tr {
+    break-inside: avoid;
+  }
+
   .sheet :is(p, li, dd) {
     orphans: 3;
     widows: 3;

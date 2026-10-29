@@ -91,6 +91,32 @@ test("test_print_keeps_blocks_whole", async ({ page }) => {
   expect(seen.wrap).toBe("pre-wrap");
 });
 
+test("print keeps headings with their text", async ({ page }) => {
+  // WebKit ignores `break-after`, so the fix is a reserved band below each heading, inside
+  // `break-inside: avoid`. Playwright cannot paginate WebKit (page.pdf is Chromium-only), so
+  // assert the mechanism is in place; the owner judges the exported PDF in the PR.
+  await open(page, "light");
+  await page.emulateMedia({ media: "print" });
+  const seen = await page.evaluate(() => {
+    const h2 = document.querySelector(".sheet h2") as Element;
+    const after = getComputedStyle(h2, "::after");
+    const row = document.querySelector(".sheet tr");
+    return {
+      display: after.display,
+      height: Number.parseFloat(after.height),
+      marginBottom: Number.parseFloat(after.marginBottom),
+      headingBreakInside: getComputedStyle(h2).breakInside,
+      row: row && getComputedStyle(row).breakInside,
+    };
+  });
+  expect(seen.display).toBe("block");
+  expect(seen.height).toBeGreaterThan(0);
+  // The band is pulled back by a matching negative margin, so it adds no visible gap.
+  expect(seen.marginBottom).toBeCloseTo(-seen.height, 0);
+  expect(seen.headingBreakInside).toBe("avoid");
+  expect(seen.row).toBe("avoid");
+});
+
 test("test_print_draws_diagrams_light", async ({ page }) => {
   // The stub records the diagram's fill at the moment print() runs.
   // The stub records every diagram's fill, and the fences still waiting, when print() runs.
