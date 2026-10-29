@@ -439,9 +439,13 @@ button:disabled {
 }
 
 .find-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 28px;
   height: 28px;
   border-radius: 50%;
+  font-size: 1.15rem;
 }
 
 .find-button:hover:enabled {
