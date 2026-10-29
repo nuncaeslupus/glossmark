@@ -27,6 +27,9 @@ export function fakeBackend(files: Record<string, string>, launch: string[] = []
     savePath: null as string | null,
     saveNames: [] as string[],
     exported: [] as string[],
+    /** Calls to the core's print; `printHandled` is what it answers. */
+    printed: 0,
+    printHandled: false,
     reads: 0,
     unwatchCalls: 0,
     updateChecks: 0,
@@ -74,6 +77,10 @@ export function fakeBackend(files: Record<string, string>, launch: string[] = []
     },
     exportPdf: async (path) => {
       state.exported.push(path);
+    },
+    printDocument: async () => {
+      state.printed++;
+      return state.printHandled;
     },
     readDocument: async (path) => {
       state.reads++;

@@ -168,6 +168,15 @@ pub async fn export_pdf<R: Runtime>(
     export::print_to_pdf(&window, &path)
 }
 
+/// File › Print through the same page setup as Export; `false` asks the frontend to print itself.
+#[tauri::command]
+pub async fn print_document<R: Runtime>(app: AppHandle<R>) -> Result<bool, IpcError> {
+    let window = app
+        .get_webview_window("main")
+        .ok_or_else(|| IpcError::new(ErrorKind::Io, "no window to print"))?;
+    export::print_dialog(&window)
+}
+
 /// Called once after first paint; a newer version arrives as `update-available`.
 #[tauri::command]
 pub async fn check_update<R: Runtime>(app: AppHandle<R>) -> Result<(), IpcError> {

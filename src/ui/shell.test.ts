@@ -89,6 +89,28 @@ describe("shell", () => {
     expect(state.exported).toEqual(["/out/notes.pdf"]);
   });
 
+  it("test_print_uses_the_cores_page_where_offered", async () => {
+    const { root, state } = await open({ "/n/notes.md": "# A" }, ["/n/notes.md"]);
+    const browserPrint = vi.spyOn(window, "print").mockImplementation(() => {});
+    try {
+      const printButton = root.querySelector('.bar [data-action="print"]');
+      // Linux: the core prints the same page as the PDF, and the webview's print stays unused.
+      state.printHandled = true;
+      click(printButton);
+      for (let i = 0; i < 5; i++) await settle();
+      expect(state.printed).toBe(1);
+      expect(browserPrint).not.toHaveBeenCalled();
+      // Elsewhere the core declines and the webview prints.
+      state.printHandled = false;
+      click(printButton);
+      for (let i = 0; i < 5; i++) await settle();
+      expect(state.printed).toBe(2);
+      expect(browserPrint).toHaveBeenCalledTimes(1);
+    } finally {
+      browserPrint.mockRestore();
+    }
+  });
+
   it("test_tab_renders_sanitised_document", async () => {
     const { root } = await open({ "/n/a.md": "# Hi\n\n<script>x()</script><b>ok</b>" }, [
       "/n/a.md",
