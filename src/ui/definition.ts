@@ -63,7 +63,13 @@ export const actions: Record<ActionId, Action> = {
   zoomOut: { id: "zoomOut", label: a.zoomOut, icon: i.zoomOut, key: "Ctrl+-", needsDocument: true },
   zoomIn: { id: "zoomIn", label: a.zoomIn, icon: i.zoomIn, key: "Ctrl+=", needsDocument: true },
   zoomReset: { id: "zoomReset", label: a.zoomReset, key: "Ctrl+0", needsDocument: true },
-  fitWidth: { id: "fitWidth", label: a.fitWidth, key: "Ctrl+9", needsDocument: true },
+  wideSheet: {
+    id: "wideSheet",
+    label: a.wideSheet,
+    icon: i.wideSheet,
+    key: "Ctrl+9",
+    needsDocument: true,
+  },
   find: { id: "find", label: a.find, icon: i.find, key: "Ctrl+F", needsDocument: true },
   findNext: {
     id: "findNext",
@@ -106,7 +112,12 @@ export const bar: BarItem[][] = [
     { kind: "button", action: "forward" },
     { kind: "notice" },
   ],
-  [{ kind: "button", action: "zoomOut" }, { kind: "zoom" }, { kind: "button", action: "zoomIn" }],
+  [
+    { kind: "button", action: "zoomOut" },
+    { kind: "zoom" },
+    { kind: "button", action: "zoomIn" },
+    { kind: "button", action: "wideSheet" },
+  ],
   [
     { kind: "button", action: "find" },
     { kind: "button", action: "export" },
@@ -123,7 +134,7 @@ export const menus: ActionId[][] = [
     "zoomIn",
     "zoomOut",
     "zoomReset",
-    "fitWidth",
+    "wideSheet",
     "find",
     "viewSource",
     "theme",

@@ -322,11 +322,13 @@ button:disabled {
   box-sizing: border-box;
 }
 
+/* --sheet-max and --sheet-pad come from the window's width (sheetLayout): a zoomed sheet
+ * rewraps rather than overflowing the canvas. */
 .sheet {
   box-sizing: border-box;
-  max-width: 816px;
+  max-width: var(--sheet-max, 816px);
   margin: 0 auto;
-  padding: 72px 80px;
+  padding: calc(72px * var(--sheet-pad, 1)) calc(80px * var(--sheet-pad, 1));
   background: var(--paper, #fff);
   box-shadow: 0 1px 4px rgb(0 0 0 / 20%);
 }

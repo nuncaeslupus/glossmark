@@ -6,7 +6,7 @@ export const strings = {
   recentFiles: "Recent files",
   documentError: "This document could not be opened.",
   zoomPercent: (percent: number) => `${percent}%`,
-  zoomToggle: "Fit to width, or back to 100%",
+  zoomToggle: "Back to 100%",
   notices: {
     openFailed: "The Open dialog could not be shown.",
     exportFailed: "The PDF could not be saved.",
@@ -56,7 +56,7 @@ export const strings = {
     zoomOut: "Zoom out",
     zoomIn: "Zoom in",
     zoomReset: "Actual size",
-    fitWidth: "Fit to width",
+    wideSheet: "Page as wide as the window",
     find: "Find",
     findNext: "Next match",
     findPrevious: "Previous match",
@@ -86,6 +86,8 @@ export const strings = {
     forward: "→",
     zoomOut: "−",
     zoomIn: "+",
+    wideSheet:
+      "M160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h640q33 0 56.5 23.5T880-720v480q0 33-23.5 56.5T800-160H160Zm0-80h40v-480h-40v480Zm120 0h400v-480H280v480Zm480 0h40v-480h-40v480ZM280-720v480-480Z",
     find: "M784-120 532-372q-30 24-69 38t-83 14q-109 0-184.5-75.5T120-580q0-109 75.5-184.5T380-840q109 0 184.5 75.5T640-580q0 44-14 83t-38 69l252 252-56 56ZM380-400q75 0 127.5-52.5T560-580q0-75-52.5-127.5T380-760q-75 0-127.5 52.5T200-580q0 75 52.5 127.5T380-400Z",
     findNext: "↓",
     findPrevious: "↑",

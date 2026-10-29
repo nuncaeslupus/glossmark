@@ -50,7 +50,7 @@ describe("shell", () => {
     );
     expect(zones).toEqual([
       ["outline", "back", "forward"],
-      ["zoomOut", "zoom", "zoomIn"],
+      ["zoomOut", "zoom", "zoomIn", "wideSheet"],
       ["find", "export", "print", "menu-button"],
     ]);
     // One ⋮ More button replaces the text menus, and lists every one of their commands.

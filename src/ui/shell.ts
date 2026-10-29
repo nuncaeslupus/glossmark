@@ -11,7 +11,7 @@ import { type Backend, type Config, type Doc, type DocumentChanged, errorMessage
 import { type Entry, findTarget, type Gesture, History, route } from "./links";
 import { currentSection, type Section, sections } from "./outline";
 import { restoreScroll, scrollAnchor, watchFile } from "./watch";
-import { clampZoom, fitWidth, stepZoom } from "./zoom";
+import { clampZoom, sheetLayout, stepZoom } from "./zoom";
 
 const MAX_RECENT_FILES = 10;
 const NOTICE_MS = 6000;
@@ -119,6 +119,8 @@ export class Shell {
   private sectionHeld = false;
   private saveTimer: ReturnType<typeof setTimeout> | undefined;
   private remoteItem: HTMLElement | null = null;
+  /** The sheet fills the window rather than keeping a book's line length. */
+  private wide = false;
   private shortcutsPanel: HTMLElement | null = null;
   private themeItem: HTMLElement | null = null;
   private sourceItem: HTMLElement | null = null;
@@ -146,7 +148,10 @@ export class Shell {
     zoomOut: () => this.setZoom(stepZoom(this.zoom, -1)),
     zoomIn: () => this.setZoom(stepZoom(this.zoom, 1)),
     zoomReset: () => this.setZoom(100),
-    fitWidth: () => this.active && this.setZoom(fitWidth(this.active.canvas.clientWidth)),
+    wideSheet: () => {
+      this.wide = !this.wide;
+      this.saveSettings();
+    },
     find: () => this.openFind(),
     findNext: () => this.stepFind(1),
     findPrevious: () => this.stepFind(-1),
@@ -182,6 +187,7 @@ export class Shell {
       if (!(e.target instanceof Element && inside(e.target))) this.closeMenus();
     };
     doc.addEventListener("click", outside, { signal });
+    doc.defaultView?.addEventListener("resize", () => this.layoutSheet(), { signal });
     this.update();
   }
 
@@ -209,6 +215,7 @@ export class Shell {
     if (this.config) {
       this.theme = THEMES.includes(this.config.theme) ? this.config.theme : "system";
       this.zoom = clampZoom(this.config.defaultZoom);
+      this.wide = this.config.wideSheet === true;
     }
     await this.backend.readUserCss().then(
       (css) => applyUserCss(this.root.ownerDocument, css),
@@ -508,7 +515,12 @@ export class Shell {
     clearTimeout(this.saveTimer);
     this.saveTimer = undefined;
     if (!this.config) return;
-    this.config = { ...this.config, theme: this.theme, defaultZoom: this.zoom };
+    this.config = {
+      ...this.config,
+      theme: this.theme,
+      defaultZoom: this.zoom,
+      wideSheet: this.wide,
+    };
     void this.backend
       .setConfig(this.config)
       .catch(() => this.show(strings.notices.settingNotSaved));
@@ -930,10 +942,7 @@ export class Shell {
         else if (item.kind === "more") zone.append(this.buildMore());
         else {
           this.zoomReadout.title = strings.zoomToggle;
-          this.zoomReadout.addEventListener("click", () => {
-            const fit = this.active && fitWidth(this.active.canvas.clientWidth);
-            if (fit) this.setZoom(this.zoom === fit ? 100 : fit);
-          });
+          this.zoomReadout.addEventListener("click", () => this.setZoom(100));
           zone.append(this.zoomReadout);
         }
       }
@@ -1003,6 +1012,7 @@ export class Shell {
           this.sourceItem = item;
           item.setAttribute("role", "menuitemcheckbox");
         }
+        if (id === "wideSheet") item.setAttribute("role", "menuitemcheckbox");
         if (id === "remoteImages") {
           this.remoteItem = item;
           item.setAttribute("role", "menuitemcheckbox");
@@ -1161,11 +1171,28 @@ export class Shell {
     this.drawOutline();
   }
 
+  /** Sizes the sheet to the window: text scales with the zoom and lines rewrap, so the sheet
+   * never runs past the canvas (no sideways scrolling). */
+  private layoutSheet(): void {
+    const width = this.active?.canvas.clientWidth ?? 0;
+    if (width <= 0) return;
+    const { maxWidth, padScale } = sheetLayout(width, this.zoom, this.wide);
+    this.view.style.setProperty("--sheet-max", `${maxWidth}px`);
+    this.view.style.setProperty("--sheet-pad", String(padScale));
+  }
+
   private applySettings(): void {
     const html = this.root.ownerDocument.documentElement;
     if (this.theme === "system") delete html.dataset.theme;
     else html.dataset.theme = this.theme;
     this.view.style.setProperty("--zoom", String(this.zoom / 100));
+    this.layoutSheet();
+    for (const el of this.root.querySelectorAll('[data-action="wideSheet"]')) {
+      el.setAttribute(
+        el.getAttribute("role") === "menuitemcheckbox" ? "aria-checked" : "aria-pressed",
+        String(this.wide),
+      );
+    }
     this.zoomReadout.textContent = strings.zoomPercent(this.zoom);
     if (this.themeItem) this.themeItem.textContent = strings.themes[this.theme];
     this.remoteItem?.setAttribute("aria-checked", String(this.config?.remoteImages ?? true));

@@ -7,6 +7,8 @@ export interface Config {
   theme: "system" | "light" | "dark";
   defaultZoom: number;
   remoteImages: boolean;
+  /** The sheet fills the window instead of keeping a book's line length. */
+  wideSheet: boolean;
   recentFiles: string[];
 }
 
