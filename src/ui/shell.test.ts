@@ -293,6 +293,29 @@ describe("view source", () => {
     expect(sheet?.hidden).toBe(false);
     expect(item?.getAttribute("aria-checked")).toBe("false");
   });
+
+  it("test_outline_hidden_on_a_tab_showing_source", async () => {
+    const { root } = await open({ "/d/a.md": "# A", "/d/b.md": "# B" }, ["/d/a.md", "/d/b.md"]);
+    const panel = root.querySelector<HTMLElement>(".outline");
+    const press = (init: KeyboardEventInit) =>
+      document.dispatchEvent(key({ bubbles: true, ...init }));
+    press({ key: "u", ctrlKey: true }); // b.md shows its source
+    press({ key: "Tab", ctrlKey: true }); // a.md
+    press({ key: "b", ctrlKey: true }); // outline open on a.md
+    expect(panel?.hidden).toBe(false);
+    press({ key: "Tab", ctrlKey: true }); // back to b.md's source
+    expect(panel?.hidden).toBe(true);
+  });
+
+  it("test_failed_navigation_clears_source", async () => {
+    const { root } = await open({ "/d/a.md": "[gone](gone.md)" }, ["/d/a.md"]);
+    click(root.querySelector(".sheet a"));
+    await settle();
+    await settle();
+    expect(root.querySelector(".doc-error")).not.toBeNull();
+    document.dispatchEvent(key({ key: "u", ctrlKey: true, bubbles: true }));
+    expect(root.querySelector("pre.source")?.textContent).toBe("");
+  });
 });
 
 describe("remote images setting", () => {

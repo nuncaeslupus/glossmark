@@ -389,6 +389,9 @@ export class Shell {
       if (reload) return this.fileNotice(tab, strings.fileNotices.reloadFailed);
       this.watch(tab, null);
       tab.sections = [];
+      // No source either: View source must not show the file the tab came from.
+      tab.text = "";
+      tab.source.replaceChildren();
       const box = h("div", "doc-error");
       box.append(h("p", "", strings.documentError), userText("p", "", errorMessage(err)));
       tab.sheet.replaceChildren(box);
@@ -503,7 +506,8 @@ export class Shell {
   /** Shows the active tab's outline, redrawn only when its sections changed. */
   private drawOutline(): void {
     const tab = this.active;
-    const open = this.outlineOpen && tab !== null;
+    // The outline lists rendered headings, so a tab showing its source has none.
+    const open = this.outlineOpen && tab?.source.hidden === true;
     this.outlinePanel.hidden = !open;
     this.view.classList.toggle("with-outline", open);
     if (!open) return;
@@ -728,7 +732,6 @@ export class Shell {
     this.update();
   }
 
-  /** Ctrl+Tab and Ctrl+Shift+Tab, wrapping at the ends. */
   /** Swaps the rendered sheet for the file's Markdown, or back; each tab keeps its own. */
   private toggleSource(tab: Tab): void {
     const on = tab.source.hidden;
@@ -736,11 +739,11 @@ export class Shell {
     tab.source.hidden = !on;
     tab.sheet.hidden = on;
     tab.canvas.scrollTop = 0;
-    if (on) this.outlineOpen = false;
     if (this.found.open) this.runFind(true);
     this.update();
   }
 
+  /** Ctrl+Tab and Ctrl+Shift+Tab, wrapping at the ends. */
   private cycleTab(step: number): void {
     if (!this.active) return;
     const n = this.tabs.length;
