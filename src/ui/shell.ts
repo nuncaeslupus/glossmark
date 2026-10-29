@@ -142,7 +142,7 @@ export class Shell {
     open: () => void this.openDialog(),
     print: () => void this.print(),
     export: () => void this.exportPdf(),
-    closeTab: () => this.active && this.close(this.active),
+    closeTab: () => (this.active ? this.close(this.active) : this.closeStartTab()),
     nextTab: () => this.cycleTab(1),
     previousTab: () => this.cycleTab(-1),
     outline: () => {
@@ -295,6 +295,8 @@ export class Shell {
       }
     }
     if (!last) return;
+    // An already-open file chosen from the New tab: that tab has nothing left to show.
+    if (this.startTab && this.active === null) this.closeStartTab();
     const tab = last;
     this.activate(tab);
     await Promise.all(added.map((t) => this.load(t)));
@@ -780,6 +782,7 @@ export class Shell {
       handle.setAttribute("role", "tab");
       const label = h("button", "tab-label", strings.actions.newTab);
       label.addEventListener("click", () => {
+        if (this.active) this.returnTo = this.active;
         this.active = null;
         this.update();
       });
@@ -826,7 +829,12 @@ export class Shell {
 
   /** Ctrl+Tab and Ctrl+Shift+Tab, wrapping at the ends. */
   private cycleTab(step: number): void {
-    if (!this.active) return;
+    if (!this.active) {
+      const back = this.returnTo && this.tabs.includes(this.returnTo) ? this.returnTo : null;
+      const tab = back ?? this.tabs[0];
+      if (tab) this.activate(tab);
+      return;
+    }
     const n = this.tabs.length;
     const tab = this.tabs[(this.tabs.indexOf(this.active) + step + n) % n];
     if (tab) this.activate(tab);
@@ -844,6 +852,9 @@ export class Shell {
   }
 
   private enabled(id: ActionId): boolean {
+    // The New tab can be closed or left like any other tab.
+    const tabbing = id === "closeTab" || id === "nextTab" || id === "previousTab";
+    if (tabbing && this.startTab && !this.active) return id === "closeTab" || this.tabs.length > 0;
     if (actions[id].needsDocument && !this.active) return false;
     if (id === "back") return this.active?.history.canGoBack === true;
     if (id === "forward") return this.active?.history.canGoForward === true;

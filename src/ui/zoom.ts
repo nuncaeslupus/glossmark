@@ -29,6 +29,8 @@ export function sheetLayout(
   wide: boolean,
 ): { maxWidth: number; padScale: number } {
   const room = Math.max(0, width - 2 * MARGIN_PX) / (percent / 100);
-  const maxWidth = Math.max(MIN_SHEET_PX, Math.floor(wide ? room : Math.min(SHEET_PX, room)));
+  // The floor is in rendered px, so a zoomed sheet still fits a narrow window.
+  const floor = Math.ceil(MIN_SHEET_PX / (percent / 100));
+  const maxWidth = Math.max(floor, Math.floor(wide ? room : Math.min(SHEET_PX, room)));
   return { maxWidth, padScale: Math.min(1, maxWidth / SHEET_PX) };
 }

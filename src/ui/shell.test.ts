@@ -110,6 +110,17 @@ describe("shell", () => {
     click(root.querySelector(".start-tab .tab-close"));
     expect(labels()).toEqual(["a.md", "b.md"]);
     expect(root.querySelector(".tab.active .tab-label")?.textContent).toBe("b.md");
+    // Ctrl+W closes a New tab too.
+    press({ key: "t", ctrlKey: true });
+    press({ key: "w", ctrlKey: true });
+    expect(labels()).toEqual(["a.md", "b.md"]);
+    // Opening an already-open file from it leaves no orphan New tab behind.
+    press({ key: "t", ctrlKey: true });
+    state.dialogPaths = ["/n/a.md"];
+    press({ key: "o", ctrlKey: true });
+    for (let i = 0; i < 5; i++) await settle();
+    expect(labels()).toEqual(["a.md", "b.md"]);
+    expect(root.querySelector(".tab.active .tab-label")?.textContent).toBe("a.md");
   });
 
   it("test_print_uses_the_cores_page_where_offered", async () => {

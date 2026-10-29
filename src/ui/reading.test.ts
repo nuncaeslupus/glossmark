@@ -114,6 +114,7 @@ describe("reading tools", () => {
     expect(sheetLayout(1000, 200, false)).toEqual({ maxWidth: 476, padScale: 476 / 816 });
     expect(sheetLayout(2000, 100, true)).toEqual({ maxWidth: 1952, padScale: 1 });
     expect(sheetLayout(0, 100, false).maxWidth).toBe(160);
+    expect(sheetLayout(0, 300, false).maxWidth).toBe(54);
   });
 
   it("test_sheet_rewraps_and_ctrl_9_widens_it", async () => {
