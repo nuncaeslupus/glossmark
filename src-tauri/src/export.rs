@@ -109,6 +109,7 @@ fn print<R: Runtime>(window: &WebviewWindow<R>, output: Output) -> Result<(), Ip
             });
             // The operation stays alive until it finishes; emptying the slot then frees it.
             let alive = Rc::new(RefCell::new(Some(op.clone())));
+            let release = alive.clone();
             let on_done = tx.clone();
             op.connect_finished(move |_| {
                 alive.borrow_mut().take();
@@ -132,6 +133,7 @@ fn print<R: Runtime>(window: &WebviewWindow<R>, output: Output) -> Result<(), Ip
                     // A cancelled dialog prints nothing and never emits `finished`.
                     if op.run_dialog(parent.as_ref()) == webkit2gtk::PrintOperationResponse::Cancel
                     {
+                        release.borrow_mut().take();
                         let _ = tx.send(Ok(()));
                     }
                 }

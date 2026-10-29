@@ -298,15 +298,18 @@ export class Shell {
   private async print(): Promise<void> {
     if (this.dialogOpen || !this.active) return;
     this.dialogOpen = true;
-    // `print()` usually blocks until the dialog closes; restoring after it covers a webview
-    // that never fires `afterprint`.
-    const back = await diagramsForPaper();
     try {
-      if (!(await this.backend.printDocument())) window.print();
+      // `print()` usually blocks until the dialog closes; restoring after it covers a webview
+      // that never fires `afterprint`.
+      const back = await diagramsForPaper();
+      try {
+        if (!(await this.backend.printDocument())) window.print();
+      } finally {
+        back();
+      }
     } catch {
       this.show(strings.notices.printFailed);
     } finally {
-      back();
       this.dialogOpen = false;
     }
   }
