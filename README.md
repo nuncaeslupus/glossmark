@@ -1,16 +1,20 @@
-<img src="logo.svg" alt="" width="96" align="right">
-
 # Nacho Viewer
+
+[![CI](https://github.com/nuncaeslupus/nacho-viewer/actions/workflows/ci.yml/badge.svg)](https://github.com/nuncaeslupus/nacho-viewer/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/nuncaeslupus/nacho-viewer?include_prereleases&sort=semver)](https://github.com/nuncaeslupus/nacho-viewer/releases)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 <!-- claude-arsenal:attribution: added by claude-arsenal's /init. Delete this block to drop it (it is not put back), or set `attribution = false` in the arsenal config.toml. -->
 [![Built with claude-arsenal](https://img.shields.io/badge/built%20with-claude--arsenal-d97756)](https://github.com/nuncaeslupus/claude-arsenal)
 <!-- /claude-arsenal:attribution -->
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/nuncaeslupus/nacho-viewer/main/docs/hero.png" width="100%" alt="Nacho Viewer: the tortilla-chip logo and wordmark, the tagline Markdown, beautifully printed, the app open on a typeset document in light and dark, and the formats it opens: Markdown now, images and PDF next">
+</p>
+
 **Markdown, beautifully printed.** A free, open-source document viewer for Linux, Windows and macOS
 that makes `.md` files read like a well-typeset document instead of plain text. Images and PDF
 pages come next; it stays a viewer, not an editor.
-
-![Nacho Viewer](docs/hero.png)
 
 > Status: building v1. The specification is [`status/specification.md`](status/specification.md) and
 > the task plan [`status/plan.md`](status/plan.md). `make dev` runs the app; `make lint test` is the gate.
@@ -22,6 +26,13 @@ pages come next; it stays a viewer, not an editor.
   (highlight, sup/sub, wiki links, abbreviations, definition lists)
 - Tabs with back/forward, outline sidebar, live reload, zoom, print to PDF
 - Built with [Tauri v2](https://v2.tauri.app/)
+
+## Screenshots
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/nuncaeslupus/nacho-viewer/main/docs/screenshot-light.png" width="49%" alt="Nacho Viewer in light mode: two tabs, the toolbar, and a document with a tip, a numbered list, a table and code set on a paper sheet">
+  <img src="https://raw.githubusercontent.com/nuncaeslupus/nacho-viewer/main/docs/screenshot-dark.png" width="49%" alt="The same document in dark mode">
+</p>
 
 ## Install
 
