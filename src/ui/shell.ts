@@ -29,6 +29,10 @@ interface Tab {
   /** The grey canvas that scrolls; each tab keeps its own, so switching keeps the scroll. */
   canvas: HTMLElement;
   sheet: HTMLElement;
+  /** View source: the file's Markdown in place of the sheet, while shown. */
+  source: HTMLPreElement;
+  /** The Markdown last read, for View source. */
+  text: string;
   /** The outline of what the sheet shows. */
   sections: Section[];
   /** Counts loads and reloads, so only the latest request fills the sheet. */
@@ -40,6 +44,8 @@ interface Tab {
 }
 
 const pathOf = (tab: Tab) => tab.history.current.path;
+/** What the tab shows: the rendered sheet, or its source. */
+const shown = (tab: Tab) => (tab.source.hidden ? tab.sheet : tab.source);
 
 function h<K extends keyof HTMLElementTagNameMap>(
   tag: K,
@@ -91,7 +97,8 @@ export class Shell {
   private readonly fileMenu = h("div", "menu file-menu");
   private fileMenuPath = "";
   private readonly notice = h("span", "notice");
-  private readonly zoomReadout = h("span", "zoom");
+  /** The zoom level; a click fits the sheet to the window's width, or returns to 100%. */
+  private readonly zoomReadout = h("button", "zoom");
   private readonly outlinePanel = h("nav", "outline");
   private outlineOpen = false;
   /** The sections the outline panel lists, so it is redrawn only when they change. */
@@ -110,6 +117,7 @@ export class Shell {
   private remoteItem: HTMLElement | null = null;
   private shortcutsPanel: HTMLElement | null = null;
   private themeItem: HTMLElement | null = null;
+  private sourceItem: HTMLElement | null = null;
   private theme: Config["theme"] = "system";
   private zoom = 100;
   private noticeTimer: ReturnType<typeof setTimeout> | undefined;
@@ -152,6 +160,7 @@ export class Shell {
     remoteImages: () => {
       void this.setRemoteImages(!(this.config?.remoteImages ?? true)).then(() => this.update());
     },
+    viewSource: () => this.active && this.toggleSource(this.active),
     shortcuts: () => this.toggleShortcuts(),
   };
 
@@ -337,6 +346,8 @@ export class Shell {
     try {
       const doc = await this.read(entry);
       if (!live()) return;
+      tab.text = doc.text;
+      if (!tab.source.hidden) tab.source.textContent = doc.text;
       const anchor = reload ? scrollAnchor(tab.canvas, tab.sheet) : undefined;
       const remoteImages = this.config?.remoteImages ?? true;
       const { readSvg, imageUrl } = this.backend;
@@ -367,7 +378,7 @@ export class Shell {
       );
       if (!live()) return;
       tab.sections = sections(tab.sheet, outline);
-      if (this.found.root === tab.sheet) this.runFind(false);
+      if (this.found.root === shown(tab)) this.runFind(false);
       // ponytail: watching starts after a successful read, so a missing file adds no second
       // notice; a save in the moment between the two is not seen.
       this.watch(tab, entry.path);
@@ -378,6 +389,9 @@ export class Shell {
       if (reload) return this.fileNotice(tab, strings.fileNotices.reloadFailed);
       this.watch(tab, null);
       tab.sections = [];
+      // No source either: View source must not show the file the tab came from.
+      tab.text = "";
+      tab.source.replaceChildren();
       const box = h("div", "doc-error");
       box.append(h("p", "", strings.documentError), userText("p", "", errorMessage(err)));
       tab.sheet.replaceChildren(box);
@@ -492,7 +506,8 @@ export class Shell {
   /** Shows the active tab's outline, redrawn only when its sections changed. */
   private drawOutline(): void {
     const tab = this.active;
-    const open = this.outlineOpen && tab !== null;
+    // The outline lists rendered headings, so a tab showing its source has none.
+    const open = this.outlineOpen && tab?.source.hidden === true;
     this.outlinePanel.hidden = !open;
     this.view.classList.toggle("with-outline", open);
     if (!open) return;
@@ -558,7 +573,7 @@ export class Shell {
     const keep = this.foundIndex;
     if (this.found.root) clearMatches(this.found.root);
     this.found.marks = [];
-    this.found.root = this.found.open && tab ? tab.sheet : null;
+    this.found.root = this.found.open && tab ? shown(tab) : null;
     this.foundIndex = -1;
     const { marks, more } = this.found.root
       ? highlightMatches(this.found.root, this.findInput.value, FIND_LIMIT)
@@ -655,13 +670,17 @@ export class Shell {
 
     const canvas = h("div", "canvas");
     const sheet = h("article", "sheet");
-    canvas.append(sheet);
+    const source = userText("pre", "sheet source", "");
+    source.hidden = true;
+    canvas.append(sheet, source);
     const tab: Tab = {
       history: new History(entry),
       handle,
       label,
       canvas,
       sheet,
+      source,
+      text: "",
       sections: [],
       loads: 0,
       loading: Promise.resolve(),
@@ -713,6 +732,17 @@ export class Shell {
     this.update();
   }
 
+  /** Swaps the rendered sheet for the file's Markdown, or back; each tab keeps its own. */
+  private toggleSource(tab: Tab): void {
+    const on = tab.source.hidden;
+    tab.source.textContent = on ? tab.text : "";
+    tab.source.hidden = !on;
+    tab.sheet.hidden = on;
+    tab.canvas.scrollTop = 0;
+    if (this.found.open) this.runFind(true);
+    this.update();
+  }
+
   /** Ctrl+Tab and Ctrl+Shift+Tab, wrapping at the ends. */
   private cycleTab(step: number): void {
     if (!this.active) return;
@@ -738,6 +768,8 @@ export class Shell {
     if (id === "findNext" || id === "findPrevious") return this.found.marks.length > 0;
     if (id === "findClose") return this.found.open;
     if (id === "remoteImages") return this.config !== null;
+    // The outline lists the rendered headings.
+    if (id === "outline") return this.active?.source.hidden === true;
     return true;
   }
 
@@ -764,7 +796,14 @@ export class Shell {
         if (item.kind === "button") zone.append(this.actionButton(item.action, "bar-button"));
         else if (item.kind === "notice") zone.append(this.notice);
         else if (item.kind === "more") zone.append(this.buildMore());
-        else zone.append(this.zoomReadout);
+        else {
+          this.zoomReadout.title = strings.zoomToggle;
+          this.zoomReadout.addEventListener("click", () => {
+            const fit = this.active && fitWidth(this.active.canvas.clientWidth);
+            if (fit) this.setZoom(this.zoom === fit ? 100 : fit);
+          });
+          zone.append(this.zoomReadout);
+        }
       }
       header.append(zone);
     }
@@ -828,6 +867,10 @@ export class Shell {
         item.setAttribute("role", "menuitem");
         item.dataset.action = id;
         if (id === "theme") this.themeItem = item;
+        if (id === "viewSource") {
+          this.sourceItem = item;
+          item.setAttribute("role", "menuitemcheckbox");
+        }
         if (id === "remoteImages") {
           this.remoteItem = item;
           item.setAttribute("role", "menuitemcheckbox");
@@ -975,7 +1018,7 @@ export class Shell {
       this.found.open = false;
       this.findBox.hidden = true;
     }
-    if (this.found.root !== (this.found.open ? active?.sheet : null)) this.runFind(true);
+    if (this.found.root !== (this.found.open && active ? shown(active) : null)) this.runFind(true);
     for (const node of this.root.querySelectorAll<HTMLButtonElement>("button[data-action]")) {
       if (node.classList.contains("tab-close")) continue;
       node.disabled = !this.enabled(node.dataset.action as ActionId);
@@ -995,6 +1038,7 @@ export class Shell {
     this.zoomReadout.textContent = strings.zoomPercent(this.zoom);
     if (this.themeItem) this.themeItem.textContent = strings.themes[this.theme];
     this.remoteItem?.setAttribute("aria-checked", String(this.config?.remoteImages ?? true));
+    this.sourceItem?.setAttribute("aria-checked", String(this.active?.source.hidden === false));
   }
 
   /** "Open or drop a Markdown file", and the recent files under it. */

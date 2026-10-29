@@ -20,7 +20,8 @@
 
 ## Decisions taken
 
-- D-19 as built: left ☰ ←→ · centre − % + Find · right Export Print ⋮. No title in the bar:
+- D-19 as built: left ☰ ←→ · centre − % + (click % = fit width ↔ 100%) · right Find Export
+  Print ⋮. More › View source (Ctrl+U) swaps the sheet for the Markdown, per tab. No title in the bar:
   the tab names the file; its ▾ (active tab) and right-click give Show in Finder / File
   Explorer / File Manager and Copy path (`reveal_file` reveals open documents only).
 - Export: the Save dialog runs in Rust; `export_pdf` writes only that dialog's last answer.

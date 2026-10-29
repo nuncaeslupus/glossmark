@@ -117,6 +117,12 @@ describe("reading tools", () => {
     press({ key: "9", ctrlKey: true });
     expect(root.querySelector(".bar .zoom")?.textContent).toBe(strings.zoomPercent(200));
     expect(root.querySelector<HTMLElement>(".view")?.style.getPropertyValue("--zoom")).toBe("2");
+    // The readout is the same switch: a click returns to 100%, and fits again.
+    const readout = root.querySelector<HTMLElement>(".bar .zoom");
+    readout?.click();
+    expect(readout?.textContent).toBe(strings.zoomPercent(100));
+    readout?.click();
+    expect(readout?.textContent).toBe(strings.zoomPercent(200));
   });
 
   it("test_remote_images_menu_toggles_setting", async () => {

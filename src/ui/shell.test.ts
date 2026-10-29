@@ -50,8 +50,8 @@ describe("shell", () => {
     );
     expect(zones).toEqual([
       ["outline", "back", "forward"],
-      ["zoomOut", "zoom", "zoomIn", "find"],
-      ["export", "print", "menu-button"],
+      ["zoomOut", "zoom", "zoomIn"],
+      ["find", "export", "print", "menu-button"],
     ]);
     // One ⋮ More button replaces the text menus, and lists every one of their commands.
     const more = root.querySelectorAll(".bar .menu-button");
@@ -269,6 +269,52 @@ describe("file menu", () => {
     click(items[1] ?? null);
     await settle();
     expect(writeText).toHaveBeenCalledWith("/d/a.md");
+  });
+});
+
+describe("view source", () => {
+  it("test_view_source_shows_markdown_and_back", async () => {
+    const { root } = await open({ "/d/a.md": "# A\n\n*b*" }, ["/d/a.md"]);
+    const sheet = root.querySelector<HTMLElement>("article.sheet");
+    const source = root.querySelector<HTMLElement>("pre.source");
+    expect(source?.hidden).toBe(true);
+    document.dispatchEvent(key({ key: "u", ctrlKey: true, bubbles: true }));
+    expect(source?.hidden).toBe(false);
+    expect(sheet?.hidden).toBe(true);
+    expect(source?.textContent).toBe("# A\n\n*b*");
+    const item = root.querySelector('.menu-item[data-action="viewSource"]');
+    expect(item?.getAttribute("aria-checked")).toBe("true");
+    // The outline lists rendered headings, so it is off while the source shows.
+    expect(root.querySelector<HTMLButtonElement>('.bar [data-action="outline"]')?.disabled).toBe(
+      true,
+    );
+    click(item);
+    expect(source?.hidden).toBe(true);
+    expect(sheet?.hidden).toBe(false);
+    expect(item?.getAttribute("aria-checked")).toBe("false");
+  });
+
+  it("test_outline_hidden_on_a_tab_showing_source", async () => {
+    const { root } = await open({ "/d/a.md": "# A", "/d/b.md": "# B" }, ["/d/a.md", "/d/b.md"]);
+    const panel = root.querySelector<HTMLElement>(".outline");
+    const press = (init: KeyboardEventInit) =>
+      document.dispatchEvent(key({ bubbles: true, ...init }));
+    press({ key: "u", ctrlKey: true }); // b.md shows its source
+    press({ key: "Tab", ctrlKey: true }); // a.md
+    press({ key: "b", ctrlKey: true }); // outline open on a.md
+    expect(panel?.hidden).toBe(false);
+    press({ key: "Tab", ctrlKey: true }); // back to b.md's source
+    expect(panel?.hidden).toBe(true);
+  });
+
+  it("test_failed_navigation_clears_source", async () => {
+    const { root } = await open({ "/d/a.md": "[gone](gone.md)" }, ["/d/a.md"]);
+    click(root.querySelector(".sheet a"));
+    await settle();
+    await settle();
+    expect(root.querySelector(".doc-error")).not.toBeNull();
+    document.dispatchEvent(key({ key: "u", ctrlKey: true, bubbles: true }));
+    expect(root.querySelector("pre.source")?.textContent).toBe("");
   });
 });
 
