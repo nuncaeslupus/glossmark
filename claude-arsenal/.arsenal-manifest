@@ -1,4 +1,4 @@
-# source: https://github.com/nuncaeslupus/claude-arsenal.git
+# source: https://github.com/nuncaeslupus/claude-arsenal
 .bundle-version
 AGENTS.md
 CHANGELOG.md
@@ -67,6 +67,7 @@ scripts/pr_audit.py
 scripts/query_status.py
 scripts/queue_hooks.py
 scripts/reader_check.py
+scripts/render_diagrams.py
 scripts/repo_health.py
 scripts/review_metrics.py
 scripts/review_policy.py
