@@ -41,7 +41,7 @@ test("test_print_media_hides_app_controls", async ({ page }) => {
     expect(await display(page, selector), `${selector} in print`).toBe("none");
   }
   // The sheet alone, without the grey canvas, its margins or its shadow.
-  await expect(page.locator(".sheet")).toBeVisible();
+  await expect(page.locator("article.sheet")).toBeVisible();
   const sheet = await page.evaluate(() => {
     const style = (selector: string) =>
       getComputedStyle(document.querySelector(selector) as Element);

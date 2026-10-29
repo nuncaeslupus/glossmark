@@ -50,8 +50,8 @@ describe("shell", () => {
     );
     expect(zones).toEqual([
       ["outline", "back", "forward"],
-      ["zoomOut", "zoom", "zoomIn", "find"],
-      ["export", "print", "menu-button"],
+      ["zoomOut", "zoom", "zoomIn"],
+      ["find", "export", "print", "menu-button"],
     ]);
     // One ⋮ More button replaces the text menus, and lists every one of their commands.
     const more = root.querySelectorAll(".bar .menu-button");
@@ -269,6 +269,29 @@ describe("file menu", () => {
     click(items[1] ?? null);
     await settle();
     expect(writeText).toHaveBeenCalledWith("/d/a.md");
+  });
+});
+
+describe("view source", () => {
+  it("test_view_source_shows_markdown_and_back", async () => {
+    const { root } = await open({ "/d/a.md": "# A\n\n*b*" }, ["/d/a.md"]);
+    const sheet = root.querySelector<HTMLElement>("article.sheet");
+    const source = root.querySelector<HTMLElement>("pre.source");
+    expect(source?.hidden).toBe(true);
+    document.dispatchEvent(key({ key: "u", ctrlKey: true, bubbles: true }));
+    expect(source?.hidden).toBe(false);
+    expect(sheet?.hidden).toBe(true);
+    expect(source?.textContent).toBe("# A\n\n*b*");
+    const item = root.querySelector('.menu-item[data-action="viewSource"]');
+    expect(item?.getAttribute("aria-checked")).toBe("true");
+    // The outline lists rendered headings, so it is off while the source shows.
+    expect(root.querySelector<HTMLButtonElement>('.bar [data-action="outline"]')?.disabled).toBe(
+      true,
+    );
+    click(item);
+    expect(source?.hidden).toBe(true);
+    expect(sheet?.hidden).toBe(false);
+    expect(item?.getAttribute("aria-checked")).toBe("false");
   });
 });
 

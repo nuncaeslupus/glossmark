@@ -6,6 +6,7 @@ export const strings = {
   recentFiles: "Recent files",
   documentError: "This document could not be opened.",
   zoomPercent: (percent: number) => `${percent}%`,
+  zoomToggle: "Fit to width, or back to 100%",
   notices: {
     openFailed: "The Open dialog could not be shown.",
     exportFailed: "The PDF could not be saved.",
@@ -53,6 +54,7 @@ export const strings = {
     findNext: "Next match",
     findPrevious: "Previous match",
     findClose: "Close find",
+    viewSource: "View source",
     theme: "Theme",
     remoteImages: "Load remote images",
     shortcuts: "Keyboard shortcuts",

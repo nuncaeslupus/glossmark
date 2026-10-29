@@ -86,6 +86,7 @@ export const actions: Record<ActionId, Action> = {
     key: "Escape",
     needsDocument: true,
   },
+  viewSource: { id: "viewSource", label: a.viewSource, key: "Ctrl+U", needsDocument: true },
   theme: { id: "theme", label: a.theme, key: "Ctrl+Shift+L" },
   remoteImages: { id: "remoteImages", label: a.remoteImages, key: "Ctrl+Shift+M" },
   shortcuts: { id: "shortcuts", label: a.shortcuts, key: "F1" },
@@ -105,19 +106,29 @@ export const bar: BarItem[][] = [
     { kind: "button", action: "forward" },
     { kind: "notice" },
   ],
+  [{ kind: "button", action: "zoomOut" }, { kind: "zoom" }, { kind: "button", action: "zoomIn" }],
   [
-    { kind: "button", action: "zoomOut" },
-    { kind: "zoom" },
-    { kind: "button", action: "zoomIn" },
     { kind: "button", action: "find" },
+    { kind: "button", action: "export" },
+    { kind: "button", action: "print" },
+    { kind: "more" },
   ],
-  [{ kind: "button", action: "export" }, { kind: "button", action: "print" }, { kind: "more" }],
 ];
 
 /** ⋮ More's sections, divided by rules; every command keeps its shortcut. */
 export const menus: ActionId[][] = [
   ["open", "export", "print", "closeTab"],
-  ["outline", "zoomIn", "zoomOut", "zoomReset", "fitWidth", "find", "theme", "remoteImages"],
+  [
+    "outline",
+    "zoomIn",
+    "zoomOut",
+    "zoomReset",
+    "fitWidth",
+    "find",
+    "viewSource",
+    "theme",
+    "remoteImages",
+  ],
   ["back", "forward", "nextTab", "previousTab"],
   ["shortcuts"],
 ];

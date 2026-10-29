@@ -186,8 +186,14 @@ button:disabled {
 }
 
 .zoom {
-  min-width: 3rem;
+  min-width: 3.5rem;
+  height: 32px;
+  border-radius: 16px;
   text-align: center;
+}
+
+.zoom:hover {
+  background: var(--chrome-hover);
 }
 
 .menu-wrap {
