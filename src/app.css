@@ -477,6 +477,85 @@ mark.find-match.current {
   opacity: 0.7;
 }
 
+/* Print dialog: a small centred page to pick the paper text size, then print or save */
+.print-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgb(0 0 0 / 40%);
+}
+
+.print-dialog {
+  min-width: 300px;
+  padding: 20px 24px;
+  background: var(--menu);
+  color: var(--menu-ink);
+  border-radius: 10px;
+  box-shadow: 0 8px 32px rgb(0 0 0 / 40%);
+}
+
+.print-dialog h2 {
+  margin: 0 0 16px;
+  font-size: 1.1rem;
+}
+
+.print-sizes {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.print-size {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 8px;
+  border: 1px solid var(--muted, #666);
+  border-radius: 8px;
+}
+
+.print-sample {
+  line-height: 1;
+}
+
+.print-size-label {
+  font-size: 0.8125rem;
+}
+
+.print-size:hover,
+.print-size.current {
+  background: var(--menu-hover);
+}
+
+.print-size.current {
+  border-color: currentColor;
+}
+
+.print-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.print-actions button {
+  padding: 8px 14px;
+  border-radius: 6px;
+}
+
+.print-actions button:hover {
+  background: var(--menu-hover);
+}
+
+.print-go,
+.print-save {
+  background: var(--menu-hover);
+}
+
 .doc-error {
   color: var(--muted, #666);
 }

@@ -76,6 +76,16 @@ export const strings = {
   // The wide-sheet toolbar toggle names the layout a click switches to.
   sheetFill: "Fill the window",
   sheetFixed: "Fixed width",
+  // The print dialog (D-20): pick a paper text size, then print or save as PDF.
+  printDialog: {
+    title: "Print",
+    size: "Text size",
+    small: "Small",
+    normal: "Normal",
+    large: "Large",
+    sample: "Aa",
+    cancel: "Cancel",
+  },
   outlineEmpty: "No headings",
   findPlaceholder: "Find in document",
   findCount: (current: number, total: number) => `${current} of ${total}`,
@@ -90,11 +100,11 @@ export const strings = {
     forward: "→",
     zoomOut: "−",
     zoomIn: "+",
-    // width_full / width_normal (Material Symbols): the sheet filling the window, or a centred column.
+    // A page with arrows pointing out (fill the window) or in (fixed column); the toggle swaps them.
     sheetFill:
-      "M140-160q-24.75 0-42.37-17.63Q80-195.25 80-220v-520q0-24.75 17.63-42.38Q115.25-800 140-800h680q24.75 0 42.38 17.62Q880-764.75 880-740v520q0 24.75-17.62 42.37Q844.75-160 820-160H140Zm0-60h70v-520h-70v520Zm130 0h420v-520H270v520Zm480 0h70v-520h-70v520ZM270-740v520-520Z",
+      "M360-760H600V-200H360ZM400-720V-240H560V-720H400ZM120-480L240-560L240-400ZM840-480L720-560L720-400Z",
     sheetFixed:
-      "M140-160q-24.75 0-42.37-17.63Q80-195.25 80-220v-520q0-24.75 17.63-42.38Q115.25-800 140-800h680q24.75 0 42.38 17.62Q880-764.75 880-740v520q0 24.75-17.62 42.37Q844.75-160 820-160H140Zm0-60h187v-520H140v520Zm247 0h186v-520H387v520Zm246 0h187v-520H633v520Zm-246 0v-520 520Z",
+      "M360-760H600V-200H360ZM400-720V-240H560V-720H400ZM240-480L120-560L120-400ZM720-480L840-560L840-400Z",
     find: "M784-120 532-372q-30 24-69 38t-83 14q-109 0-184.5-75.5T120-580q0-109 75.5-184.5T380-840q109 0 184.5 75.5T640-580q0 44-14 83t-38 69l252 252-56 56ZM380-400q75 0 127.5-52.5T560-580q0-75-52.5-127.5T380-760q-75 0-127.5 52.5T200-580q0 75 52.5 127.5T380-400Z",
     findNext: "↓",
     findPrevious: "↑",

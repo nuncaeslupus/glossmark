@@ -77,15 +77,19 @@ describe("shell", () => {
 
   it("test_export_asks_for_a_path_and_saves_pdf", async () => {
     const { root, state } = await open({ "/n/notes.md": "# A" }, ["/n/notes.md"]);
-    const exportButton = root.querySelector('.bar [data-action="export"]');
-    // Cancelling the dialog saves nothing.
-    click(exportButton);
+    // Export opens the intermediate page; its Save button asks for the path.
+    const doExport = () => {
+      click(root.querySelector('.bar [data-action="export"]'));
+      click(root.querySelector(".print-dialog .print-save"));
+    };
+    // Cancelling the save dialog saves nothing.
+    doExport();
     for (let i = 0; i < 5; i++) await settle();
     expect(state.saveNames).toEqual(["notes.pdf"]);
     expect(state.exported).toEqual([]);
 
     state.savePath = "/out/notes.pdf";
-    click(exportButton);
+    doExport();
     for (let i = 0; i < 5; i++) await settle();
     expect(state.exported).toEqual(["/out/notes.pdf"]);
   });
@@ -126,32 +130,52 @@ describe("shell", () => {
   it("test_print_uses_the_cores_page_where_offered", async () => {
     const { root, state, backend } = await open({ "/n/notes.md": "# A" }, ["/n/notes.md"]);
     const browserPrint = vi.spyOn(window, "print").mockImplementation(() => {});
+    // Print opens the intermediate page; its Print button runs the actual print.
+    const doPrint = async () => {
+      click(root.querySelector('.bar [data-action="print"]'));
+      click(root.querySelector(".print-dialog .print-go"));
+      for (let i = 0; i < 5; i++) await settle();
+    };
     try {
-      const printButton = root.querySelector('.bar [data-action="print"]');
       // Linux: the core prints the same page as the PDF, and the webview's print stays unused.
       state.printHandled = true;
-      click(printButton);
-      for (let i = 0; i < 5; i++) await settle();
+      await doPrint();
       expect(state.printed).toBe(1);
       expect(browserPrint).not.toHaveBeenCalled();
       // Elsewhere the core declines and the webview prints.
       state.printHandled = false;
-      click(printButton);
-      for (let i = 0; i < 5; i++) await settle();
+      await doPrint();
       expect(state.printed).toBe(2);
       expect(browserPrint).toHaveBeenCalledTimes(1);
       // A failed print says so and leaves Print usable.
       const fail = vi.spyOn(backend, "printDocument").mockRejectedValueOnce(new Error("no"));
-      click(printButton);
-      for (let i = 0; i < 5; i++) await settle();
+      await doPrint();
       expect(notice(root)).toBe(strings.notices.printFailed);
       fail.mockRestore();
-      click(printButton);
-      for (let i = 0; i < 5; i++) await settle();
+      await doPrint();
       expect(state.printed).toBe(3);
     } finally {
       browserPrint.mockRestore();
     }
+  });
+
+  it("test_print_dialog_sets_the_paper_text_size", async () => {
+    const { root, state } = await open({ "/n/notes.md": "# A" }, ["/n/notes.md"]);
+    click(root.querySelector('.bar [data-action="print"]'));
+    expect(root.querySelector(".print-dialog")).not.toBeNull();
+    // Small / Normal / Large; Normal (1) is the default selection.
+    const sizes = [...root.querySelectorAll<HTMLElement>(".print-size")];
+    expect(sizes.map((b) => b.dataset.zoom)).toEqual(["0.85", "1", "1.2"]);
+    expect(sizes[1]?.getAttribute("aria-checked")).toBe("true");
+    // Choosing Large and printing scales the paper font and dismisses the page.
+    click(sizes[2]);
+    expect(sizes[2]?.getAttribute("aria-checked")).toBe("true");
+    state.printHandled = true;
+    click(root.querySelector(".print-go"));
+    for (let i = 0; i < 5; i++) await settle();
+    expect(state.printed).toBe(1);
+    expect(root.ownerDocument.documentElement.style.getPropertyValue("--print-zoom")).toBe("1.2");
+    expect(root.querySelector(".print-dialog")).toBeNull();
   });
 
   it("test_tab_renders_sanitised_document", async () => {

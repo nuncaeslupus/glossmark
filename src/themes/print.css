@@ -41,8 +41,8 @@
   }
 
   .sheet {
-    /* Paper ignores the reader's zoom: --zoom scales the screen font only. */
-    --zoom: 1;
+    /* Paper ignores the reader's zoom; the print dialog's size sets --print-zoom instead. */
+    --zoom: var(--print-zoom, 1);
     max-width: none;
     padding: 0;
     background: none;

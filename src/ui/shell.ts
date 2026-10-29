@@ -21,6 +21,12 @@ const FIND_DEBOUNCE_MS = 100;
 const FIND_LIMIT = 1000;
 /** Zoom keys come in bursts; the level is saved once the reader settles on it. */
 const ZOOM_SAVE_MS = 500;
+/** Paper text sizes the print dialog offers; the zoom multiplies the sheet's print font. */
+const PRINT_SIZES = [
+  { label: strings.printDialog.small, zoom: 0.85 },
+  { label: strings.printDialog.normal, zoom: 1 },
+  { label: strings.printDialog.large, zoom: 1.2 },
+] as const;
 
 interface Tab {
   history: History;
@@ -128,6 +134,9 @@ export class Shell {
   private startTab: HTMLElement | null = null;
   private returnTo: Tab | null = null;
   private shortcutsPanel: HTMLElement | null = null;
+  /** The print dialog overlay while open, and the paper text size it last chose. */
+  private printPanel: HTMLElement | null = null;
+  private printZoom = 1;
   private themeItem: HTMLElement | null = null;
   private sourceItem: HTMLElement | null = null;
   private theme: Config["theme"] = "system";
@@ -140,8 +149,8 @@ export class Shell {
 
   private readonly handlers: Record<ActionId, () => void> = {
     open: () => void this.openDialog(),
-    print: () => void this.print(),
-    export: () => void this.exportPdf(),
+    print: () => this.openPrintDialog("print"),
+    export: () => this.openPrintDialog("export"),
     closeTab: () => (this.active ? this.close(this.active) : this.closeStartTab()),
     nextTab: () => this.cycleTab(1),
     previousTab: () => this.cycleTab(-1),
@@ -315,6 +324,7 @@ export class Shell {
   private async print(): Promise<void> {
     if (this.dialogOpen || !this.active) return;
     this.dialogOpen = true;
+    this.applyPrintZoom();
     try {
       // `print()` usually blocks until the dialog closes; restoring after it covers a webview
       // that never fires `afterprint`.
@@ -335,6 +345,7 @@ export class Shell {
   private async exportPdf(): Promise<void> {
     if (this.dialogOpen || !this.active) return;
     this.dialogOpen = true;
+    this.applyPrintZoom();
     try {
       const name = basename(pathOf(this.active)).replace(/\.[^.]*$/, "");
       const path = await this.backend.saveDialog(`${name}.pdf`);
@@ -350,6 +361,79 @@ export class Shell {
     } finally {
       this.dialogOpen = false;
     }
+  }
+
+  /** The intermediate print page (D-20): pick a paper text size, then print or save as PDF. */
+  private openPrintDialog(primary: "print" | "export"): void {
+    if (this.printPanel || this.dialogOpen || !this.active) return;
+    const panel = h("section", "print-dialog");
+    panel.setAttribute("role", "dialog");
+    panel.setAttribute("aria-modal", "true");
+    panel.setAttribute("aria-label", strings.printDialog.title);
+    panel.append(h("h2", "", strings.printDialog.title));
+
+    const sizes = h("div", "print-sizes");
+    sizes.setAttribute("role", "radiogroup");
+    sizes.setAttribute("aria-label", strings.printDialog.size);
+    for (const size of PRINT_SIZES) {
+      const button = h("button", "print-size");
+      button.dataset.zoom = String(size.zoom);
+      button.setAttribute("role", "radio");
+      const sample = h("span", "print-sample", strings.printDialog.sample);
+      sample.style.fontSize = `${size.zoom}em`;
+      button.append(sample, h("span", "print-size-label", size.label));
+      button.addEventListener("click", () => this.pickPrintSize(size.zoom));
+      sizes.append(button);
+    }
+    panel.append(sizes);
+
+    const row = h("div", "print-actions");
+    const go = h("button", "print-go", strings.actions.print);
+    const save = h("button", "print-save", strings.actions.export);
+    const cancel = h("button", "print-cancel", strings.printDialog.cancel);
+    go.addEventListener("click", () => {
+      this.closePrintDialog();
+      void this.print();
+    });
+    save.addEventListener("click", () => {
+      this.closePrintDialog();
+      void this.exportPdf();
+    });
+    cancel.addEventListener("click", () => this.closePrintDialog());
+    row.append(go, save, cancel);
+    panel.append(row);
+
+    const overlay = h("div", "print-overlay");
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) this.closePrintDialog();
+    });
+    overlay.append(panel);
+    this.view.append(overlay);
+    this.printPanel = overlay;
+    this.markPrintSize();
+    (primary === "export" ? save : go).focus();
+  }
+
+  private pickPrintSize(zoom: number): void {
+    this.printZoom = zoom;
+    this.markPrintSize();
+  }
+
+  private markPrintSize(): void {
+    for (const b of this.printPanel?.querySelectorAll<HTMLElement>(".print-size") ?? []) {
+      const on = Number(b.dataset.zoom) === this.printZoom;
+      b.classList.toggle("current", on);
+      b.setAttribute("aria-checked", String(on));
+    }
+  }
+
+  private closePrintDialog(): void {
+    this.printPanel?.remove();
+    this.printPanel = null;
+  }
+
+  private applyPrintZoom(): void {
+    this.root.ownerDocument.documentElement.style.setProperty("--print-zoom", String(this.printZoom));
   }
 
   private async openDialog(): Promise<void> {
@@ -1164,6 +1248,14 @@ export class Shell {
   private onKey(e: KeyboardEvent): void {
     // A key may scroll the page, which releases a section clicked in the outline.
     this.sectionHeld = false;
+    // The print dialog is modal: Esc closes it, other shortcuts wait behind it.
+    if (this.printPanel) {
+      if (e.key === "Escape") {
+        this.closePrintDialog();
+        e.preventDefault();
+      }
+      return;
+    }
     // Esc closes an open menu or the shortcuts list before it closes find.
     const menuOpen = [...this.menuBar.querySelectorAll<HTMLElement>(".menu")].some(
       (m) => !m.hidden,
