@@ -121,6 +121,9 @@ export class Shell {
   private remoteItem: HTMLElement | null = null;
   /** The sheet fills the window rather than keeping a book's line length. */
   private wide = false;
+  /** The "New tab" entry in the strip, showing the start page, and the tab it was opened from. */
+  private startTab: HTMLElement | null = null;
+  private returnTo: Tab | null = null;
   private shortcutsPanel: HTMLElement | null = null;
   private themeItem: HTMLElement | null = null;
   private sourceItem: HTMLElement | null = null;
@@ -148,6 +151,7 @@ export class Shell {
     zoomOut: () => this.setZoom(stepZoom(this.zoom, -1)),
     zoomIn: () => this.setZoom(stepZoom(this.zoom, 1)),
     zoomReset: () => this.setZoom(100),
+    newTab: () => this.openStartTab(),
     wideSheet: () => {
       this.wide = !this.wide;
       this.saveSettings();
@@ -754,9 +758,49 @@ export class Shell {
     });
 
     this.tabs.push(tab);
-    this.tabStrip.append(handle);
+    // A file opened from the start page takes the "New tab" entry's place.
+    if (this.startTab && this.active === null) {
+      this.startTab.replaceWith(handle);
+      this.startTab = null;
+    } else this.tabStrip.append(handle);
     this.view.append(canvas);
     return tab;
+  }
+
+  /** A "New tab" in the strip showing the start page (Open, drop, recent files); opening a
+   * file there turns it into that file's tab. */
+  private openStartTab(): void {
+    if (!this.startTab) {
+      const handle = h("div", "tab start-tab");
+      handle.setAttribute("role", "tab");
+      const label = h("button", "tab-label", strings.actions.newTab);
+      label.addEventListener("click", () => {
+        this.active = null;
+        this.update();
+      });
+      const close = iconButton("tab-close", strings.icons.closeTab);
+      close.title = strings.actions.closeTab;
+      close.setAttribute("aria-label", strings.actions.closeTab);
+      close.addEventListener("click", () => this.closeStartTab());
+      handle.append(label, close);
+      this.tabStrip.append(handle);
+      this.startTab = handle;
+    }
+    if (this.active) this.returnTo = this.active;
+    this.active = null;
+    this.update();
+    this.startTab.scrollIntoView?.({ inline: "nearest" });
+  }
+
+  private closeStartTab(): void {
+    this.startTab?.remove();
+    this.startTab = null;
+    if (!this.active) {
+      const back = this.returnTo && this.tabs.includes(this.returnTo) ? this.returnTo : null;
+      this.active = back ?? this.tabs.at(-1) ?? null;
+    }
+    this.returnTo = null;
+    this.update();
   }
 
   private activate(tab: Tab): void {
@@ -863,7 +907,9 @@ export class Shell {
     mark.src = logo;
     mark.alt = "";
     brand.append(mark, h("span", "", strings.appName));
-    this.titleBar.append(brand, this.tabStrip, drag);
+    // "+" sits right after the last tab, before the empty strip that drags the window.
+    const plus = this.actionButton("newTab", "new-tab");
+    this.titleBar.append(brand, this.tabStrip, plus, drag);
     const controls = this.backend.window;
     // The window moves by the bar, not by the tabs on it; a double-click maximizes.
     const handles = [this.titleBar, brand, this.tabStrip, drag];
@@ -1149,6 +1195,8 @@ export class Shell {
       tab.handle.setAttribute("aria-selected", String(tab === active));
       tab.canvas.hidden = tab !== active;
     }
+    this.startTab?.classList.toggle("active", active === null);
+    this.startTab?.setAttribute("aria-selected", String(active === null));
     this.empty.hidden = active !== null;
     if (!active) this.drawEmpty();
     this.root.ownerDocument.title = active

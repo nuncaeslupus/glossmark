@@ -48,6 +48,7 @@ export const strings = {
     print: "Print…",
     export: "Export PDF…",
     closeTab: "Close tab",
+    newTab: "New tab",
     nextTab: "Next tab",
     previousTab: "Previous tab",
     outline: "Outline",
@@ -95,6 +96,7 @@ export const strings = {
     print:
       "M640-640v-120H320v120h-80v-200h480v200h-80Zm-480 80h640-640Zm560 100q17 0 28.5-11.5T760-500q0-17-11.5-28.5T720-540q-17 0-28.5 11.5T680-500q0 17 11.5 28.5T720-460Zm-80 260v-160H320v160h320Zm80 80H240v-160H80v-240q0-51 35-85.5t85-34.5h560q51 0 85.5 34.5T880-520v240H720v160Zm80-240v-160q0-17-11.5-28.5T760-560H200q-17 0-28.5 11.5T160-520v160h80v-80h480v80h80Z",
     closeTab: "×",
+    newTab: "+",
     export:
       "M480-320 280-520l56-58 104 104v-326h80v326l104-104 56 58-200 200ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z",
     minimize: "M240-460h480v-40H240Z",

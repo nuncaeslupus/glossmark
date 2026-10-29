@@ -160,6 +160,21 @@ button:disabled {
   background: var(--chrome);
 }
 
+/* Chrome's "+" after the last tab, opening the start page in a tab of its own. */
+.new-tab {
+  flex: none;
+  align-self: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  margin-left: 4px;
+  border-radius: 50%;
+  font-size: 1.1rem;
+}
+
+.new-tab:hover {
+  background: var(--chrome-hover);
+}
+
 .tab-label {
   padding: 6px 4px 6px 10px;
   overflow: hidden;

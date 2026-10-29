@@ -37,6 +37,7 @@ export const actions: Record<ActionId, Action> = {
     needsDocument: true,
     dialog: true,
   },
+  newTab: { id: "newTab", label: a.newTab, icon: i.newTab, key: "Ctrl+T" },
   closeTab: {
     id: "closeTab",
     label: a.closeTab,
@@ -128,7 +129,7 @@ export const bar: BarItem[][] = [
 
 /** ⋮ More's sections, divided by rules; every command keeps its shortcut. */
 export const menus: ActionId[][] = [
-  ["open", "export", "print", "closeTab"],
+  ["open", "newTab", "export", "print", "closeTab"],
   [
     "outline",
     "zoomIn",
