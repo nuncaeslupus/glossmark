@@ -6,6 +6,12 @@
 }
 
 @media print {
+  /* Paper reads at book sizes, not screen ones: every size in the theme is rem or em, so
+   * this one value sets the body near 11pt and code near 9pt. */
+  html {
+    font-size: 10.5pt;
+  }
+
   .titlebar,
   .bar,
   .outline,

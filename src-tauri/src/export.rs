@@ -33,6 +33,10 @@ pub fn target(picked: Option<PathBuf>, path: &str) -> Result<PathBuf, IpcError> 
 
 /// WebKitGTK's print operation with "Print to File" settings: no dialog, the same page Print
 /// shows. Returns once the file is written.
+/// The margin on every side of an exported page, matching print.css's `@page`.
+#[cfg(target_os = "linux")]
+const PAGE_MARGIN_MM: f64 = 20.0;
+
 #[cfg(target_os = "linux")]
 pub fn print_to_pdf<R: Runtime>(window: &WebviewWindow<R>, path: &Path) -> Result<(), IpcError> {
     use std::cell::RefCell;
@@ -52,8 +56,20 @@ pub fn print_to_pdf<R: Runtime>(window: &WebviewWindow<R>, path: &Path) -> Resul
             settings.set_printer(&printer);
             settings.set(gtk::PRINT_SETTINGS_OUTPUT_FILE_FORMAT, Some("pdf"));
             settings.set(gtk::PRINT_SETTINGS_OUTPUT_URI, Some(&uri));
+            // WebKitGTK ignores CSS @page margins, so the page gets them here (print.css keeps
+            // its @page rule for the browsers that honour it).
+            let setup = gtk::PageSetup::new();
+            for set in [
+                gtk::PageSetup::set_top_margin,
+                gtk::PageSetup::set_bottom_margin,
+                gtk::PageSetup::set_left_margin,
+                gtk::PageSetup::set_right_margin,
+            ] {
+                set(&setup, PAGE_MARGIN_MM, gtk::Unit::Mm);
+            }
             let op = webkit2gtk::PrintOperation::new(&webview.inner());
             op.set_print_settings(&settings);
+            op.set_page_setup(&setup);
             let on_fail = tx.clone();
             op.connect_failed(move |_, err| {
                 let _ = on_fail.send(Err(err.to_string()));
