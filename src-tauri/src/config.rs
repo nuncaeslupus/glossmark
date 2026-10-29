@@ -66,20 +66,23 @@ pub fn config_dir() -> Option<PathBuf> {
 const OLD_DIR: &str = "glossmark";
 
 /// Copies the settings and user.css from the folder used before the rename into `new`, once:
-/// only while `new` does not exist. The old folder is left as it was. Best effort: a copy that
-/// fails leaves the defaults, as a missing file would.
+/// only while `new` does not exist. The old folder is left as it was. The files go to a staging
+/// folder that becomes `new` only once every copy succeeded, so a failed copy (a full disk) is
+/// retried next time instead of leaving a half-made folder whose defaults would undo the user's
+/// settings, such as turning remote images back on.
 fn carry_over(old: &Path, new: &Path) {
     if new.exists() || !old.is_dir() {
         return;
     }
-    if fs::create_dir_all(new).is_err() {
-        return;
-    }
-    for name in ["config.json", "user.css"] {
-        let from = old.join(name);
-        if from.is_file() {
-            let _ = fs::copy(&from, new.join(name));
-        }
+    let staging = new.with_extension("migrating");
+    let _ = fs::remove_dir_all(&staging);
+    let copied = fs::create_dir_all(&staging).is_ok()
+        && ["config.json", "user.css"].iter().all(|name| {
+            let from = old.join(name);
+            !from.is_file() || fs::copy(&from, staging.join(name)).is_ok()
+        });
+    if !copied || fs::rename(&staging, new).is_err() {
+        let _ = fs::remove_dir_all(&staging);
     }
 }
 
@@ -196,6 +199,29 @@ mod tests {
         .unwrap();
         carry_over(&old, &new);
         assert_eq!(load(&new.join("config.json")).theme, Theme::Light);
+    }
+
+    #[test]
+    fn test_config_failed_carry_over_is_retried() {
+        let base = tempfile::tempdir().unwrap();
+        let (old, new) = (base.path().join(OLD_DIR), base.path().join("nacho-viewer"));
+        fs::create_dir(&old).unwrap();
+        fs::write(
+            old.join("config.json"),
+            r#"{"version": 1, "theme": "dark"}"#,
+        )
+        .unwrap();
+
+        // A file where the staging folder goes makes the copy fail: no half-made new folder.
+        let blocker = new.with_extension("migrating");
+        fs::write(&blocker, "").unwrap();
+        carry_over(&old, &new);
+        assert!(!new.exists());
+
+        fs::remove_file(&blocker).unwrap();
+        carry_over(&old, &new);
+        assert_eq!(load(&new.join("config.json")).theme, Theme::Dark);
+        assert!(!blocker.exists());
     }
 
     #[test]
