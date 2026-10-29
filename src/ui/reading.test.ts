@@ -244,6 +244,19 @@ describe("reading tools", () => {
     expect(highlightMatches(root, "").marks).toEqual([]);
   });
 
+  it("test_find_ignores_accents_and_case", () => {
+    const root = document.createElement("div");
+    // Precomposed, decomposed (e + combining acute), and an emoji before the match.
+    root.innerHTML = "<p>Canción, cancion, CANCIÓN, cance\u0301 😀camión</p>";
+    const text = (q: string) => highlightMatches(root, q).marks.map((m) => m.textContent);
+    expect(text("cancion")).toEqual(["Canción", "cancion", "CANCIÓN"]);
+    expect(text("canción")).toEqual(["Canción", "cancion", "CANCIÓN"]);
+    expect(text("cance")).toEqual(["cance\u0301"]);
+    expect(text("camion")).toEqual(["camión"]);
+    clearMatches(root);
+    expect(root.textContent).toBe("Canción, cancion, CANCIÓN, cance\u0301 😀camión");
+  });
+
   it("test_ctrl_plus_matches_zoom_in", () => {
     const key = (init: KeyboardEventInit) => new KeyboardEvent("keydown", init);
     expect(matchesKey("Ctrl+=", key({ key: "+", ctrlKey: true, shiftKey: true }))).toBe(true);
