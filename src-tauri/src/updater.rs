@@ -71,15 +71,15 @@ mod tests {
 
     #[test]
     fn test_updater_is_off_in_flatpak_snap_and_usr() {
-        let appimage = Path::new("/tmp/.mount_GlossmXYZ/usr/bin/glossmark");
+        let appimage = Path::new("/tmp/.mount_NachoXYZ/usr/bin/nacho-viewer");
         let none = |_: &str| false;
         assert!(enabled_for(none, appimage));
         assert!(!enabled_for(|name| name == "FLATPAK_ID", appimage));
         assert!(!enabled_for(|name| name == "SNAP", appimage));
-        assert!(!enabled_for(none, Path::new("/usr/bin/glossmark")));
+        assert!(!enabled_for(none, Path::new("/usr/bin/nacho-viewer")));
         assert!(enabled_for(
             none,
-            Path::new(r"C:\Program Files\Glossmark\glossmark.exe")
+            Path::new(r"C:\Program Files\Nacho Viewer\nacho-viewer.exe")
         ));
     }
 }

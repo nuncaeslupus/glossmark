@@ -98,6 +98,14 @@
   overflow-wrap: break-word;
 }
 
+/* View source: the file's Markdown on the same sheet, wrapped rather than scrolled */
+.sheet.source {
+  font-family: var(--font-code);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
 .sheet > :first-child {
   margin-top: 0;
 }

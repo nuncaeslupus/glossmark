@@ -16,9 +16,11 @@ export function fakeBackend(files: Record<string, string>, launch: string[] = []
       theme: "system",
       defaultZoom: 100,
       remoteImages: true,
+      wideSheet: false,
       recentFiles: [],
     } as Config,
     external: [] as string[],
+    revealed: [] as string[],
     userCss: null as string | null,
     dialogPaths: [] as string[],
     dialogCalls: 0,
@@ -26,6 +28,9 @@ export function fakeBackend(files: Record<string, string>, launch: string[] = []
     savePath: null as string | null,
     saveNames: [] as string[],
     exported: [] as string[],
+    /** Calls to the core's print; `printHandled` is what it answers. */
+    printed: 0,
+    printHandled: false,
     reads: 0,
     unwatchCalls: 0,
     updateChecks: 0,
@@ -74,6 +79,10 @@ export function fakeBackend(files: Record<string, string>, launch: string[] = []
     exportPdf: async (path) => {
       state.exported.push(path);
     },
+    printDocument: async () => {
+      state.printed++;
+      return state.printHandled;
+    },
     readDocument: async (path) => {
       state.reads++;
       const waits = state.nextReadWaits;
@@ -106,6 +115,9 @@ export function fakeBackend(files: Record<string, string>, launch: string[] = []
     },
     openExternal: async (url) => {
       state.external.push(url);
+    },
+    revealFile: async (path) => {
+      state.revealed.push(path);
     },
     watch: async (path) => {
       if (state.unwatchable.includes(path)) throw { kind: "io", message: `${path}: no watch` };

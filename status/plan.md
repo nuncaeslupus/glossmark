@@ -42,6 +42,10 @@ in the bar the Outline toggle, the document title, HTML menus (File, View, Go, H
 Forward, zoom (−, percentage, +), Find and Print. There is no native menu bar, no status bar
 and no second toolbar; the menus are drawn in the bar, as Chrome's viewer draws its own.
 
+![Diagram 1](diagrams/plan-1.svg) <!-- drawspec-render -->
+
+<details><summary>Diagram source</summary>
+
 ```drawspec
 {"version": 1, "kind": "flow",
  "nodes": [
@@ -59,6 +63,8 @@ and no second toolbar; the menus are drawn in the bar, as Chrome's viewer draws 
   {"from": "core", "to": "tab", "label": "document-changed"}
  ]}
 ```
+
+</details>
 
 ### Data flow
 
@@ -140,6 +146,10 @@ T4 → T6 → T8 → T9 → T10; T12, T13, T14, T15 in parallel after their depe
 
 Generated from the **Depends** column — never drawn by hand.
 
+![Task dependencies — phases](diagrams/plan-2.svg) <!-- drawspec-render -->
+
+<details><summary>Diagram source</summary>
+
 ```drawspec
 {"version": 1, "kind": "flow", "title": "Task dependencies — phases",
  "nodes": [
@@ -151,7 +161,13 @@ Generated from the **Depends** column — never drawn by hand.
  ]}
 ```
 
+</details>
+
 **Phase 1** — T1, T2, T7, T3, T5, T11, T16, T4, T8
+
+![Task dependencies — phase 1](diagrams/plan-3.svg) <!-- drawspec-render -->
+
+<details><summary>Diagram source</summary>
 
 ```drawspec
 {"version": 1, "kind": "flow", "title": "Task dependencies — phase 1",
@@ -179,7 +195,13 @@ Generated from the **Depends** column — never drawn by hand.
  ]}
 ```
 
+</details>
+
 **Phase 2** — T12, T14, T6, T9, T13, T15, T10, T17 (with T4, T5, T8, T11, T16 from earlier phases)
+
+![Task dependencies — phase 2](diagrams/plan-4.svg) <!-- drawspec-render -->
+
+<details><summary>Diagram source</summary>
 
 ```drawspec
 {"version": 1, "kind": "flow", "title": "Task dependencies — phase 2",
@@ -217,6 +239,8 @@ Generated from the **Depends** column — never drawn by hand.
   {"from": "T16", "to": "T17"}
  ]}
 ```
+
+</details>
 
 ## Evidence log
 

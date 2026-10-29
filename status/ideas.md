@@ -62,16 +62,17 @@
 |-----|----------------------|--------|-----------|--------------|
 | S-1 | Viewer v1            | A, B, E, F | specified | status/specification.md |
 | S-2 | Diagram rendering    | B      | dropped   |              |
-| S-3 | Editing              | C      | parked    |              |
+| S-3 | Editing              | C      | dropped   |              |
 | S-4 | Packaging and stores | D      | specified | arsenal/project/packaging/spec.md |
+| S-5 | Images and PDF pages | A      | exploring |              |
 
 ## Decision log
 
 | ID  | Decision                                                     | Status | Date       | Sub-project |
 |-----|--------------------------------------------------------------|--------|------------|-------------|
-| D-1 | Name: Glossmark                                              | agreed | 2026-10-26 | S-1         |
+| D-1 | Name: Glossmark                                              | superseded by D-32 | 2026-10-26 | S-1         |
 | D-2 | Stack: Tauri v2 (system webview, small Rust backend)         | agreed | 2026-10-26 | S-1         |
-| D-3 | v1 is a viewer only; editing comes later (S-3)               | agreed | 2026-10-26 | S-1         |
+| D-3 | v1 is a viewer only; editing comes later (S-3)               | superseded by D-33 | 2026-10-26 | S-1         |
 | D-4 | Linux first, then Windows and macOS                          | agreed | 2026-10-26 | S-1         |
 | D-5 | Mermaid is in v1, lazy-loaded (S-2 folded into S-1)          | agreed | 2026-10-26 | S-1         |
 | D-6 | Page layout: a fixed-width paper sheet on a grey canvas, continuous scroll; print uses the same styling | agreed | 2026-10-26 | S-1 |
@@ -85,7 +86,7 @@
 | D-14 | UI in English for v1, all strings in one file; translations later | agreed | 2026-10-26 | S-1 |
 | D-15 | Safe raw HTML is kept, as on GitHub; everything else is stripped | agreed | 2026-10-26 | S-1 |
 | D-18 | Zoom scales the whole sheet like a PDF viewer (I-24): already so (`zoom` on `.sheet`), no task | agreed | 2026-10-28 | S-1 |
-| D-19 | One bar in three zones (I-25, I-29): left ☰ outline, title, Back/Forward · centre zoom − % + and Find · right Export, Print, ⋮ More; the File/View/Go/Help menus fold into ⋮ More (Chrome's PDF viewer, D-11) | agreed | 2026-10-28 | S-1 |
+| D-19 | One bar in three zones (I-25, I-29): left ☰ outline, Back/Forward (no title: the tab names the file; its ▾ and right-click offer Show in file manager / Copy path, 2026-10-29) · centre zoom − % + (a click on % fits the width, or returns to 100%) · right Find, Export, Print, ⋮ More (2026-10-29); the File/View/Go/Help menus fold into ⋮ More (Chrome's PDF viewer, D-11) | agreed | 2026-10-28 | S-1 |
 | D-20 | Export (I-26) saves a PDF of the print styling to a chosen file; no HTML export | agreed | 2026-10-28 | S-1 |
 | D-21 | Find and Print use the familiar icons, Material Symbols as in Chrome's PDF viewer (I-27) | agreed | 2026-10-28 | S-1 |
 | D-22 | Ctrl+Tab / Ctrl+Shift+Tab switch to the next / previous tab (I-28) | agreed | 2026-10-28 | S-1 |
@@ -98,3 +99,5 @@
 | D-29 | Export to PDF works on Windows (WebView2) and macOS (WKWebView) before their builds ship | agreed | 2026-10-28 | S-4 |
 | D-30 | Print and Export paginate well: headings keep with the text that follows, no widow or orphan lines, and code blocks, table rows, images and diagrams are not split where they fit on one page | agreed | 2026-10-28 | S-1 |
 | D-31 | The Tauri updater is on in every build that can replace itself (AppImage, .msi/.exe, .dmg), including the winget and Homebrew installs, which use the same binaries; the cask declares `auto_updates true`. It is off under Flatpak, Snap and the .deb (apt) | agreed | 2026-10-28 | S-4 |
+| D-32 | Rename before v0: Glossmark becomes **Nacho Viewer** (short name Nacho); a single tortilla-chip mark for the logo. The old `glossmark` settings folder is still read | agreed | 2026-10-29 | S-4 |
+| D-33 | One free universal viewer, no editor (S-3 dropped): Markdown now; images (zoom, fit, rotate and save) and PDF (view; reorder, rotate and delete pages, then save) after v0 as S-5 | agreed | 2026-10-29 | S-5 |

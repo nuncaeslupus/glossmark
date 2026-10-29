@@ -13,7 +13,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 RESULTS="status/acceptance.json"
-BIN="src-tauri/target/release/glossmark"
+BIN="src-tauri/target/release/nacho-viewer"
 
 # Launch to the document being read: spawn the release binary on a 100 KB doc and time the
 # first inotify OPEN of that file (process, GTK and WebKitGTK start-up, bundle load, IPC).

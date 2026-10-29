@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Glossmark",
+  "productName": "Nacho Viewer",
   "version": "0.1.0",
-  "identifier": "io.github.nuncaeslupus.glossmark",
+  "identifier": "io.github.nuncaeslupus.NachoViewer",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -10,7 +10,9 @@
     "frontendDist": "../dist"
   },
   "app": {
-    "windows": [{ "label": "main", "title": "Glossmark", "width": 1000, "height": 800 }],
+    "windows": [
+      { "label": "main", "title": "Nacho Viewer", "width": 1000, "height": 800, "decorations": false }
+    ],
     "security": {
       "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' image: http://image.localhost data: https:; font-src 'self' data:; connect-src ipc: http://ipc.localhost; frame-src 'none'; object-src 'none'"
     }
@@ -20,9 +22,9 @@
     "createUpdaterArtifacts": true,
     "targets": ["deb", "appimage", "msi", "nsis", "dmg", "app"],
     "icon": [
+      "icons/128x128@2x.png",
       "icons/32x32.png",
       "icons/128x128.png",
-      "icons/128x128@2x.png",
       "icons/icon.png",
       "icons/icon.icns",
       "icons/icon.ico"
@@ -34,13 +36,13 @@
     "shortDescription": "A Markdown viewer that reads like a well-typeset document",
     "macOS": { "signingIdentity": "-" },
     "linux": {
-      "deb": { "desktopTemplate": "linux/glossmark.desktop" }
+      "deb": { "desktopTemplate": "linux/nacho-viewer.desktop" }
     }
   },
   "plugins": {
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDZGMEFDMUE2RjYyRDY3OEQKUldTTlp5MzJwc0VLYi9tUW9acncva1BHOVVKQTJlZ3VxTEM0VXp0QThaSVBEenMwNExmY2dFaEkK",
-      "endpoints": ["https://github.com/nuncaeslupus/glossmark/releases/latest/download/latest.json"]
+      "endpoints": ["https://github.com/nuncaeslupus/nacho-viewer/releases/latest/download/latest.json"]
     }
   }
 }

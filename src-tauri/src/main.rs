@@ -13,6 +13,14 @@ use commands::AppState;
 use tauri::{DragDropEvent, Emitter, Manager, WindowEvent};
 
 fn main() {
+    // WebKitGTK's DMA-BUF renderer freezes the page (slow scrolling, dead clicks) on some
+    // GPU drivers, NVIDIA under Wayland among them. The fallback renders fine everywhere, so
+    // it is the default; a user who sets the variable keeps their choice.
+    #[cfg(target_os = "linux")]
+    if std::env::var_os("WEBKIT_DISABLE_DMABUF_RENDERER").is_none() {
+        // SAFETY: first statement of main, before any thread exists.
+        unsafe { std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1") };
+    }
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(
             commands::open_from_second_instance,
@@ -52,6 +60,7 @@ fn main() {
             commands::open_dialog,
             commands::save_dialog,
             commands::export_pdf,
+            commands::print_document,
             commands::read_document,
             commands::read_svg,
             commands::watch,
@@ -60,9 +69,10 @@ fn main() {
             commands::set_config,
             commands::read_user_css,
             commands::open_external,
+            commands::reveal_file,
             commands::check_update,
             commands::install_update,
         ])
         .run(tauri::generate_context!())
-        .expect("error while running Glossmark");
+        .expect("error while running Nacho Viewer");
 }

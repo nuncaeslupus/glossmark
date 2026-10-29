@@ -1,11 +1,14 @@
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 
 export interface Config {
   version: number;
   theme: "system" | "light" | "dark";
   defaultZoom: number;
   remoteImages: boolean;
+  /** The sheet fills the window instead of keeping a book's line length. */
+  wideSheet: boolean;
   recentFiles: string[];
 }
 
@@ -28,6 +31,16 @@ export interface UpdateAvailable {
 }
 
 /** The Rust core, as the shell sees it; tests pass a fake. */
+export interface WindowControls {
+  minimize(): Promise<void>;
+  toggleMaximize(): Promise<void>;
+  close(): Promise<void>;
+  startDragging(): Promise<void>;
+  isMaximized(): Promise<boolean>;
+  /** Resolves to the function that stops listening. */
+  onResized(handler: () => void): Promise<() => void>;
+}
+
 export interface Backend {
   takeOpenFiles(): Promise<string[]>;
   openDialog(): Promise<string[]>;
@@ -35,6 +48,9 @@ export interface Backend {
   saveDialog(name: string): Promise<string | null>;
   /** Prints the page to `path`, which must be the Save dialog's last answer. */
   exportPdf(path: string): Promise<void>;
+  /** The system print dialog over the same page as the PDF; `false` where the webview's own
+   * print is used instead. */
+  printDocument(): Promise<boolean>;
   readDocument(path: string): Promise<Doc>;
   /** The markup of a local SVG, for inlining after sanitising (2 MB cap). */
   readSvg(path: string): Promise<string>;
@@ -42,9 +58,13 @@ export interface Backend {
   imageUrl(path: string): string;
   getConfig(): Promise<Config>;
   setConfig(config: Config): Promise<void>;
-  /** `$XDG_CONFIG_HOME/glossmark/user.css`, or `null` when there is none. */
+  /** `$XDG_CONFIG_HOME/nacho-viewer/user.css`, or `null` when there is none. */
   readUserCss(): Promise<string | null>;
   openExternal(url: string): Promise<void>;
+  /** Opens the system file manager at an open document, with it selected. */
+  revealFile(path: string): Promise<void>;
+  /** The window's own buttons, drawn in the tab strip; absent where the system draws them. */
+  window?: WindowControls;
   /** Watching is reference-counted in the core: each `watch` needs its own `unwatch`. */
   watch(path: string): Promise<void>;
   unwatch(path: string): Promise<void>;
@@ -67,6 +87,7 @@ export const tauriBackend: Backend = {
   openDialog: () => invoke<OpenFiles>("open_dialog").then((r) => r.paths),
   saveDialog: (name) => invoke<string | null>("save_dialog", { name }),
   exportPdf: (path) => invoke<void>("export_pdf", { path }),
+  printDocument: () => invoke<boolean>("print_document"),
   readDocument: (path) => invoke<Doc>("read_document", { path }),
   readSvg: (path) => invoke<{ svg: string }>("read_svg", { path }).then((r) => r.svg),
   imageUrl: (path) => convertFileSrc(path, "image"),
@@ -74,6 +95,15 @@ export const tauriBackend: Backend = {
   setConfig: (config) => invoke<void>("set_config", { config }),
   readUserCss: () => invoke<{ css: string | null }>("read_user_css").then((r) => r.css),
   openExternal: (url) => invoke<void>("open_external", { url }),
+  revealFile: (path) => invoke<void>("reveal_file", { path }),
+  window: {
+    minimize: () => getCurrentWindow().minimize(),
+    toggleMaximize: () => getCurrentWindow().toggleMaximize(),
+    close: () => getCurrentWindow().close(),
+    startDragging: () => getCurrentWindow().startDragging(),
+    isMaximized: () => getCurrentWindow().isMaximized(),
+    onResized: (handler) => getCurrentWindow().onResized(() => handler()),
+  },
   watch: (path) => invoke<void>("watch", { path }),
   unwatch: (path) => invoke<void>("unwatch", { path }),
   checkUpdate: () => invoke<void>("check_update"),

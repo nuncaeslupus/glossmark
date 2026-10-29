@@ -68,7 +68,7 @@ test("test_feature_fixture_parser_constructs_present", () => {
   expect(text(el.querySelectorAll(".front-matter th"))).toEqual(["title", "author", "tags"]);
   expect(text(el.querySelectorAll(".front-matter td"))).toEqual([
     "All features",
-    "Glossmark",
+    "Nacho Viewer",
     "fixture",
   ]);
   expect(meta?.nextElementSibling?.tagName).toBe("H1");

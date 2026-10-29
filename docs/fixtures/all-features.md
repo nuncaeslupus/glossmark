@@ -1,12 +1,12 @@
 ---
 title: All features
-author: Glossmark
+author: Nacho Viewer
 tags: fixture
 ---
 
 # All features
 
-One example of every construct in Glossmark's v1 scope (D-7). Tests and later tasks render
+One example of every construct in Nacho Viewer's v1 scope (D-7). Tests and later tasks render
 this file and look for each construct's element.
 
 ## CommonMark
