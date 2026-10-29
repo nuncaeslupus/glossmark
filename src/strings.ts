@@ -1,7 +1,7 @@
 // Every UI string lives here (D-14), so translations can be added without touching the code.
 export const strings = {
-  appName: "Glossmark",
-  windowTitle: (document: string) => `${document} — Glossmark`,
+  appName: "Nacho Viewer",
+  windowTitle: (document: string) => `${document} — Nacho Viewer`,
   emptyState: "Open or drop a Markdown file",
   recentFiles: "Recent files",
   documentError: "This document could not be opened.",
@@ -15,7 +15,7 @@ export const strings = {
     recentFilesNotSaved: "Recent files could not be saved.",
     settingNotSaved: "The setting could not be saved.",
     sectionNotFound: "That section is not in this document.",
-    notMarkdown: "Only Markdown files open in Glossmark.",
+    notMarkdown: "Only Markdown files open in Nacho Viewer.",
     watchFailed: "Changes to this file will not be shown.",
     updateFailed: "The update could not be installed.",
     revealFailed: "The file manager could not be opened.",

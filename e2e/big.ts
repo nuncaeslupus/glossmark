@@ -11,7 +11,7 @@ const LOREM =
 function paragraph(n: number, k: number): string {
   const note = k === 0 && n % 2 === 0 ? `[^n${n}]` : "";
   const math = k === 1 && n % 4 === 0 ? ` The cost grows as $O(n \\log n)$ for ${n} items.` : "";
-  return `Glossmark renders **Markdown** the way _GitHub_ does: \`option${n}.${k}\` sets the widget, [the guide](https://example.com/guide/${n}) explains it${note}, and ~~nothing~~ is lost.${math} ${LOREM}\n\n`;
+  return `Nacho Viewer renders **Markdown** the way _GitHub_ does: \`option${n}.${k}\` sets the widget, [the guide](https://example.com/guide/${n}) explains it${note}, and ~~nothing~~ is lost.${math} ${LOREM}\n\n`;
 }
 
 function section(n: number): string {

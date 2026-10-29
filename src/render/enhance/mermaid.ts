@@ -63,7 +63,7 @@ function load(): Promise<Mermaid> {
  * lays out the document again. The stage is as wide as `spot`, where the drawing goes: a
  * Gantt chart is laid out at its container's width, and one laid out wider is squashed. */
 async function draw(m: Mermaid, source: string, stage: HTMLElement, spot: HTMLElement) {
-  const id = `glossmark-mermaid-${++count}`;
+  const id = `nacho-mermaid-${++count}`;
   // A drawn spot in a hidden tab has no width: it keeps its drawing's.
   const width = spot.clientWidth || spot.querySelector("svg")?.viewBox.baseVal.width;
   stage.style.width = width ? `${width}px` : "";

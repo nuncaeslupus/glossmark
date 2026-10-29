@@ -65,5 +65,5 @@ fn main() {
             commands::install_update,
         ])
         .run(tauri::generate_context!())
-        .expect("error while running Glossmark");
+        .expect("error while running Nacho Viewer");
 }

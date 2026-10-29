@@ -16,7 +16,7 @@ pub enum Theme {
     Dark,
 }
 
-/// `$XDG_CONFIG_HOME/glossmark/config.json`.
+/// `$XDG_CONFIG_HOME/nacho-viewer/config.json`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct Config {
@@ -53,8 +53,34 @@ pub struct UserCss {
     pub css: Option<String>,
 }
 
+/// The app's settings folder, `$XDG_CONFIG_HOME/nacho-viewer` (or the platform's equivalent).
+/// Settings from before the rename are carried over on first use.
 pub fn config_dir() -> Option<PathBuf> {
-    dirs::config_dir().map(|d| d.join("glossmark"))
+    let base = dirs::config_dir()?;
+    let dir = base.join("nacho-viewer");
+    carry_over(&base.join(OLD_DIR), &dir);
+    Some(dir)
+}
+
+/// The settings folder's name before the app was renamed (D-32).
+const OLD_DIR: &str = "glossmark";
+
+/// Copies the settings and user.css from the folder used before the rename into `new`, once:
+/// only while `new` does not exist. The old folder is left as it was. Best effort: a copy that
+/// fails leaves the defaults, as a missing file would.
+fn carry_over(old: &Path, new: &Path) {
+    if new.exists() || !old.is_dir() {
+        return;
+    }
+    if fs::create_dir_all(new).is_err() {
+        return;
+    }
+    for name in ["config.json", "user.css"] {
+        let from = old.join(name);
+        if from.is_file() {
+            let _ = fs::copy(&from, new.join(name));
+        }
+    }
 }
 
 /// Reads the config. A missing or unreadable file gives the defaults and is left alone; a file
@@ -139,6 +165,40 @@ mod tests {
     }
 
     #[test]
+    fn test_config_falls_back_to_glossmark_folder() {
+        let base = tempfile::tempdir().unwrap();
+        let (old, new) = (base.path().join(OLD_DIR), base.path().join("nacho-viewer"));
+        fs::create_dir(&old).unwrap();
+        fs::write(
+            old.join("config.json"),
+            r#"{"version": 1, "theme": "dark"}"#,
+        )
+        .unwrap();
+        fs::write(old.join("user.css"), "body { color: red }").unwrap();
+
+        // Only the old folder: its settings and user.css are read through the new one.
+        carry_over(&old, &new);
+        assert_eq!(load(&new.join("config.json")).theme, Theme::Dark);
+        assert_eq!(
+            read_user_css(&new.join("user.css")).unwrap().css.as_deref(),
+            Some("body { color: red }")
+        );
+        assert!(
+            old.join("config.json").is_file(),
+            "the old folder is left as it was"
+        );
+
+        // Both folders: the new one wins and is not overwritten.
+        fs::write(
+            new.join("config.json"),
+            r#"{"version": 1, "theme": "light"}"#,
+        )
+        .unwrap();
+        carry_over(&old, &new);
+        assert_eq!(load(&new.join("config.json")).theme, Theme::Light);
+    }
+
+    #[test]
     fn test_config_read_error_keeps_file() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("config.json");
@@ -151,7 +211,7 @@ mod tests {
     #[test]
     fn test_config_round_trips_and_normalises() {
         let dir = tempfile::tempdir().unwrap();
-        let path = dir.path().join("glossmark/config.json");
+        let path = dir.path().join("nacho-viewer/config.json");
         let config = Config {
             theme: Theme::Dark,
             default_zoom: 1000,

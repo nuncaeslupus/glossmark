@@ -52,7 +52,7 @@ export interface Backend {
   imageUrl(path: string): string;
   getConfig(): Promise<Config>;
   setConfig(config: Config): Promise<void>;
-  /** `$XDG_CONFIG_HOME/glossmark/user.css`, or `null` when there is none. */
+  /** `$XDG_CONFIG_HOME/nacho-viewer/user.css`, or `null` when there is none. */
   readUserCss(): Promise<string | null>;
   openExternal(url: string): Promise<void>;
   /** Opens the system file manager at an open document, with it selected. */
