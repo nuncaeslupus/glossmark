@@ -337,8 +337,8 @@ button:disabled {
   box-sizing: border-box;
 }
 
-/* --sheet-max and --sheet-pad come from the window's width (sheetLayout): a zoomed sheet
- * rewraps rather than overflowing the canvas. */
+/* --sheet-max and --sheet-pad come from the window's width (sheetLayout): the column fits the
+ * canvas, and zoom grows the font inside it rather than widening the sheet. */
 .sheet {
   box-sizing: border-box;
   max-width: var(--sheet-max, 816px);
@@ -350,10 +350,6 @@ button:disabled {
 
 .view.with-outline .canvas {
   left: var(--outline-width);
-}
-
-.sheet {
-  zoom: var(--zoom, 1);
 }
 
 /* Outline sidebar */

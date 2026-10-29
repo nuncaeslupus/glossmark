@@ -89,7 +89,9 @@
 /* The page: a measure of about 70 characters inside the sheet's margins */
 .sheet {
   font-family: var(--font-body);
-  font-size: 1.0625rem;
+  /* Zoom scales this one root size; every other size is em/rem, so the whole sheet grows and
+   * the text reflows in its column, like a web page. --zoom defaults to 1 (e.g. in print). */
+  font-size: calc(1.0625rem * var(--zoom, 1));
   line-height: 1.6;
   color: var(--ink);
   font-optical-sizing: auto;
@@ -101,7 +103,7 @@
 /* View source: the file's Markdown on the same sheet, wrapped rather than scrolled */
 .sheet.source {
   font-family: var(--font-code);
-  font-size: 0.875rem;
+  font-size: calc(0.875rem * var(--zoom, 1));
   line-height: 1.5;
   white-space: pre-wrap;
 }

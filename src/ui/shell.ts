@@ -1243,7 +1243,7 @@ export class Shell {
   private layoutSheet(): void {
     const width = this.active?.canvas.clientWidth ?? 0;
     if (width <= 0) return;
-    const { maxWidth, padScale } = sheetLayout(width, this.zoom, this.wide);
+    const { maxWidth, padScale } = sheetLayout(width, this.wide);
     this.view.style.setProperty("--sheet-max", `${maxWidth}px`);
     this.view.style.setProperty("--sheet-pad", String(padScale));
   }

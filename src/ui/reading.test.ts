@@ -107,30 +107,33 @@ describe("reading tools", () => {
     expect(stepZoom(300, 1)).toBe(300);
     expect(stepZoom(50, -1)).toBe(50);
     expect(stepZoom(133, -1)).toBe(125);
-    // A book page while the window has room; the canvas width, less its margins, once zoom
-    // would push past it (the lines rewrap); the whole canvas when wide.
-    expect(sheetLayout(2000, 100, false)).toEqual({ maxWidth: 816, padScale: 1 });
-    expect(sheetLayout(2000, 200, false)).toEqual({ maxWidth: 816, padScale: 1 });
-    expect(sheetLayout(1000, 200, false)).toEqual({ maxWidth: 476, padScale: 476 / 816 });
-    expect(sheetLayout(2000, 100, true)).toEqual({ maxWidth: 1952, padScale: 1 });
-    expect(sheetLayout(0, 100, false).maxWidth).toBe(160);
-    expect(sheetLayout(0, 300, false).maxWidth).toBe(54);
+    // A book page while the window has room; the canvas width, less its margins, when wide.
+    // The column is the same at every zoom — zoom grows the font, the text reflows inside it.
+    expect(sheetLayout(2000, false)).toEqual({ maxWidth: 816, padScale: 1 });
+    expect(sheetLayout(1000, false)).toEqual({ maxWidth: 816, padScale: 1 });
+    expect(sheetLayout(2000, true)).toEqual({ maxWidth: 1952, padScale: 1 });
+    // A window narrower than a book page: the sheet fills it and its padding shrinks.
+    expect(sheetLayout(300, false)).toEqual({ maxWidth: 252, padScale: 252 / 816 });
+    expect(sheetLayout(0, false).maxWidth).toBe(160);
   });
 
-  it("test_sheet_rewraps_and_ctrl_9_widens_it", async () => {
+  it("test_zoom_grows_font_and_ctrl_9_widens_sheet", async () => {
     const { root, state } = await open({ "/n/a.md": "# A" }, ["/n/a.md"]);
     const view = root.querySelector<HTMLElement>(".view");
     const max = () => view?.style.getPropertyValue("--sheet-max");
+    const scale = () => view?.style.getPropertyValue("--zoom");
     layout(root.querySelector(".canvas") as Element, { clientWidth: 1000 });
     window.dispatchEvent(new Event("resize"));
     expect(max()).toBe("816px");
-    // Zooming in keeps the sheet inside the window: the lines rewrap, nothing scrolls sideways.
+    // Zooming grows the font (the text reflows in the column); the column itself is unchanged.
     press({ key: "=", ctrlKey: true });
     press({ key: "=", ctrlKey: true });
     expect(root.querySelector(".bar .zoom")?.textContent).toBe(strings.zoomPercent(125));
-    expect(max()).toBe(`${Math.floor(952 / 1.25)}px`);
+    expect(scale()).toBe("1.25");
+    expect(max()).toBe("816px");
     // The readout returns to 100%.
     root.querySelector<HTMLElement>(".bar .zoom")?.click();
+    expect(scale()).toBe("1");
     expect(max()).toBe("816px");
     // Ctrl+9 (or the bar's toggle) gives the sheet the whole window, and is remembered.
     press({ key: "9", ctrlKey: true });

@@ -19,18 +19,12 @@ export function stepZoom(percent: number, direction: 1 | -1): number {
   return next ?? clampZoom(percent);
 }
 
-/** The sheet's width and padding for a canvas `width` px wide at `percent` zoom, in the sheet's
- * own (unzoomed) pixels: a book's line length, or the whole canvas when `wide`, and never wider
- * than the canvas, so a zoomed sheet rewraps its lines instead of scrolling sideways. The
- * padding shrinks with a sheet narrower than a book page. */
-export function sheetLayout(
-  width: number,
-  percent: number,
-  wide: boolean,
-): { maxWidth: number; padScale: number } {
-  const room = Math.max(0, width - 2 * MARGIN_PX) / (percent / 100);
-  // The floor is in rendered px, so a zoomed sheet still fits a narrow window.
-  const floor = Math.ceil(MIN_SHEET_PX / (percent / 100));
-  const maxWidth = Math.max(floor, Math.floor(wide ? room : Math.min(SHEET_PX, room)));
+/** The sheet's width and padding for a canvas `width` px wide: a book's line length, or the
+ * whole canvas when `wide`, and never wider than the canvas. Independent of zoom — zoom grows
+ * the font and the text reflows inside this column (like a web page), so the column itself
+ * never changes with zoom. The padding shrinks with a sheet narrower than a book page. */
+export function sheetLayout(width: number, wide: boolean): { maxWidth: number; padScale: number } {
+  const room = Math.max(0, width - 2 * MARGIN_PX);
+  const maxWidth = Math.max(MIN_SHEET_PX, Math.floor(wide ? room : Math.min(SHEET_PX, room)));
   return { maxWidth, padScale: Math.min(1, maxWidth / SHEET_PX) };
 }
