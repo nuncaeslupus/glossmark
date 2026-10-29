@@ -1,6 +1,8 @@
 // Find in page: our own search over text nodes, since `window.find` is unreliable in WebKitGTK.
 
 const MATCH = "find-match";
+const MARK_RE = /\p{M}/u;
+const NON_ASCII = /[\u0080-\uffff]/;
 // Text a reader does not see as the document's: diagram internals, KaTeX's MathML copy, the
 // copy buttons and the reload notice.
 const SKIP = "script, style, svg, button, .katex-mathml, .file-notice";
@@ -12,20 +14,48 @@ export interface Found {
   more: boolean;
 }
 
-/** `text` folded for matching: lower case, accents dropped ("É" → "e"), with each folded
- * code unit's index in `text`, so a match maps back to the original span. */
-function fold(text: string): { folded: string; at: number[] } {
-  let folded = "";
+const folds = new Map<string, string>();
+
+/** One character folded: lower case, accents dropped ("É" → "e"), final sigma as sigma. NFC
+ * after stripping keeps Hangul syllables whole. */
+function foldChar(ch: string): string {
+  let f = folds.get(ch);
+  if (f === undefined) {
+    f = ch
+      .normalize("NFD")
+      .replace(/\p{M}/gu, "")
+      .normalize("NFC")
+      .toLowerCase()
+      .replace(/ς/g, "σ");
+    folds.set(ch, f);
+  }
+  return f;
+}
+
+/** `text` folded for matching, with each folded code unit's index in `text`, so a match maps
+ * back to the original span (`null` when the two are the same). */
+function fold(text: string): { folded: string; at: number[] | null } {
+  // Plain ASCII, the bulk of most documents: lower case only, and offsets map one to one.
+  if (!NON_ASCII.test(text)) return { folded: text.toLowerCase(), at: null };
+  const parts: string[] = [];
   const at: number[] = [];
   for (let i = 0; i < text.length; ) {
+    const code = text.charCodeAt(i);
+    if (code < 0x80) {
+      // ASCII, the bulk of most documents: lower case is all there is to do.
+      parts.push(code >= 65 && code <= 90 ? String.fromCharCode(code + 32) : (text[i] as string));
+      at.push(i);
+      i++;
+      continue;
+    }
     const ch = String.fromCodePoint(text.codePointAt(i) as number);
-    const f = ch.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
+    const f = foldChar(ch);
     for (let k = 0; k < f.length; k++) at.push(i);
-    folded += f;
+    parts.push(f);
     i += ch.length;
   }
   at.push(text.length);
-  return { folded, at };
+  return { folded: parts.join(""), at };
 }
 
 /** Wraps each occurrence of `query` under `root` in `<mark class="find-match">`, ignoring case
@@ -46,17 +76,24 @@ export function highlightMatches(root: HTMLElement, query: string, limit = Infin
 
   for (const node of nodes) {
     // ponytail: a match must sit within one text node, so `foo **bar**` does not find "foo bar".
-    const { folded, at } = fold(node.data);
+    const { folded, at: map } = fold(node.data);
+    const at = (i: number) => (map ? (map[i] as number) : i);
     let rest = node;
     let consumed = 0;
     for (let hit = folded.indexOf(needle); hit >= 0; ) {
       if (marks.length === limit) return { marks, more: true };
-      const start = at[hit] as number;
+      const start = at(hit);
       // The match ends after the original character its last folded unit came from.
-      const last = at[hit + needle.length - 1] as number;
+      const last = at(hit + needle.length - 1);
       let end = last + ((node.data.codePointAt(last) as number) > 0xffff ? 2 : 1);
       // ...and any accents written after it as separate marks.
-      while (end < node.data.length && /\p{M}/u.test(node.data[end] as string)) end++;
+      for (
+        let c = node.data.codePointAt(end);
+        c !== undefined && MARK_RE.test(String.fromCodePoint(c));
+        c = node.data.codePointAt(end)
+      ) {
+        end += c > 0xffff ? 2 : 1;
+      }
       const match = rest.splitText(start - consumed);
       rest = match.splitText(end - start);
       const mark = doc.createElement("mark");
@@ -65,8 +102,10 @@ export function highlightMatches(root: HTMLElement, query: string, limit = Infin
       mark.append(match);
       marks.push(mark);
       consumed = end;
-      const next = at.findIndex((i) => i >= end);
-      hit = next < 0 ? -1 : folded.indexOf(needle, next);
+      // Resume at the first folded unit of a character after the match.
+      let next = hit + needle.length;
+      while (next < folded.length && at(next) < end) next++;
+      hit = folded.indexOf(needle, next);
     }
   }
   return { marks, more: false };
