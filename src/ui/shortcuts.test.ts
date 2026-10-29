@@ -57,7 +57,7 @@ describe("keyboard shortcuts", () => {
       document.dispatchEvent(
         new KeyboardEvent("keydown", { key: "Tab", ctrlKey: true, shiftKey, bubbles: true }),
       );
-    const active = () => root.querySelector(".bar .title")?.textContent;
+    const active = () => root.querySelector(".tab.active .tab-label")?.textContent;
     const labels = [...root.querySelectorAll<HTMLElement>(".tab-label")];
     expect(labels.map((l) => l.textContent)).toEqual(["a.md", "b.md", "c.md"]);
     labels[2]?.click();

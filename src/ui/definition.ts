@@ -37,6 +37,7 @@ export const actions: Record<ActionId, Action> = {
     needsDocument: true,
     dialog: true,
   },
+  newTab: { id: "newTab", label: a.newTab, icon: i.newTab, key: "Ctrl+T" },
   closeTab: {
     id: "closeTab",
     label: a.closeTab,
@@ -63,7 +64,13 @@ export const actions: Record<ActionId, Action> = {
   zoomOut: { id: "zoomOut", label: a.zoomOut, icon: i.zoomOut, key: "Ctrl+-", needsDocument: true },
   zoomIn: { id: "zoomIn", label: a.zoomIn, icon: i.zoomIn, key: "Ctrl+=", needsDocument: true },
   zoomReset: { id: "zoomReset", label: a.zoomReset, key: "Ctrl+0", needsDocument: true },
-  fitWidth: { id: "fitWidth", label: a.fitWidth, key: "Ctrl+9", needsDocument: true },
+  wideSheet: {
+    id: "wideSheet",
+    label: a.wideSheet,
+    icon: i.wideSheet,
+    key: "Ctrl+9",
+    needsDocument: true,
+  },
   find: { id: "find", label: a.find, icon: i.find, key: "Ctrl+F", needsDocument: true },
   findNext: {
     id: "findNext",
@@ -86,6 +93,7 @@ export const actions: Record<ActionId, Action> = {
     key: "Escape",
     needsDocument: true,
   },
+  viewSource: { id: "viewSource", label: a.viewSource, key: "Ctrl+U", needsDocument: true },
   theme: { id: "theme", label: a.theme, key: "Ctrl+Shift+L" },
   remoteImages: { id: "remoteImages", label: a.remoteImages, key: "Ctrl+Shift+M" },
   shortcuts: { id: "shortcuts", label: a.shortcuts, key: "F1" },
@@ -93,7 +101,7 @@ export const actions: Record<ActionId, Action> = {
 
 export type BarItem =
   | { kind: "button"; action: ActionId }
-  | { kind: "title" }
+  | { kind: "notice" }
   | { kind: "more" }
   | { kind: "zoom" };
 
@@ -101,23 +109,38 @@ export type BarItem =
 export const bar: BarItem[][] = [
   [
     { kind: "button", action: "outline" },
-    { kind: "title" },
     { kind: "button", action: "back" },
     { kind: "button", action: "forward" },
+    { kind: "notice" },
   ],
   [
     { kind: "button", action: "zoomOut" },
     { kind: "zoom" },
     { kind: "button", action: "zoomIn" },
-    { kind: "button", action: "find" },
+    { kind: "button", action: "wideSheet" },
   ],
-  [{ kind: "button", action: "export" }, { kind: "button", action: "print" }, { kind: "more" }],
+  [
+    { kind: "button", action: "find" },
+    { kind: "button", action: "export" },
+    { kind: "button", action: "print" },
+    { kind: "more" },
+  ],
 ];
 
 /** ⋮ More's sections, divided by rules; every command keeps its shortcut. */
 export const menus: ActionId[][] = [
-  ["open", "export", "print", "closeTab"],
-  ["outline", "zoomIn", "zoomOut", "zoomReset", "fitWidth", "find", "theme", "remoteImages"],
+  ["open", "newTab", "export", "print", "closeTab"],
+  [
+    "outline",
+    "zoomIn",
+    "zoomOut",
+    "zoomReset",
+    "wideSheet",
+    "find",
+    "viewSource",
+    "theme",
+    "remoteImages",
+  ],
   ["back", "forward", "nextTab", "previousTab"],
   ["shortcuts"],
 ];

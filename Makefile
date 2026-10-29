@@ -1,4 +1,4 @@
-.PHONY: sync dev dist build lint format test clean update-skills
+.PHONY: sync dev dist build lint format test clean hero update-skills
 
 CARGO = cd src-tauri && cargo
 
@@ -21,7 +21,7 @@ dist:
 	npm run build
 
 build:
-	npm run tauri build
+	npm run tauri build -- --config '{"bundle":{"createUpdaterArtifacts":false}}'
 
 lint: dist
 	npm exec -- biome check .
@@ -34,10 +34,20 @@ format:
 
 test: dist
 	npm test
+	for t in scripts/*.test.sh; do bash "$$t" || exit 1; done
 	$(call rust,$(CARGO) test)
 
 clean:
 	rm -rf dist src-tauri/target
+
+# The README hero and screenshots, taken from the e2e build's demo document.
+hero:
+	node_modules/.bin/vite build --mode e2e
+	node_modules/.bin/vite preview --mode e2e --port 4199 --strictPort & pid=$$!; \
+	  trap 'kill $$pid' EXIT; \
+	  until curl -sf -o /dev/null http://localhost:4199/e2e/shell.html; do \
+	    kill -0 $$pid || exit 1; sleep 0.5; done; \
+	  node scripts/hero.mjs
 
 update-skills:
 	git subtree pull --prefix .claude/skills https://github.com/nuncaeslupus/my-skills.git main --squash

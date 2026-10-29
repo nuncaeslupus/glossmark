@@ -32,7 +32,7 @@ jobs:
           prerelease=false
           [[ $GITHUB_REF_NAME == *-* ]] && prerelease=true
           id=$(gh api "repos/$GITHUB_REPOSITORY/releases" -f tag_name="$GITHUB_REF_NAME" \
-            -f name="Glossmark $GITHUB_REF_NAME" -F draft=true -F prerelease="$prerelease" --jq .id)
+            -f name="Nacho Viewer $GITHUB_REF_NAME" -F draft=true -F prerelease="$prerelease" --jq .id)
           echo "id=$id" >> "$GITHUB_OUTPUT"
 
   build:
@@ -77,6 +77,8 @@ jobs:
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           releaseId: ${{ needs.draft.outputs.release-id }}
           args: ${{ matrix.args }}
@@ -85,7 +87,7 @@ jobs:
       - if: runner.os == 'Linux'
         run: |
           sudo apt-get install -y ./src-tauri/target/release/bundle/deb/*.deb
-          xvfb-run -a bash scripts/smoke.sh glossmark README.md
+          xvfb-run -a bash scripts/smoke.sh nacho-viewer README.md
       - if: runner.os == 'Windows'
         shell: pwsh
         run: |
@@ -93,14 +95,14 @@ jobs:
           $p = Start-Process msiexec -ArgumentList "/i `"$msi`" /qn" -Wait -PassThru
           if ($p.ExitCode -ne 0) { throw "msiexec exited $($p.ExitCode)" }
       - if: runner.os == 'Windows'
-        run: bash scripts/smoke.sh "/c/Program Files/Glossmark/glossmark.exe" README.md
+        run: bash scripts/smoke.sh "/c/Program Files/Nacho Viewer/nacho-viewer.exe" README.md
         shell: bash
       - if: runner.os == 'macOS'
         run: |
-          hdiutil attach -nobrowse -mountpoint /tmp/glossmark-dmg src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg
-          cp -R /tmp/glossmark-dmg/Glossmark.app /Applications/
-          hdiutil detach /tmp/glossmark-dmg
-          bash scripts/smoke.sh /Applications/Glossmark.app/Contents/MacOS/glossmark README.md
+          hdiutil attach -nobrowse -mountpoint /tmp/nacho-viewer-dmg src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg
+          cp -R "/tmp/nacho-viewer-dmg/Nacho Viewer.app" /Applications/
+          hdiutil detach /tmp/nacho-viewer-dmg
+          bash scripts/smoke.sh "/Applications/Nacho Viewer.app/Contents/MacOS/nacho-viewer" README.md
 
   # Fails when any bundle is missing; the size table goes to the job summary.
   assets:

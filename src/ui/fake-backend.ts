@@ -1,4 +1,4 @@
-import type { Backend, Config, DocumentChanged } from "./ipc";
+import type { Backend, Config, DocumentChanged, UpdateAvailable } from "./ipc";
 
 /** Where the fake's `image:` protocol URLs point (Tauri's Windows form, so a browser can route it). */
 export const FAKE_IMAGE_ORIGIN = "http://image.localhost";
@@ -7,6 +7,7 @@ export const FAKE_IMAGE_ORIGIN = "http://image.localhost";
 export function fakeBackend(files: Record<string, string>, launch: string[] = []) {
   let openFiles: (paths: string[]) => void = () => {};
   let documentChanged: (change: DocumentChanged) => void = () => {};
+  let updateAvailable: (update: UpdateAvailable) => void = () => {};
   const mtimes: Record<string, number> = {};
   let clock = 1000;
   const state = {
@@ -15,9 +16,11 @@ export function fakeBackend(files: Record<string, string>, launch: string[] = []
       theme: "system",
       defaultZoom: 100,
       remoteImages: true,
+      wideSheet: false,
       recentFiles: [],
     } as Config,
     external: [] as string[],
+    revealed: [] as string[],
     userCss: null as string | null,
     dialogPaths: [] as string[],
     dialogCalls: 0,
@@ -25,10 +28,17 @@ export function fakeBackend(files: Record<string, string>, launch: string[] = []
     savePath: null as string | null,
     saveNames: [] as string[],
     exported: [] as string[],
+    /** Calls to the core's print; `printHandled` is what it answers. */
+    printed: 0,
+    printHandled: false,
     reads: 0,
     unwatchCalls: 0,
+    updateChecks: 0,
+    installs: 0,
     /** When set, the matching call rejects with this error. */
-    fail: {} as Partial<Record<"openDialog" | "getConfig" | "setConfig" | "readUserCss", unknown>>,
+    fail: {} as Partial<
+      Record<"openDialog" | "getConfig" | "setConfig" | "readUserCss" | "installUpdate", unknown>
+    >,
     /** When set, reads wait for it. */
     readGate: undefined as Promise<void> | undefined,
     /** Watchers per path, as the core counts them. */
@@ -37,6 +47,7 @@ export function fakeBackend(files: Record<string, string>, launch: string[] = []
     unwatchable: [] as string[],
     emitOpenFiles: (paths: string[]) => openFiles(paths),
     emitDocumentChanged: (change: DocumentChanged) => documentChanged(change),
+    emitUpdateAvailable: (update: UpdateAvailable) => updateAvailable(update),
     /** When set, the next read takes the file as it is now, then waits for this. */
     nextReadWaits: undefined as Promise<void> | undefined,
     /** An external save, by default with a newer mtime, and the event if the path is watched. */
@@ -67,6 +78,10 @@ export function fakeBackend(files: Record<string, string>, launch: string[] = []
     },
     exportPdf: async (path) => {
       state.exported.push(path);
+    },
+    printDocument: async () => {
+      state.printed++;
+      return state.printHandled;
     },
     readDocument: async (path) => {
       state.reads++;
@@ -101,6 +116,9 @@ export function fakeBackend(files: Record<string, string>, launch: string[] = []
     openExternal: async (url) => {
       state.external.push(url);
     },
+    revealFile: async (path) => {
+      state.revealed.push(path);
+    },
     watch: async (path) => {
       if (state.unwatchable.includes(path)) throw { kind: "io", message: `${path}: no watch` };
       state.watched[path] = (state.watched[path] ?? 0) + 1;
@@ -108,6 +126,13 @@ export function fakeBackend(files: Record<string, string>, launch: string[] = []
     unwatch: async (path) => {
       state.unwatchCalls++;
       if (state.watched[path]) state.watched[path]--;
+    },
+    checkUpdate: async () => {
+      state.updateChecks++;
+    },
+    installUpdate: async () => {
+      failing("installUpdate");
+      state.installs++;
     },
     onOpenFiles: async (handler) => {
       openFiles = handler;
@@ -119,6 +144,12 @@ export function fakeBackend(files: Record<string, string>, launch: string[] = []
       documentChanged = handler;
       return () => {
         documentChanged = () => {};
+      };
+    },
+    onUpdateAvailable: async (handler) => {
+      updateAvailable = handler;
+      return () => {
+        updateAvailable = () => {};
       };
     },
   };

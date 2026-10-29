@@ -4,11 +4,11 @@
 
 use std::path::Path;
 
-const TEMPLATE: &str = "linux/glossmark.desktop";
+const TEMPLATE: &str = "linux/nacho-viewer.desktop";
 
 fn desktop_entry() -> Vec<(String, String)> {
     let path = Path::new(env!("CARGO_MANIFEST_DIR")).join(TEMPLATE);
-    let text = std::fs::read_to_string(&path).expect("read linux/glossmark.desktop");
+    let text = std::fs::read_to_string(&path).expect("read linux/nacho-viewer.desktop");
     assert!(
         text.lines().any(|l| l.trim() == "[Desktop Entry]"),
         "missing [Desktop Entry] group"

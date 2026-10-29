@@ -17,7 +17,8 @@ const capabilities: Record<string, string> = import.meta.glob(
 describe("simplicity budget (D-11)", () => {
   it("test_ui_definition_within_simplicity_budget", () => {
     const toolbarButtons = barButtons().length;
-    expect(toolbarButtons).toBeLessThanOrEqual(8);
+    // Nine since the page-width toggle beside zoom, at the owner's request.
+    expect(toolbarButtons).toBeLessThanOrEqual(9);
     expect(settings.length).toBeLessThanOrEqual(4);
     expect(menus.length).toBeLessThanOrEqual(4);
 

@@ -126,9 +126,12 @@ test("test_worker_that_never_answers_falls_back_after_timeout", async () => {
     await Promise.resolve();
     expect(root.childElementCount).toBe(0);
     vi.advanceTimersByTime(10_000);
-    await pending;
+    const rendered = await pending;
     expect(terminate).toHaveBeenCalled();
     expect(root.querySelectorAll("h2").length).toBeGreaterThan(10);
+    // Laying out the boxes outlives the render; left running, it touches `document` after
+    // the environment is torn down.
+    await rendered.settled;
   } finally {
     vi.useRealTimers();
     vi.unstubAllGlobals();

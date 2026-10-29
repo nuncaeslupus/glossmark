@@ -3,7 +3,28 @@
 <!-- Written at session end. A new session reading this file can resume without
      additional context. -->
 
-## This session (local, 2026-10-28)
+## This session (cloud, 2026-10-29)
+
+- **Renamed to Nacho Viewer** (#111, T14 t-66dcfed6); repo is `nuncaeslupus/nacho-viewer`.
+  Settings carry over from `~/.config/glossmark` (old folder used while a copy fails).
+- Merged: accent-insensitive Find (#114); PDF export margins 20 mm + print type 10.5pt
+  root, Print uses the export's page setup on Linux (#115); claude-arsenal 5.15.0 +
+  diagrams rendered for GitHub (`render_diagrams.py`, #116); Linux freeze fix — defaults
+  `WEBKIT_DISABLE_DMABUF_RENDERER=1` (owner's Wayland + NVIDIA laptop) — and 256 px window
+  icon (#117); title bar no longer traps clicks on Linux (#113); README hero (#112).
+- **Open: #118** reflow zoom + page-width toggle (Ctrl+9) + New tab (+ / Ctrl+T). Own
+  review of the zoom commit was running when the session ended; the New tab commit
+  (b348e69) has had no review yet. Merge when reviewed and green.
+- **Open: #97, #98** Windows/macOS PDF export — wait on the owner's page-count check; they
+  now conflict with #115's `export.rs` and need a merge, and Print should route through
+  them there as it does on Linux.
+
+## What remains
+
+- Alt+Tab icon on Wayland comes from the installed desktop file; `make dev` shows a generic one.
+- Export to PDF is Linux-only until #97/#98 land.
+
+## Previous session (local, 2026-10-28)
 
 - **#49 start-up** closed at the ~650 ms WebKitGTK floor (owner-accepted deviation); perf
   bounds loosened for CI (#65).
@@ -13,15 +34,16 @@
   Find in the centre next to zoom), Export PDF (#76).
 - Queue empty.
 
-## What remains
-
-- README hero (`docs/hero.png`) shows the old toolbar; retake it to show the new bar.
-- Export to PDF is Linux-only; Windows/macOS return an error (D-4).
-
 ## Decisions taken
 
-- D-19 as built: left ☰ title ←→ · centre − % + Find · right Export Print ⋮.
+- D-19 as built: left ☰ ←→ · centre − % + ⇔ (click % = 100%; ⇔ = page as wide as the window, #118) · right Find Export
+  Print ⋮. More › View source (Ctrl+U) swaps the sheet for the Markdown, per tab. No title in the bar:
+  the tab names the file; its ▾ (active tab) and right-click give Show in Finder / File
+  Explorer / File Manager and Copy path (`reveal_file` reveals open documents only).
 - Export: the Save dialog runs in Rust; `export_pdf` writes only that dialog's last answer.
+- PR review (owner, 2026-10-28): ask `@coderabbitai review`; if CodeRabbit still does not
+  review, review the PR ourselves, then merge once `bash claude-arsenal/bin/merge_ready.sh <pr>`
+  exits 0.
 
 ## Gotchas
 

@@ -22,7 +22,7 @@ test("test_print_media_hides_app_controls", async ({ page }) => {
   await open(page, "light");
   await page.locator(".bar-button[data-action=outline]").click();
   await page.locator(".bar-button[data-action=find]").click();
-  for (const selector of [".bar", ".tabs", ".outline", ".find"]) {
+  for (const selector of [".bar", ".titlebar", ".outline", ".find"]) {
     expect(await display(page, selector), `${selector} on screen`).not.toBe("none");
   }
   // A zoomed diagram prints unzoomed, without its view controls.
@@ -32,7 +32,7 @@ test("test_print_media_hides_app_controls", async ({ page }) => {
   expect(await svg.evaluate((el) => getComputedStyle(el).transform)).toBe("none");
   for (const selector of [
     ".bar",
-    ".tabs",
+    ".titlebar",
     ".outline",
     ".find",
     ".sheet .code-block > .copy",
@@ -41,7 +41,7 @@ test("test_print_media_hides_app_controls", async ({ page }) => {
     expect(await display(page, selector), `${selector} in print`).toBe("none");
   }
   // The sheet alone, without the grey canvas, its margins or its shadow.
-  await expect(page.locator(".sheet")).toBeVisible();
+  await expect(page.locator("article.sheet")).toBeVisible();
   const sheet = await page.evaluate(() => {
     const style = (selector: string) =>
       getComputedStyle(document.querySelector(selector) as Element);
@@ -89,6 +89,32 @@ test("test_print_keeps_blocks_whole", async ({ page }) => {
   }
   expect(seen.heading).toBe("avoid");
   expect(seen.wrap).toBe("pre-wrap");
+});
+
+test("print keeps headings with their text", async ({ page }) => {
+  // WebKit ignores `break-after`, so the fix is a reserved band below each heading, inside
+  // `break-inside: avoid`. Playwright cannot paginate WebKit (page.pdf is Chromium-only), so
+  // assert the mechanism is in place; the owner judges the exported PDF in the PR.
+  await open(page, "light");
+  await page.emulateMedia({ media: "print" });
+  const seen = await page.evaluate(() => {
+    const h2 = document.querySelector(".sheet h2") as Element;
+    const after = getComputedStyle(h2, "::after");
+    const row = document.querySelector(".sheet tr");
+    return {
+      display: after.display,
+      height: Number.parseFloat(after.height),
+      marginBottom: Number.parseFloat(after.marginBottom),
+      headingBreakInside: getComputedStyle(h2).breakInside,
+      row: row && getComputedStyle(row).breakInside,
+    };
+  });
+  expect(seen.display).toBe("block");
+  expect(seen.height).toBeGreaterThan(0);
+  // The band is pulled back by a matching negative margin, so it adds no visible gap.
+  expect(seen.marginBottom).toBeCloseTo(-seen.height, 0);
+  expect(seen.headingBreakInside).toBe("avoid");
+  expect(seen.row).toBe("avoid");
 });
 
 test("test_print_draws_diagrams_light", async ({ page }) => {

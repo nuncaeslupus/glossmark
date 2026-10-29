@@ -1,5 +1,5 @@
 [package]
-name = "glossmark"
+name = "nacho-viewer"
 version = "0.1.0"
 description = "A Markdown viewer that reads like a well-typeset document"
 license = "MIT"
@@ -18,6 +18,7 @@ tauri = { version = "2", features = [] }
 tauri-plugin-dialog = "2"
 tauri-plugin-opener = "2"
 tauri-plugin-single-instance = "2"
+tauri-plugin-updater = "2"
 url = "2"
 
 # Export prints through WebKitGTK; the versions Tauri already links.

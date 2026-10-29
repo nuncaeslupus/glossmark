@@ -82,6 +82,10 @@ it waits.
   shortcut. Settings are limited to what a viewer needs: theme, default zoom, remote
   images on/off (default on), and the remembered window size and recent files.
 
+![Diagram 1](diagrams/specification-1.svg) <!-- drawspec-render -->
+
+<details><summary>Diagram source</summary>
+
 ```drawspec
 {"version": 1, "kind": "flow",
  "nodes": [
@@ -100,6 +104,8 @@ it waits.
   {"from": "enhance", "to": "sheet"}
  ]}
 ```
+
+</details>
 
 **Success criteria (measurable)**:
 

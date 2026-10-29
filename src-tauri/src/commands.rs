@@ -5,6 +5,7 @@ use crate::export;
 use crate::external;
 use crate::image;
 use crate::scope::{self, Scope};
+use crate::updater;
 use crate::watch::{self, Registry};
 use notify_debouncer_mini::notify::{RecommendedWatcher, RecursiveMode};
 use notify_debouncer_mini::Debouncer;
@@ -167,6 +168,30 @@ pub async fn export_pdf<R: Runtime>(
     export::print_to_pdf(&window, &path)
 }
 
+/// File › Print through the same page setup as Export; `false` asks the frontend to print itself.
+#[tauri::command]
+pub async fn print_document<R: Runtime>(app: AppHandle<R>) -> Result<bool, IpcError> {
+    let window = app
+        .get_webview_window("main")
+        .ok_or_else(|| IpcError::new(ErrorKind::Io, "no window to print"))?;
+    // The dialog can stay open a long time: wait for it off the async workers.
+    tauri::async_runtime::spawn_blocking(move || export::print_dialog(&window))
+        .await
+        .map_err(|e| IpcError::new(ErrorKind::Io, e.to_string()))?
+}
+
+/// Called once after first paint; a newer version arrives as `update-available`.
+#[tauri::command]
+pub async fn check_update<R: Runtime>(app: AppHandle<R>) -> Result<(), IpcError> {
+    updater::check(&app).await
+}
+
+/// More › Restart to update. Returns only on failure: on success the app restarts.
+#[tauri::command]
+pub async fn install_update<R: Runtime>(app: AppHandle<R>) -> Result<(), IpcError> {
+    updater::install(&app).await
+}
+
 /// Brings files into `scope` and returns the canonical paths it accepted.
 fn open_in_scope<P: AsRef<Path>>(
     scope: &mut Scope,
@@ -259,6 +284,22 @@ pub fn open_external(url: String, app: AppHandle) -> Result<(), IpcError> {
     app.opener()
         .open_url(url.as_str(), None::<&str>)
         .map_err(|e| IpcError::new(ErrorKind::Io, e.to_string()))
+}
+
+/// Only an open document may be shown, so the page cannot probe other paths. The file
+/// manager can be slow to answer, so the call waits off the main thread.
+#[tauri::command]
+pub async fn reveal_file(
+    path: String,
+    state: State<'_, AppState>,
+    app: AppHandle,
+) -> Result<(), IpcError> {
+    let path = lock(&state.scope).check_document(Path::new(&path))?;
+    let io = |e: String| IpcError::new(ErrorKind::Io, e);
+    tauri::async_runtime::spawn_blocking(move || app.opener().reveal_item_in_dir(path))
+        .await
+        .map_err(|e| io(e.to_string()))?
+        .map_err(|e| io(e.to_string()))
 }
 
 #[cfg(test)]

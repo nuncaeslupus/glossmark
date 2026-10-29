@@ -66,22 +66,87 @@ button:disabled {
   cursor: default;
 }
 
-.tabs[hidden],
 .empty[hidden],
 .outline[hidden],
 .find[hidden] {
   display: none;
 }
 
-/* Tab strip, above the bar */
+/* Title bar (Chrome's): the tab strip, room to drag the window, and its buttons */
+.titlebar {
+  display: flex;
+  min-height: 36px;
+  background: var(--tabs);
+  color: var(--chrome-ink);
+  user-select: none;
+}
+
+/* The app's mark and name, at the strip's left end; dragging there moves the window */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px 0 10px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.brand > * {
+  pointer-events: none;
+}
+
+.brand img {
+  width: 18px;
+  height: 18px;
+}
+
+/* Room for macOS's own buttons */
+.titlebar.mac {
+  padding-left: 72px;
+}
+
 .tabs {
   display: flex;
   gap: 1px;
+  min-width: 0;
   padding: 4px 4px 0;
-  background: var(--tabs);
-  color: var(--chrome-ink);
   font-size: 0.8125rem;
   overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.drag {
+  flex: 1;
+  min-width: 48px;
+}
+
+.window-controls {
+  display: flex;
+}
+
+.window-button {
+  width: 46px;
+  height: 36px;
+}
+
+.window-button svg {
+  width: 20px;
+  height: 20px;
+  fill: currentcolor;
+}
+
+.window-button:hover {
+  background: var(--chrome-hover);
+}
+
+.window-close:hover {
+  background: #c42b1c;
+  color: #fff;
 }
 
 .tab {
@@ -95,6 +160,21 @@ button:disabled {
   background: var(--chrome);
 }
 
+/* Chrome's "+" after the last tab, opening the start page in a tab of its own. */
+.new-tab {
+  flex: none;
+  align-self: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  margin-left: 4px;
+  border-radius: 50%;
+  font-size: 1.1rem;
+}
+
+.new-tab:hover {
+  background: var(--chrome-hover);
+}
+
 .tab-label {
   padding: 6px 4px 6px 10px;
   overflow: hidden;
@@ -102,11 +182,32 @@ button:disabled {
   text-overflow: ellipsis;
 }
 
-.tab-close {
+.tab-close,
+.tab-menu {
   width: 1.5rem;
   height: 1.5rem;
   margin-right: 4px;
   border-radius: 50%;
+}
+
+.tab-menu {
+  margin-right: 0;
+}
+
+.tab-menu svg {
+  width: 18px;
+  height: 18px;
+  fill: currentcolor;
+}
+
+.tab-menu:hover,
+.tab-menu[aria-expanded="true"] {
+  background: var(--chrome-hover);
+}
+
+/* ▾ only on the active tab; right-click works on any. */
+.tab:not(.active) .tab-menu {
+  display: none;
 }
 
 /* The one slim bar (Chrome's PDF viewer) */
@@ -158,14 +259,6 @@ button:disabled {
   background: var(--chrome-hover);
 }
 
-.title {
-  flex: 1;
-  margin: 0 8px;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
 .notice {
   margin-right: 8px;
   opacity: 0.8;
@@ -173,8 +266,14 @@ button:disabled {
 }
 
 .zoom {
-  min-width: 3rem;
+  min-width: 3.5rem;
+  height: 32px;
+  border-radius: 16px;
   text-align: center;
+}
+
+.zoom:hover {
+  background: var(--chrome-hover);
 }
 
 .menu-wrap {
@@ -191,6 +290,11 @@ button:disabled {
   color: var(--menu-ink);
   border-radius: 6px;
   box-shadow: 0 4px 16px rgb(0 0 0 / 30%);
+}
+
+.file-menu {
+  position: fixed;
+  right: auto;
 }
 
 .menu-item {
@@ -233,11 +337,13 @@ button:disabled {
   box-sizing: border-box;
 }
 
+/* --sheet-max and --sheet-pad come from the window's width (sheetLayout): a zoomed sheet
+ * rewraps rather than overflowing the canvas. */
 .sheet {
   box-sizing: border-box;
-  max-width: 816px;
+  max-width: var(--sheet-max, 816px);
   margin: 0 auto;
-  padding: 72px 80px;
+  padding: calc(72px * var(--sheet-pad, 1)) calc(80px * var(--sheet-pad, 1));
   background: var(--paper, #fff);
   box-shadow: 0 1px 4px rgb(0 0 0 / 20%);
 }
