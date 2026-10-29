@@ -93,6 +93,9 @@ export class Shell {
   /** The title bar, Chrome's way: the tab strip, room to drag the window, its buttons. */
   private readonly titleBar = h("div", "titlebar");
   private stopResize = () => {};
+  /** Re-sizes the sheet when its canvas changes width: the outline, a scrollbar, the window. */
+  private readonly canvasWidth =
+    typeof ResizeObserver === "undefined" ? null : new ResizeObserver(() => this.layoutSheet());
   private readonly tabStrip = h("nav", "tabs");
   private readonly view = h("div", "view");
   private readonly empty = h("main", "empty");
@@ -237,6 +240,7 @@ export class Shell {
     this.listeners.abort();
     for (const stop of this.unlisten) stop();
     this.stopResize();
+    this.canvasWidth?.disconnect();
     for (const tab of this.tabs) this.watch(tab, null);
     clearTimeout(this.noticeTimer);
     clearTimeout(this.findTimer);
@@ -764,6 +768,7 @@ export class Shell {
       this.startTab = null;
     } else this.tabStrip.append(handle);
     this.view.append(canvas);
+    this.canvasWidth?.observe(canvas);
     return tab;
   }
 
@@ -830,6 +835,7 @@ export class Shell {
   private close(tab: Tab): void {
     const index = this.tabs.indexOf(tab);
     this.tabs.splice(index, 1);
+    this.canvasWidth?.unobserve(tab.canvas);
     this.watch(tab, null);
     tab.handle.remove();
     tab.canvas.remove();
@@ -1217,6 +1223,8 @@ export class Shell {
     }
     this.applySettings();
     this.drawOutline();
+    // After the outline, which moves the canvas's edge.
+    this.layoutSheet();
   }
 
   /** Sizes the sheet to the window: text scales with the zoom and lines rewrap, so the sheet
@@ -1234,7 +1242,6 @@ export class Shell {
     if (this.theme === "system") delete html.dataset.theme;
     else html.dataset.theme = this.theme;
     this.view.style.setProperty("--zoom", String(this.zoom / 100));
-    this.layoutSheet();
     for (const el of this.root.querySelectorAll('[data-action="wideSheet"]')) {
       el.setAttribute(
         el.getAttribute("role") === "menuitemcheckbox" ? "aria-checked" : "aria-pressed",

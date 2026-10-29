@@ -6,6 +6,8 @@ const STEPS = [50, 67, 75, 80, 90, 100, 110, 125, 150, 175, 200, 250, 300];
 /** The sheet's width at 100 %, and the canvas margin kept beside it. */
 const SHEET_PX = 816;
 const MARGIN_PX = 24;
+/** The narrowest sheet drawn, so a tiny window still shows text rather than nothing. */
+const MIN_SHEET_PX = 160;
 
 export const clampZoom = (percent: number) =>
   Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.round(percent)));
@@ -27,6 +29,6 @@ export function sheetLayout(
   wide: boolean,
 ): { maxWidth: number; padScale: number } {
   const room = Math.max(0, width - 2 * MARGIN_PX) / (percent / 100);
-  const maxWidth = Math.floor(wide ? room : Math.min(SHEET_PX, room));
+  const maxWidth = Math.max(MIN_SHEET_PX, Math.floor(wide ? room : Math.min(SHEET_PX, room)));
   return { maxWidth, padScale: Math.min(1, maxWidth / SHEET_PX) };
 }
