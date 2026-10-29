@@ -433,7 +433,10 @@ export class Shell {
   }
 
   private applyPrintZoom(): void {
-    this.root.ownerDocument.documentElement.style.setProperty("--print-zoom", String(this.printZoom));
+    this.root.ownerDocument.documentElement.style.setProperty(
+      "--print-zoom",
+      String(this.printZoom),
+    );
   }
 
   private async openDialog(): Promise<void> {

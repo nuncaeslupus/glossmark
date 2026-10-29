@@ -142,6 +142,7 @@ test("test_print_draws_diagrams_light", async ({ page }) => {
   await expect(page.locator(".sheet pre.mermaid-pending")).toHaveCount(1);
 
   await page.locator(".bar-button[data-action=print]").click();
+  await page.locator(".print-dialog .print-go").click();
   await expect
     .poll(() => page.evaluate(() => (window as unknown as { printed: number }).printed))
     .toBe(1);
