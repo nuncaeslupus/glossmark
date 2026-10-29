@@ -73,6 +73,9 @@ export const strings = {
     light: "Theme: Light",
     dark: "Theme: Dark",
   },
+  // The wide-sheet toolbar toggle names the layout a click switches to.
+  sheetFill: "Fill the window",
+  sheetFixed: "Fixed width",
   outlineEmpty: "No headings",
   findPlaceholder: "Find in document",
   findCount: (current: number, total: number) => `${current} of ${total}`,
@@ -87,8 +90,11 @@ export const strings = {
     forward: "→",
     zoomOut: "−",
     zoomIn: "+",
-    wideSheet:
-      "M160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h640q33 0 56.5 23.5T880-720v480q0 33-23.5 56.5T800-160H160Zm0-80h40v-480h-40v480Zm120 0h400v-480H280v480Zm480 0h40v-480h-40v480ZM280-720v480-480Z",
+    // width_full / width_normal (Material Symbols): the sheet filling the window, or a centred column.
+    sheetFill:
+      "M140-160q-24.75 0-42.37-17.63Q80-195.25 80-220v-520q0-24.75 17.63-42.38Q115.25-800 140-800h680q24.75 0 42.38 17.62Q880-764.75 880-740v520q0 24.75-17.62 42.37Q844.75-160 820-160H140Zm0-60h70v-520h-70v520Zm130 0h420v-520H270v520Zm480 0h70v-520h-70v520ZM270-740v520-520Z",
+    sheetFixed:
+      "M140-160q-24.75 0-42.37-17.63Q80-195.25 80-220v-520q0-24.75 17.63-42.38Q115.25-800 140-800h680q24.75 0 42.38 17.62Q880-764.75 880-740v520q0 24.75-17.62 42.37Q844.75-160 820-160H140Zm0-60h187v-520H140v520Zm247 0h186v-520H387v520Zm246 0h187v-520H633v520Zm-246 0v-520 520Z",
     find: "M784-120 532-372q-30 24-69 38t-83 14q-109 0-184.5-75.5T120-580q0-109 75.5-184.5T380-840q109 0 184.5 75.5T640-580q0 44-14 83t-38 69l252 252-56 56ZM380-400q75 0 127.5-52.5T560-580q0-75-52.5-127.5T380-760q-75 0-127.5 52.5T200-580q0 75 52.5 127.5T380-400Z",
     findNext: "↓",
     findPrevious: "↑",

@@ -140,10 +140,13 @@ describe("reading tools", () => {
     expect(max()).toBe("952px");
     const toggle = root.querySelector('.bar [data-action="wideSheet"]');
     expect(toggle?.getAttribute("aria-pressed")).toBe("true");
+    // Filling the window, the toggle now offers the way back to a fixed column.
+    expect(toggle?.getAttribute("aria-label")).toBe(strings.sheetFixed);
     await settle();
     expect(state.config.wideSheet).toBe(true);
     click(toggle);
     expect(max()).toBe("816px");
+    expect(toggle?.getAttribute("aria-label")).toBe(strings.sheetFill);
   });
 
   it("test_remote_images_menu_toggles_setting", async () => {

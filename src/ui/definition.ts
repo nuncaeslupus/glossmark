@@ -67,7 +67,7 @@ export const actions: Record<ActionId, Action> = {
   wideSheet: {
     id: "wideSheet",
     label: a.wideSheet,
-    icon: i.wideSheet,
+    icon: i.sheetFill,
     key: "Ctrl+9",
     needsDocument: true,
   },

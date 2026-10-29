@@ -1254,9 +1254,18 @@ export class Shell {
     else html.dataset.theme = this.theme;
     this.view.style.setProperty("--zoom", String(this.zoom / 100));
     for (const el of this.root.querySelectorAll('[data-action="wideSheet"]')) {
-      el.setAttribute(
-        el.getAttribute("role") === "menuitemcheckbox" ? "aria-checked" : "aria-pressed",
-        String(this.wide),
+      if (el.getAttribute("role") === "menuitemcheckbox") {
+        el.setAttribute("aria-checked", String(this.wide));
+        continue;
+      }
+      // Toolbar toggle: icon and tooltip name the layout a click switches to.
+      el.setAttribute("aria-pressed", String(this.wide));
+      const label = this.wide ? strings.sheetFixed : strings.sheetFill;
+      el.setAttribute("aria-label", label);
+      (el as HTMLElement).title = label;
+      el.querySelector("path")?.setAttribute(
+        "d",
+        this.wide ? strings.icons.sheetFixed : strings.icons.sheetFill,
       );
     }
     this.zoomReadout.textContent = strings.zoomPercent(this.zoom);
