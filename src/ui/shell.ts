@@ -534,7 +534,7 @@ export class Shell {
     this.dialogOpen = true;
     let paths: string[] = [];
     try {
-      paths = await this.backend.openDialog();
+      paths = await this.backend.openDialog(this.config?.recentFiles[0]);
     } catch {
       this.show(strings.notices.openFailed);
     } finally {
