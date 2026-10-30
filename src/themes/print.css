@@ -21,6 +21,7 @@
   .empty,
   .file-notice,
   .canvas[hidden],
+  .sheet .anchor,
   .sheet .code-block > .copy,
   .sheet .mermaid-controls {
     display: none;

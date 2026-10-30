@@ -35,6 +35,7 @@ test("test_print_media_hides_app_controls", async ({ page }) => {
     ".titlebar",
     ".outline",
     ".find",
+    ".sheet .anchor",
     ".sheet .code-block > .copy",
     ".sheet .mermaid-controls",
   ]) {
@@ -120,6 +121,34 @@ test("print keeps headings with their text", async ({ page }) => {
   expect(seen.bandInside).toBeGreaterThanOrEqual(seen.height);
   expect(seen.headingBreakInside).toBe("avoid");
   expect(seen.row).toBe("avoid");
+});
+
+test("test_print_document_styles_stay_on_their_page", async ({ page }) => {
+  await open(page, "light");
+  await page.emulateMedia({ media: "print" });
+  const setStyle = (style: string) =>
+    page.evaluate((s) => {
+      document.documentElement.dataset.style = s;
+    }, style);
+
+  // Typewriter's marks and list numbers hang left of the text: the sheet keeps room for them.
+  await setStyle("typewriter");
+  const padding = await page
+    .locator("article.sheet")
+    .evaluate((el) => Number.parseFloat(getComputedStyle(el).paddingLeft));
+  expect(padding).toBeGreaterThan(0);
+
+  // Docs' section bar stops above print's keep-with-next band.
+  await setStyle("docs");
+  const h2 = await page
+    .locator(".sheet h2")
+    .first()
+    .evaluate((el) => {
+      const style = getComputedStyle(el);
+      return { border: style.borderLeftStyle, size: style.backgroundSize };
+    });
+  expect(h2.border).toBe("none");
+  expect(h2.size).toContain("calc(100% - ");
 });
 
 test("test_print_draws_diagrams_light", async ({ page }) => {
