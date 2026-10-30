@@ -111,7 +111,7 @@ jobs:
   # Export on macOS (S-4 T5) prints through WKWebView: build that path and run the export tests there.
   macos:
     runs-on: macos-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -119,6 +119,8 @@ jobs:
           node-version: 22
           cache: npm
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
@@ -128,6 +130,13 @@ jobs:
       - run: npm run build
       - run: cargo test export
         working-directory: src-tauri
+      # A disk image to check the PDF export by hand on macOS.
+      - run: npm run tauri build -- --target universal-apple-darwin --bundles dmg --config '{"bundle":{"createUpdaterArtifacts":false}}'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-installer
+          path: src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg
+          retention-days: 7
 
   # The render pipeline in real browsers: WebKit (the app's engine family) and Chromium.
   e2e:

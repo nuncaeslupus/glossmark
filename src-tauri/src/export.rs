@@ -35,7 +35,7 @@ pub fn target(picked: Option<PathBuf>, path: &str) -> Result<PathBuf, IpcError> 
 /// WebKitGTK's print operation with "Print to File" settings: no dialog, the same page Print
 /// shows. Returns once the file is written.
 /// The margin on every side of a printed page, matching print.css's `@page`.
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 const PAGE_MARGIN_MM: f64 = 20.0;
 
 /// Where a print goes: a PDF file, or the system print dialog.
@@ -173,6 +173,11 @@ fn print_macos<R: Runtime>(window: &WebviewWindow<R>, path: &Path) -> Result<(),
             let info = NSPrintInfo::new();
             // A4, in points.
             info.setPaperSize(NSSize::new(595.28, 841.89));
+            let margin = PAGE_MARGIN_MM * 72.0 / 25.4;
+            info.setTopMargin(margin);
+            info.setBottomMargin(margin);
+            info.setLeftMargin(margin);
+            info.setRightMargin(margin);
             info.setOrientation(NSPaperOrientation::Portrait);
             info.setJobDisposition(NSPrintSaveJob);
             info.dictionary().insert(NSPrintJobSavingURL, &*url);
