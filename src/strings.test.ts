@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { strings } from "./strings";
+import { actions } from "./ui/definition";
 import { fakeBackend, settle } from "./ui/fake-backend";
 import { Shell } from "./ui/shell";
 
@@ -31,8 +32,15 @@ function uiText(el: Element, out: string[] = []): string[] {
 
 describe("strings (D-14)", () => {
   it("test_strings_all_ui_text_from_strings_file", async () => {
-    // The zoom readout is built by a function; at the default zoom it reads 100 %.
-    const allowed = new Set([...stringValues(strings), strings.zoomPercent(100)]);
+    // The zoom readout is built by a function; at the default zoom it reads 100 %. Menu items
+    // show their shortcut's key names, which the action definitions hold.
+    const keys = Object.values(actions).map((a) => a.key);
+    const allowed = new Set([
+      ...stringValues(strings),
+      strings.zoomPercent(100),
+      strings.recentRemove("old.md"),
+      ...keys,
+    ]);
     const { backend, state } = fakeBackend({ "/n/a.md": "# A\n\n[x](https://a.org)" });
     state.config.recentFiles = ["/n/old.md"];
 

@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { expect, type Page, test } from "@playwright/test";
 import { FAKE_IMAGE_ORIGIN } from "../src/ui/fake-backend";
 
@@ -81,6 +82,26 @@ test("test_remote_images_off_csp_blocks_late_image", async ({ page, baseURL }) =
       }),
   );
   expect(blocked).toBe("https://example.com/late.png");
+});
+
+test("test_images_follow_zoom", async ({ page, baseURL }) => {
+  await open(page, false, baseURL);
+  // The harness renders unstyled and its CSP refuses <style>; an adopted sheet gets past it.
+  await page.evaluate(
+    (css) => {
+      const sheet = new CSSStyleSheet();
+      sheet.replaceSync(css);
+      document.adoptedStyleSheets = [sheet];
+    },
+    readFileSync("src/themes/signature.css", "utf8"),
+  );
+  const photo = page.locator('.sheet img[alt="photo"]');
+  const width = async () => (await photo.boundingBox())?.width ?? 0;
+  const before = await width();
+  await page
+    .locator(".view")
+    .evaluate((view: HTMLElement) => view.style.setProperty("--zoom", "3"));
+  expect(await width()).toBeCloseTo(before * 3, 0);
 });
 
 test("test_remote_images_on_requests_only_document_images", async ({ page, baseURL }) => {

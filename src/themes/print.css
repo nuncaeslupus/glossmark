@@ -7,9 +7,9 @@
 
 @media print {
   /* Paper reads at book sizes, not screen ones: every size in the theme is rem or em, so
-   * this one value sets the body near 11pt and code near 9pt. */
+   * this one value sets Normal's body near 9pt and code near 7.5pt. */
   html {
-    font-size: 10.5pt;
+    font-size: 8.5pt;
   }
 
   .titlebar,
@@ -17,9 +17,11 @@
   .outline,
   .find,
   .shortcuts,
+  .print-overlay,
   .empty,
   .file-notice,
   .canvas[hidden],
+  .sheet .anchor,
   .sheet .code-block > .copy,
   .sheet .mermaid-controls {
     display: none;
@@ -41,7 +43,8 @@
   }
 
   .sheet {
-    zoom: 1;
+    /* Paper ignores the reader's zoom; the print dialog's size sets --print-zoom instead. */
+    --zoom: var(--print-zoom, 1);
     max-width: none;
     padding: 0;
     background: none;
@@ -110,6 +113,23 @@
     display: block;
     height: 3rem;
     margin-bottom: -3rem;
+  }
+
+  /* The band's negative margin only stays inside a heading with no bottom padding or border,
+   * so a heading's rule (the document style's) moves onto the band. */
+  .sheet :is(h1, h2) {
+    padding-bottom: 0;
+    border-bottom: 0;
+  }
+
+  .sheet h1::after {
+    margin-top: var(--h1-pad);
+    border-top: var(--h1-rule);
+  }
+
+  .sheet h2::after {
+    margin-top: 0.3em;
+    border-top: var(--h2-rule);
   }
 
   /* A table that fits a page stays whole (rule above); one that doesn't breaks between rows. */

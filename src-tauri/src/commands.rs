@@ -112,12 +112,22 @@ pub fn take_open_files(state: State<'_, AppState>) -> OpenFiles {
     }
 }
 
+/// Where Open and Export start: the folder of `near` if it still exists, else `home`. Left unset, GTK
+/// starts in the process's working directory.
+fn start_folder(near: Option<&Path>, home: Option<PathBuf>) -> Option<PathBuf> {
+    near.and_then(Path::parent)
+        .filter(|dir| dir.is_dir())
+        .map(Path::to_path_buf)
+        .or(home)
+}
+
 /// File › Open. The native dialog runs here rather than in the frontend, so only files the user
 /// picked enter the scope; the frontend holds no dialog permission. Cancelling gives no paths.
 #[tauri::command]
 pub async fn open_dialog<R: Runtime>(
     app: AppHandle<R>,
     state: State<'_, AppState>,
+    near: Option<String>,
 ) -> Result<OpenFiles, IpcError> {
     let mut dialog = app
         .dialog()
@@ -125,6 +135,9 @@ pub async fn open_dialog<R: Runtime>(
         .add_filter("Markdown", &scope::MARKDOWN_EXTENSIONS);
     if let Some(window) = app.get_webview_window("main") {
         dialog = dialog.set_parent(&window);
+    }
+    if let Some(dir) = start_folder(near.as_deref().map(Path::new), app.path().home_dir().ok()) {
+        dialog = dialog.set_directory(dir);
     }
     let picked = dialog.blocking_pick_files().unwrap_or_default();
     Ok(picked_files(&mut lock(&state.scope), picked))
@@ -137,6 +150,7 @@ pub async fn save_dialog<R: Runtime>(
     app: AppHandle<R>,
     state: State<'_, AppState>,
     name: String,
+    near: Option<String>,
 ) -> Result<Option<String>, IpcError> {
     let mut dialog = app
         .dialog()
@@ -145,6 +159,9 @@ pub async fn save_dialog<R: Runtime>(
         .set_file_name(name);
     if let Some(window) = app.get_webview_window("main") {
         dialog = dialog.set_parent(&window);
+    }
+    if let Some(dir) = start_folder(near.as_deref().map(Path::new), app.path().home_dir().ok()) {
+        dialog = dialog.set_directory(dir);
     }
     let picked = dialog
         .blocking_save_file()
@@ -166,6 +183,24 @@ pub async fn export_pdf<R: Runtime>(
         .get_webview_window("main")
         .ok_or_else(|| IpcError::new(ErrorKind::Io, "no window to export"))?;
     export::print_to_pdf(&window, &path)
+}
+
+/// The print dialog's Preview: the same PDF as Export, in the temp folder, opened in the
+/// system's viewer. Only the name's last component is used, so it cannot leave that folder.
+#[tauri::command]
+pub async fn preview_pdf<R: Runtime>(app: AppHandle<R>, name: String) -> Result<(), IpcError> {
+    let io = |e: String| IpcError::new(ErrorKind::Io, e);
+    let file = Path::new(&name)
+        .file_name()
+        .ok_or_else(|| io(format!("{name} is not a file name")))?;
+    let path = export::with_pdf_extension(std::env::temp_dir().join(file));
+    let window = app
+        .get_webview_window("main")
+        .ok_or_else(|| io("no window to preview".into()))?;
+    export::print_to_pdf(&window, &path)?;
+    app.opener()
+        .open_path(path.to_string_lossy(), None::<&str>)
+        .map_err(|e| io(e.to_string()))
 }
 
 /// File › Print through the same page setup as Export; `false` asks the frontend to print itself.
@@ -325,6 +360,24 @@ mod tests {
         assert_eq!(opened.paths, [doc.display().to_string()]);
         assert!(scope.is_opened(&doc));
         assert!(picked_files(&mut scope, Vec::new()).paths.is_empty());
+    }
+
+    #[test]
+    fn test_start_folder_prefers_the_file_folder_then_home() {
+        let dir = tempfile::tempdir().unwrap();
+        let home = PathBuf::from("/home/someone");
+        let doc = dir.path().join("a.md");
+        assert_eq!(
+            start_folder(Some(&doc), Some(home.clone())).as_deref(),
+            Some(dir.path())
+        );
+        let gone = dir.path().join("gone/a.md");
+        assert_eq!(
+            start_folder(Some(&gone), Some(home.clone())),
+            Some(home.clone())
+        );
+        assert_eq!(start_folder(None, Some(home.clone())), Some(home));
+        assert_eq!(start_folder(None, None), None);
     }
 
     #[test]

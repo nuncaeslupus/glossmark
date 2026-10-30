@@ -76,10 +76,13 @@ it waits.
 - **Chrome (I-10, D-11)**: the reference is Chrome's built-in PDF viewer: one slim bar and
   nothing else, adapted to Markdown. Above it the tab strip; in it, left to right: the Outline
   toggle, the document title, the menus (File, View, Go, Help), Back and Forward, zoom
-  (− , percentage, +), Find and Print. Open and Theme live in the menus. No second toolbar,
+  (− , percentage, +), Find and Print. Open lives in the menu, each item showing its shortcut;
+  Theme and remote images are set in a small Settings panel opened from it (owner, 2026-10-30).
+  No second toolbar,
   no status bar, no side panels besides the outline. With no file open, the window shows a single
   "Open or drop a Markdown file" area and the recent files. Every toolbar action also has a keyboard
-  shortcut. Settings are limited to what a viewer needs: theme, default zoom, remote
+  shortcut. Settings are limited to what a viewer needs: theme, document style (Classic, the
+  default, Newspaper, Paper, Docs or Typewriter; owner, 2026-10-30), default zoom, remote
   images on/off (default on), and the remembered window size and recent files.
 
 ![Diagram 1](diagrams/specification-1.svg) <!-- drawspec-render -->

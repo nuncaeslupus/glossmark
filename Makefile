@@ -1,4 +1,4 @@
-.PHONY: sync dev dist build lint format test clean hero update-skills
+.PHONY: sync dev dev-icon dist build lint format test clean hero update-skills
 
 CARGO = cd src-tauri && cargo
 
@@ -13,7 +13,19 @@ endef
 sync:
 	npm ci
 
-dev:
+# GNOME on Wayland takes a window's icon from the desktop file named after its app id, and an
+# uninstalled build has none. Hidden from the launcher, so it goes once the package is installed:
+# a user entry would override the package's and hide the app.
+DEV_DESKTOP := $(HOME)/.local/share/applications/nacho-viewer.desktop
+
+dev-icon:
+	@if test -e /usr/share/applications/nacho-viewer.desktop; then \
+		rm -f $(DEV_DESKTOP); \
+	elif test -d $(dir $(DEV_DESKTOP)); then \
+		printf '[Desktop Entry]\nType=Application\nName=Nacho Viewer\nExec=$(CURDIR)/src-tauri/target/debug/nacho-viewer %%F\nIcon=$(CURDIR)/src-tauri/icons/128x128@2x.png\nNoDisplay=true\n' > $(DEV_DESKTOP); \
+	fi
+
+dev: dev-icon
 	npm run tauri dev
 
 # The frontend bundle; generate_context! in the Rust build reads it.

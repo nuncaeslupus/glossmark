@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { strings } from "../strings";
-import { matchesKey, menus } from "./definition";
+import { actions, matchesKey, menus } from "./definition";
 import { fakeBackend, gate, settle } from "./fake-backend";
 import { Shell } from "./shell";
 
@@ -61,6 +61,10 @@ describe("shell", () => {
     click(more[0] ?? null);
     const items = [...root.querySelectorAll<HTMLElement>(".menu:not([hidden]) .menu-item")];
     expect(items.map((i) => i.dataset.action)).toEqual(menus.flat());
+    // Each item shows its shortcut.
+    expect(items.map((i) => i.querySelector("kbd")?.textContent)).toEqual(
+      menus.flat().map((id) => actions[id].key),
+    );
   });
 
   it("test_find_and_print_use_material_icons", async () => {
@@ -75,49 +79,47 @@ describe("shell", () => {
     }
   });
 
+  it("test_preview_opens_the_pdf_and_keeps_the_dialog", async () => {
+    const { root, state } = await open({ "/n/notes.md": "# A" }, ["/n/notes.md"]);
+    click(root.querySelector('.bar [data-action="print"]'));
+    click(root.querySelector(".print-dialog .print-preview"));
+    for (let i = 0; i < 5; i++) await settle();
+    expect(state.previewed).toEqual(["notes"]);
+    expect(root.querySelector(".print-dialog")).not.toBeNull();
+    expect(state.exported).toEqual([]);
+  });
+
   it("test_export_asks_for_a_path_and_saves_pdf", async () => {
     const { root, state } = await open({ "/n/notes.md": "# A" }, ["/n/notes.md"]);
-    const exportButton = root.querySelector('.bar [data-action="export"]');
-    // Cancelling the dialog saves nothing.
-    click(exportButton);
+    // Export opens the intermediate page; its Save button asks for the path.
+    const doExport = () => {
+      click(root.querySelector('.bar [data-action="export"]'));
+      click(root.querySelector(".print-dialog .print-save"));
+    };
+    // Cancelling the save dialog saves nothing.
+    doExport();
     for (let i = 0; i < 5; i++) await settle();
     expect(state.saveNames).toEqual(["notes.pdf"]);
+    expect(state.dialogNear).toBe(state.config.recentFiles[0]);
     expect(state.exported).toEqual([]);
 
     state.savePath = "/out/notes.pdf";
-    click(exportButton);
+    doExport();
     for (let i = 0; i < 5; i++) await settle();
     expect(state.exported).toEqual(["/out/notes.pdf"]);
   });
 
-  it("test_new_tab_shows_start_page_and_becomes_the_opened_file", async () => {
+  it("test_new_tab_opens_the_open_dialog", async () => {
     const { root, state } = await open({ "/n/a.md": "# A", "/n/b.md": "# B" }, ["/n/a.md"]);
     const labels = () => [...root.querySelectorAll(".tabs .tab-label")].map((l) => l.textContent);
-    const empty = () => root.querySelector<HTMLElement>(".empty");
-    // "+" adds a selected "New tab" showing the start page; the file's tab stays.
-    click(root.querySelector(".titlebar .new-tab"));
-    expect(labels()).toEqual(["a.md", strings.actions.newTab]);
-    expect(root.querySelector(".tab.active .tab-label")?.textContent).toBe(strings.actions.newTab);
-    expect(empty()?.hidden).toBe(false);
-    // Opening a file from it turns it into that file's tab.
+    // "+" and Ctrl+T open files the same way Open does: the dialog, into a new tab.
     state.dialogPaths = ["/n/b.md"];
-    press({ key: "o", ctrlKey: true });
+    click(root.querySelector(".titlebar .new-tab"));
     for (let i = 0; i < 5; i++) await settle();
     expect(labels()).toEqual(["a.md", "b.md"]);
-    expect(empty()?.hidden).toBe(true);
-    // Closing a "New tab" returns to the tab it was opened from.
-    press({ key: "t", ctrlKey: true });
-    click(root.querySelector(".start-tab .tab-close"));
-    expect(labels()).toEqual(["a.md", "b.md"]);
     expect(root.querySelector(".tab.active .tab-label")?.textContent).toBe("b.md");
-    // Ctrl+W closes a New tab too.
-    press({ key: "t", ctrlKey: true });
-    press({ key: "w", ctrlKey: true });
-    expect(labels()).toEqual(["a.md", "b.md"]);
-    // Opening an already-open file from it leaves no orphan New tab behind.
-    press({ key: "t", ctrlKey: true });
     state.dialogPaths = ["/n/a.md"];
-    press({ key: "o", ctrlKey: true });
+    press({ key: "t", ctrlKey: true });
     for (let i = 0; i < 5; i++) await settle();
     expect(labels()).toEqual(["a.md", "b.md"]);
     expect(root.querySelector(".tab.active .tab-label")?.textContent).toBe("a.md");
@@ -126,32 +128,52 @@ describe("shell", () => {
   it("test_print_uses_the_cores_page_where_offered", async () => {
     const { root, state, backend } = await open({ "/n/notes.md": "# A" }, ["/n/notes.md"]);
     const browserPrint = vi.spyOn(window, "print").mockImplementation(() => {});
+    // Print opens the intermediate page; its Print button runs the actual print.
+    const doPrint = async () => {
+      click(root.querySelector('.bar [data-action="print"]'));
+      click(root.querySelector(".print-dialog .print-go"));
+      for (let i = 0; i < 5; i++) await settle();
+    };
     try {
-      const printButton = root.querySelector('.bar [data-action="print"]');
       // Linux: the core prints the same page as the PDF, and the webview's print stays unused.
       state.printHandled = true;
-      click(printButton);
-      for (let i = 0; i < 5; i++) await settle();
+      await doPrint();
       expect(state.printed).toBe(1);
       expect(browserPrint).not.toHaveBeenCalled();
       // Elsewhere the core declines and the webview prints.
       state.printHandled = false;
-      click(printButton);
-      for (let i = 0; i < 5; i++) await settle();
+      await doPrint();
       expect(state.printed).toBe(2);
       expect(browserPrint).toHaveBeenCalledTimes(1);
       // A failed print says so and leaves Print usable.
       const fail = vi.spyOn(backend, "printDocument").mockRejectedValueOnce(new Error("no"));
-      click(printButton);
-      for (let i = 0; i < 5; i++) await settle();
+      await doPrint();
       expect(notice(root)).toBe(strings.notices.printFailed);
       fail.mockRestore();
-      click(printButton);
-      for (let i = 0; i < 5; i++) await settle();
+      await doPrint();
       expect(state.printed).toBe(3);
     } finally {
       browserPrint.mockRestore();
     }
+  });
+
+  it("test_print_dialog_sets_the_paper_text_size", async () => {
+    const { root, state } = await open({ "/n/notes.md": "# A" }, ["/n/notes.md"]);
+    click(root.querySelector('.bar [data-action="print"]'));
+    expect(root.querySelector(".print-dialog")).not.toBeNull();
+    // Small / Normal / Large; Normal (1) is the default selection.
+    const sizes = [...root.querySelectorAll<HTMLElement>(".print-size")];
+    expect(sizes.map((b) => b.dataset.zoom)).toEqual(["0.85", "1", "1.2"]);
+    expect(sizes[1]?.getAttribute("aria-checked")).toBe("true");
+    // Choosing Large and printing scales the paper font and dismisses the page.
+    click(sizes[2]);
+    expect(sizes[2]?.getAttribute("aria-checked")).toBe("true");
+    state.printHandled = true;
+    click(root.querySelector(".print-go"));
+    for (let i = 0; i < 5; i++) await settle();
+    expect(state.printed).toBe(1);
+    expect(root.ownerDocument.documentElement.style.getPropertyValue("--print-zoom")).toBe("1.2");
+    expect(root.querySelector(".print-dialog")).toBeNull();
   });
 
   it("test_tab_renders_sanitised_document", async () => {
@@ -188,6 +210,14 @@ describe("shell", () => {
     expect(root.querySelector<HTMLElement>("main.empty")?.hidden).toBe(false);
   });
 
+  it("test_open_rejects_non_markdown", async () => {
+    const { root, shell } = await open({ "/n/a.md": "a" }, []);
+    await shell.openPaths(["/n/doc.pdf", "/n/a.md"]);
+    expect(notice(root)).toBe(strings.notices.notMarkdown);
+    expect(root.querySelectorAll(".tab")).toHaveLength(1);
+    expect(root.querySelector(".tab-label")?.textContent).toBe("a.md");
+  });
+
   it("test_recent_files_newest_first_and_capped", async () => {
     const files = Object.fromEntries([...Array(12).keys()].map((i) => [`/n/${i}.md`, "x"]));
     const { root, shell, state } = await open(files, []);
@@ -203,6 +233,27 @@ describe("shell", () => {
     click(root.querySelector(".recent-file"));
     await settle();
     expect(root.querySelector(".tab.active .tab-label")?.textContent).toBe("11.md");
+  });
+
+  it("test_recent_files_remove_one_then_clear", async () => {
+    const { root, state } = await open({}, [], (s) => {
+      s.config.recentFiles = ["/n/a.md", "/n/b.md", "/n/c.md"];
+    });
+    const names = () => [...root.querySelectorAll(".recent-file")].map((b) => b.textContent);
+    expect(names()).toEqual(["a.md", "b.md", "c.md"]);
+
+    click(root.querySelectorAll(".recent-remove")[1]);
+    await settle();
+    expect(names()).toEqual(["a.md", "c.md"]);
+    expect(state.config.recentFiles).toEqual(["/n/a.md", "/n/c.md"]);
+    // Removed with the keyboard, the next X is one Enter away.
+    expect(document.activeElement).toBe(root.querySelectorAll(".recent-remove")[1]);
+
+    click(root.querySelector(".recent-clear"));
+    await settle();
+    expect(root.querySelector(".recent")).toBeNull();
+    expect(state.config.recentFiles).toEqual([]);
+    expect(document.activeElement).toBe(root.querySelector(".drop"));
   });
 
   it("test_file_open_menu_uses_core_dialog", async () => {
@@ -234,6 +285,28 @@ describe("shell", () => {
 
     expect(click(links[2]).defaultPrevented).toBe(true);
     expect(state.external).toHaveLength(1);
+  });
+
+  it("test_open_dialog_starts_near_the_last_file_opened", async () => {
+    const pressOpen = async () => {
+      press({ key: "o", ctrlKey: true });
+      await settle();
+    };
+    const first = await open({}, []);
+    await pressOpen();
+    expect(first.state.dialogNear).toBeUndefined();
+
+    const recent = await open({}, [], (s) => {
+      s.config.recentFiles = ["/n/old.md"];
+    });
+    await pressOpen();
+    expect(recent.state.dialogNear).toBe("/n/old.md");
+
+    // Even with another tab in front.
+    const tabs = await open({ "/n/a.md": "# A", "/m/b.md": "# B" }, ["/n/a.md", "/m/b.md"]);
+    click(tabs.root.querySelector(".tab"));
+    await pressOpen();
+    expect(tabs.state.dialogNear).toBe("/m/b.md");
   });
 
   it("test_dialog_failure_shows_notice_and_second_open_is_ignored", async () => {
@@ -334,6 +407,28 @@ describe("file menu", () => {
     click(items[1] ?? null);
     await settle();
     expect(writeText).toHaveBeenCalledWith("/d/a.md");
+  });
+
+  it("test_browser_menu_stays_only_for_paste_and_copy", async () => {
+    const { root } = await open({ "/d/a.md": "Some text\n\n[A link](b.md)" }, ["/d/a.md"]);
+    const browserMenu = (el: Element | null | undefined) =>
+      el?.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true }));
+    const text = root.querySelector(".sheet p");
+    const link = root.querySelector(".sheet a");
+
+    expect(browserMenu(text)).toBe(false);
+    expect(browserMenu(link)).toBe(false);
+    expect(browserMenu(root.querySelector(".bar"))).toBe(false);
+    expect(browserMenu(root.querySelector(".find-input"))).toBe(true);
+
+    document.getSelection()?.selectAllChildren(text as Element);
+    expect(browserMenu(text)).toBe(true);
+    // Elsewhere the selection is not what was clicked.
+    expect(browserMenu(root.querySelector(".bar"))).toBe(false);
+    // A link's items would open it inside the window.
+    document.getSelection()?.selectAllChildren(link as Element);
+    expect(browserMenu(link)).toBe(false);
+    document.getSelection()?.removeAllRanges();
   });
 });
 
