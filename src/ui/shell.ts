@@ -207,6 +207,18 @@ export class Shell {
       if (!(e.target instanceof Element && inside(e.target))) this.closeMenus();
     };
     doc.addEventListener("click", outside, { signal });
+    // WebKit's own menu is a browser's: Reload, Open Link, and Inspect in dev builds. It stays
+    // only where it has a use: pasting into the find box and copying selected text.
+    doc.addEventListener(
+      "contextmenu",
+      (e) => {
+        const el = e.target as Element;
+        const picked = doc.getSelection();
+        const copying = picked && !picked.isCollapsed && picked.getRangeAt(0).intersectsNode(el);
+        if (el !== this.findInput && !(copying && !el.closest("a, img"))) e.preventDefault();
+      },
+      { signal },
+    );
     doc.defaultView?.addEventListener("resize", () => this.layoutSheet(), { signal });
     this.update();
   }
