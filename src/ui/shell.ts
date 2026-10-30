@@ -166,10 +166,11 @@ export class Shell {
     zoomReset: () => this.setZoom(100),
     // One way to open a file: "+" and Ctrl+T show the same dialog as Open.
     newTab: () => void this.openDialog(),
-    wideSheet: () => {
-      this.wide = !this.wide;
-      this.saveSettings();
-    },
+    wideSheet: () =>
+      this.keepPlace(() => {
+        this.wide = !this.wide;
+        this.saveSettings();
+      }),
     find: () => this.openFind(),
     findNext: () => this.stepFind(1),
     findPrevious: () => this.stepFind(-1),
@@ -714,10 +715,17 @@ export class Shell {
 
   /** Zooms the sheets; the active tab keeps the heading the reader is at. */
   private setZoom(percent: number): void {
+    this.keepPlace(() => {
+      this.zoom = clampZoom(percent);
+      this.saveSettings(ZOOM_SAVE_MS);
+    });
+  }
+
+  /** Runs `reflow`, which changes the document's height, and keeps the reader where they were. */
+  private keepPlace(reflow: () => void): void {
     const tab = this.active;
     const anchor = tab && scrollAnchor(tab.canvas, tab.sheet);
-    this.zoom = clampZoom(percent);
-    this.saveSettings(ZOOM_SAVE_MS);
+    reflow();
     if (tab && anchor) restoreScroll(tab.canvas, tab.sheet, anchor);
   }
 

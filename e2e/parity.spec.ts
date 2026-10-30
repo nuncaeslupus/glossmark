@@ -152,3 +152,15 @@ test("mermaid diagram zooms and pans", async ({ page }) => {
   await figure.getByRole("button", { name: "Reset view" }).click();
   expect(await box()).toEqual(start);
 });
+
+test("test_wide_sheet_keeps_the_reading_place", async ({ page }) => {
+  await page.setViewportSize({ width: 1600, height: 900 });
+  await page.goto("/e2e/shell.html?big");
+  await expect(page.locator(".sheet .chunk")).toHaveCount(0);
+  const heading = page.locator(".sheet h2").nth(100);
+  await heading.evaluate((el) => el.scrollIntoView());
+  const top = () => heading.evaluate((el) => el.getBoundingClientRect().top);
+  const before = await top();
+  await page.keyboard.press("Control+9");
+  await expect.poll(top).toBeCloseTo(before, 0);
+});
