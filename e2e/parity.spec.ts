@@ -172,6 +172,21 @@ test("test_wide_sheet_keeps_the_reading_place", async ({ page }) => {
   await expect.poll(top).toBeCloseTo(before, 0);
 });
 
+test("test_browser_menu_stays_only_for_copying_selected_text", async ({ page }) => {
+  await page.goto("/e2e/shell.html?demo");
+  const text = page.locator(".sheet p").first();
+  await expect(text).toBeAttached();
+  const menu = (selected: boolean) =>
+    text.evaluate((el, select) => {
+      const picked = document.getSelection();
+      if (select) picked?.selectAllChildren(el);
+      else picked?.collapse(el, 0);
+      return el.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true }));
+    }, selected);
+  expect(await menu(false)).toBe(false);
+  expect(await menu(true)).toBe(true);
+});
+
 test("test_start_page_stays_put_when_recent_files_go", async ({ page }) => {
   await page.goto("/e2e/shell.html?demo");
   while (await page.locator(".tab-close").count()) await page.locator(".tab-close").first().click();

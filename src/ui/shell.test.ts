@@ -408,6 +408,28 @@ describe("file menu", () => {
     await settle();
     expect(writeText).toHaveBeenCalledWith("/d/a.md");
   });
+
+  it("test_browser_menu_stays_only_for_paste_and_copy", async () => {
+    const { root } = await open({ "/d/a.md": "Some text\n\n[A link](b.md)" }, ["/d/a.md"]);
+    const browserMenu = (el: Element | null | undefined) =>
+      el?.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true }));
+    const text = root.querySelector(".sheet p");
+    const link = root.querySelector(".sheet a");
+
+    expect(browserMenu(text)).toBe(false);
+    expect(browserMenu(link)).toBe(false);
+    expect(browserMenu(root.querySelector(".bar"))).toBe(false);
+    expect(browserMenu(root.querySelector(".find-input"))).toBe(true);
+
+    document.getSelection()?.selectAllChildren(text as Element);
+    expect(browserMenu(text)).toBe(true);
+    // Elsewhere the selection is not what was clicked.
+    expect(browserMenu(root.querySelector(".bar"))).toBe(false);
+    // A link's items would open it inside the window.
+    document.getSelection()?.selectAllChildren(link as Element);
+    expect(browserMenu(link)).toBe(false);
+    document.getSelection()?.removeAllRanges();
+  });
 });
 
 describe("title bar", () => {
