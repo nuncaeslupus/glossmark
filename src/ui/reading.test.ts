@@ -187,12 +187,14 @@ describe("reading tools", () => {
 
   it("test_theme_cycles_and_persists", async () => {
     const { root, state } = await open({}, []);
-    const item = root.querySelector<HTMLElement>(".menu-item[data-action=theme]");
-    expect(item?.textContent).toBe(strings.themes.system);
+    const item = (theme: string) =>
+      root.querySelector<HTMLElement>(`.menu-item[data-theme=${theme}]`);
+    expect(item("system")?.getAttribute("aria-checked")).toBe("true");
     expect(document.documentElement.dataset.theme).toBeUndefined();
 
-    click(item);
-    expect(item?.textContent).toBe(strings.themes.light);
+    click(item("light"));
+    expect(item("light")?.getAttribute("aria-checked")).toBe("true");
+    expect(item("system")?.getAttribute("aria-checked")).toBe("false");
     expect(document.documentElement.dataset.theme).toBe("light");
     press({ key: "L", ctrlKey: true, shiftKey: true });
     expect(document.documentElement.dataset.theme).toBe("dark");

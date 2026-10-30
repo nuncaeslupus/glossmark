@@ -101,7 +101,11 @@ test("print keeps headings with their text", async ({ page }) => {
     const h2 = document.querySelector(".sheet h2") as Element;
     const after = getComputedStyle(h2, "::after");
     const row = document.querySelector(".sheet tr");
+    // The band must sit inside the heading's box, or `break-inside: avoid` doesn't cover it.
+    const text = document.createRange();
+    text.selectNodeContents(h2);
     return {
+      bandInside: h2.getBoundingClientRect().bottom - text.getBoundingClientRect().bottom,
       display: after.display,
       height: Number.parseFloat(after.height),
       marginBottom: Number.parseFloat(after.marginBottom),
@@ -113,6 +117,7 @@ test("print keeps headings with their text", async ({ page }) => {
   expect(seen.height).toBeGreaterThan(0);
   // The band is pulled back by a matching negative margin, so it adds no visible gap.
   expect(seen.marginBottom).toBeCloseTo(-seen.height, 0);
+  expect(seen.bandInside).toBeGreaterThanOrEqual(seen.height);
   expect(seen.headingBreakInside).toBe("avoid");
   expect(seen.row).toBe("avoid");
 });

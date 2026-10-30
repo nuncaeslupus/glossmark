@@ -60,7 +60,10 @@ describe("shell", () => {
     expect(more[0]?.textContent).toBe("");
     click(more[0] ?? null);
     const items = [...root.querySelectorAll<HTMLElement>(".menu:not([hidden]) .menu-item")];
-    expect(items.map((i) => i.dataset.action)).toEqual(menus.flat());
+    // Theme shows as its three choices.
+    expect(items.map((i) => i.dataset.action ?? "theme")).toEqual(
+      menus.flat().flatMap((id) => (id === "theme" ? ["theme", "theme", "theme"] : [id])),
+    );
   });
 
   it("test_find_and_print_use_material_icons", async () => {
@@ -73,6 +76,16 @@ describe("shell", () => {
       const path = root.querySelector(`.bar [data-action="${id}"] svg path`);
       expect(path?.getAttribute("d")).toMatch(new RegExp(`^${start}`));
     }
+  });
+
+  it("test_preview_opens_the_pdf_and_keeps_the_dialog", async () => {
+    const { root, state } = await open({ "/n/notes.md": "# A" }, ["/n/notes.md"]);
+    click(root.querySelector('.bar [data-action="print"]'));
+    click(root.querySelector(".print-dialog .print-preview"));
+    for (let i = 0; i < 5; i++) await settle();
+    expect(state.previewed).toEqual(["notes"]);
+    expect(root.querySelector(".print-dialog")).not.toBeNull();
+    expect(state.exported).toEqual([]);
   });
 
   it("test_export_asks_for_a_path_and_saves_pdf", async () => {
@@ -94,34 +107,17 @@ describe("shell", () => {
     expect(state.exported).toEqual(["/out/notes.pdf"]);
   });
 
-  it("test_new_tab_shows_start_page_and_becomes_the_opened_file", async () => {
+  it("test_new_tab_opens_the_open_dialog", async () => {
     const { root, state } = await open({ "/n/a.md": "# A", "/n/b.md": "# B" }, ["/n/a.md"]);
     const labels = () => [...root.querySelectorAll(".tabs .tab-label")].map((l) => l.textContent);
-    const empty = () => root.querySelector<HTMLElement>(".empty");
-    // "+" adds a selected "New tab" showing the start page; the file's tab stays.
-    click(root.querySelector(".titlebar .new-tab"));
-    expect(labels()).toEqual(["a.md", strings.actions.newTab]);
-    expect(root.querySelector(".tab.active .tab-label")?.textContent).toBe(strings.actions.newTab);
-    expect(empty()?.hidden).toBe(false);
-    // Opening a file from it turns it into that file's tab.
+    // "+" and Ctrl+T open files the same way Open does: the dialog, into a new tab.
     state.dialogPaths = ["/n/b.md"];
-    press({ key: "o", ctrlKey: true });
+    click(root.querySelector(".titlebar .new-tab"));
     for (let i = 0; i < 5; i++) await settle();
     expect(labels()).toEqual(["a.md", "b.md"]);
-    expect(empty()?.hidden).toBe(true);
-    // Closing a "New tab" returns to the tab it was opened from.
-    press({ key: "t", ctrlKey: true });
-    click(root.querySelector(".start-tab .tab-close"));
-    expect(labels()).toEqual(["a.md", "b.md"]);
     expect(root.querySelector(".tab.active .tab-label")?.textContent).toBe("b.md");
-    // Ctrl+W closes a New tab too.
-    press({ key: "t", ctrlKey: true });
-    press({ key: "w", ctrlKey: true });
-    expect(labels()).toEqual(["a.md", "b.md"]);
-    // Opening an already-open file from it leaves no orphan New tab behind.
-    press({ key: "t", ctrlKey: true });
     state.dialogPaths = ["/n/a.md"];
-    press({ key: "o", ctrlKey: true });
+    press({ key: "t", ctrlKey: true });
     for (let i = 0; i < 5; i++) await settle();
     expect(labels()).toEqual(["a.md", "b.md"]);
     expect(root.querySelector(".tab.active .tab-label")?.textContent).toBe("a.md");

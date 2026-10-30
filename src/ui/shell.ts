@@ -131,13 +131,11 @@ export class Shell {
   /** The sheet fills the window rather than keeping a book's line length. */
   private wide = false;
   /** The "New tab" entry in the strip, showing the start page, and the tab it was opened from. */
-  private startTab: HTMLElement | null = null;
-  private returnTo: Tab | null = null;
   private shortcutsPanel: HTMLElement | null = null;
   /** The print dialog overlay while open, and the paper text size it last chose. */
   private printPanel: HTMLElement | null = null;
   private printZoom = 1;
-  private themeItem: HTMLElement | null = null;
+  private themeItems: HTMLElement[] = [];
   private sourceItem: HTMLElement | null = null;
   private theme: Config["theme"] = "system";
   private zoom = 100;
@@ -151,7 +149,7 @@ export class Shell {
     open: () => void this.openDialog(),
     print: () => this.openPrintDialog("print"),
     export: () => this.openPrintDialog("export"),
-    closeTab: () => (this.active ? this.close(this.active) : this.closeStartTab()),
+    closeTab: () => this.active && this.close(this.active),
     nextTab: () => this.cycleTab(1),
     previousTab: () => this.cycleTab(-1),
     outline: () => {
@@ -163,7 +161,8 @@ export class Shell {
     zoomOut: () => this.setZoom(stepZoom(this.zoom, -1)),
     zoomIn: () => this.setZoom(stepZoom(this.zoom, 1)),
     zoomReset: () => this.setZoom(100),
-    newTab: () => this.openStartTab(),
+    // One way to open a file: "+" and Ctrl+T show the same dialog as Open.
+    newTab: () => void this.openDialog(),
     wideSheet: () => {
       this.wide = !this.wide;
       this.saveSettings();
@@ -307,8 +306,6 @@ export class Shell {
       }
     }
     if (!last) return;
-    // An already-open file chosen from the New tab: that tab has nothing left to show.
-    if (this.startTab && this.active === null) this.closeStartTab();
     const tab = last;
     this.activate(tab);
     await Promise.all(added.map((t) => this.load(t)));
@@ -339,6 +336,25 @@ export class Shell {
       }
     } catch {
       this.show(strings.notices.printFailed);
+    } finally {
+      this.dialogOpen = false;
+    }
+  }
+
+  /** The print dialog's Preview: the PDF Export would save, opened in the system viewer. */
+  private async previewPdf(): Promise<void> {
+    if (this.dialogOpen || !this.active) return;
+    this.dialogOpen = true;
+    this.applyPrintZoom();
+    try {
+      const back = await diagramsForPaper();
+      try {
+        await this.backend.previewPdf(basename(pathOf(this.active)).replace(/\.[^.]*$/, ""));
+      } finally {
+        back();
+      }
+    } catch {
+      this.show(strings.notices.previewFailed);
     } finally {
       this.dialogOpen = false;
     }
@@ -403,8 +419,11 @@ export class Shell {
       this.closePrintDialog();
       void (isExport ? this.exportPdf() : this.print());
     });
+    // Preview leaves the dialog open, so another size can be tried.
+    const preview = h("button", "print-preview", strings.printDialog.preview);
+    preview.addEventListener("click", () => void this.previewPdf());
     cancel.addEventListener("click", () => this.closePrintDialog());
-    row.append(action, cancel);
+    row.append(action, preview, cancel);
     panel.append(row);
 
     const overlay = h("div", "print-overlay");
@@ -855,51 +874,10 @@ export class Shell {
     });
 
     this.tabs.push(tab);
-    // A file opened from the start page takes the "New tab" entry's place.
-    if (this.startTab && this.active === null) {
-      this.startTab.replaceWith(handle);
-      this.startTab = null;
-    } else this.tabStrip.append(handle);
+    this.tabStrip.append(handle);
     this.view.append(canvas);
     this.canvasWidth?.observe(canvas);
     return tab;
-  }
-
-  /** A "New tab" in the strip showing the start page (Open, drop, recent files); opening a
-   * file there turns it into that file's tab. */
-  private openStartTab(): void {
-    if (!this.startTab) {
-      const handle = h("div", "tab start-tab");
-      handle.setAttribute("role", "tab");
-      const label = h("button", "tab-label", strings.actions.newTab);
-      label.addEventListener("click", () => {
-        if (this.active) this.returnTo = this.active;
-        this.active = null;
-        this.update();
-      });
-      const close = iconButton("tab-close", strings.icons.closeTab);
-      close.title = strings.actions.closeTab;
-      close.setAttribute("aria-label", strings.actions.closeTab);
-      close.addEventListener("click", () => this.closeStartTab());
-      handle.append(label, close);
-      this.tabStrip.append(handle);
-      this.startTab = handle;
-    }
-    if (this.active) this.returnTo = this.active;
-    this.active = null;
-    this.update();
-    this.startTab.scrollIntoView?.({ inline: "nearest" });
-  }
-
-  private closeStartTab(): void {
-    this.startTab?.remove();
-    this.startTab = null;
-    if (!this.active) {
-      const back = this.returnTo && this.tabs.includes(this.returnTo) ? this.returnTo : null;
-      this.active = back ?? this.tabs.at(-1) ?? null;
-    }
-    this.returnTo = null;
-    this.update();
   }
 
   private activate(tab: Tab): void {
@@ -920,12 +898,7 @@ export class Shell {
 
   /** Ctrl+Tab and Ctrl+Shift+Tab, wrapping at the ends. */
   private cycleTab(step: number): void {
-    if (!this.active) {
-      const back = this.returnTo && this.tabs.includes(this.returnTo) ? this.returnTo : null;
-      const tab = back ?? this.tabs[0];
-      if (tab) this.activate(tab);
-      return;
-    }
+    if (!this.active) return;
     const n = this.tabs.length;
     const tab = this.tabs[(this.tabs.indexOf(this.active) + step + n) % n];
     if (tab) this.activate(tab);
@@ -943,9 +916,6 @@ export class Shell {
   }
 
   private enabled(id: ActionId): boolean {
-    // The New tab can be closed or left like any other tab.
-    const tabbing = id === "closeTab" || id === "nextTab" || id === "previousTab";
-    if (tabbing && this.startTab && !this.active) return id === "closeTab" || this.tabs.length > 0;
     if (actions[id].needsDocument && !this.active) return false;
     if (id === "back") return this.active?.history.canGoBack === true;
     if (id === "forward") return this.active?.history.canGoForward === true;
@@ -1158,10 +1128,25 @@ export class Shell {
         list.append(rule);
       }
       for (const id of section) {
+        // Theme is a choice of three, each its own item, the current one checked.
+        if (id === "theme") {
+          for (const theme of THEMES) {
+            const item = h("button", "menu-item", strings.themes[theme]);
+            item.setAttribute("role", "menuitemradio");
+            item.dataset.theme = theme;
+            item.addEventListener("click", () => {
+              this.closeMenus();
+              this.theme = theme;
+              this.saveSettings();
+            });
+            this.themeItems.push(item);
+            list.append(item);
+          }
+          continue;
+        }
         const item = h("button", "menu-item", actions[id].label);
         item.setAttribute("role", "menuitem");
         item.dataset.action = id;
-        if (id === "theme") this.themeItem = item;
         if (id === "viewSource") {
           this.sourceItem = item;
           item.setAttribute("role", "menuitemcheckbox");
@@ -1311,8 +1296,6 @@ export class Shell {
       tab.handle.setAttribute("aria-selected", String(tab === active));
       tab.canvas.hidden = tab !== active;
     }
-    this.startTab?.classList.toggle("active", active === null);
-    this.startTab?.setAttribute("aria-selected", String(active === null));
     this.empty.hidden = active !== null;
     if (!active) this.drawEmpty();
     this.root.ownerDocument.title = active
@@ -1368,7 +1351,8 @@ export class Shell {
       );
     }
     this.zoomReadout.textContent = strings.zoomPercent(this.zoom);
-    if (this.themeItem) this.themeItem.textContent = strings.themes[this.theme];
+    for (const item of this.themeItems)
+      item.setAttribute("aria-checked", String(item.dataset.theme === this.theme));
     this.remoteItem?.setAttribute("aria-checked", String(this.config?.remoteImages ?? true));
     this.sourceItem?.setAttribute("aria-checked", String(this.active?.source.hidden === false));
   }

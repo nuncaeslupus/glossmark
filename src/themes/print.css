@@ -17,6 +17,7 @@
   .outline,
   .find,
   .shortcuts,
+  .print-overlay,
   .empty,
   .file-notice,
   .canvas[hidden],
@@ -111,6 +112,18 @@
     display: block;
     height: 3rem;
     margin-bottom: -3rem;
+  }
+
+  /* The band's negative margin only stays inside a heading with no bottom padding or border,
+   * so h2's rule moves onto the band. */
+  .sheet h2 {
+    padding-bottom: 0;
+    border-bottom: 0;
+  }
+
+  .sheet h2::after {
+    margin-top: 0.3em;
+    border-top: 1px solid var(--rule);
   }
 
   /* A table that fits a page stays whole (rule above); one that doesn't breaks between rows. */

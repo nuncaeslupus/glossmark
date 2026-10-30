@@ -201,6 +201,11 @@
   max-width: 100%;
 }
 
+/* Images grow and shrink with the text; a too-wide one still stops at the column. */
+.sheet img {
+  zoom: var(--zoom, 1);
+}
+
 /* A lone height attribute sizes the image, as on GitHub. With both attributes the browser
    takes the ratio from them, so `height: auto` keeps that height and still scales a too-wide
    image down undistorted. */

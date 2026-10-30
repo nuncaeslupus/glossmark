@@ -129,7 +129,7 @@ export const bar: BarItem[][] = [
 
 /** ⋮ More's sections, divided by rules; every command keeps its shortcut. */
 export const menus: ActionId[][] = [
-  ["open", "newTab", "export", "print", "closeTab"],
+  ["open", "export", "print", "closeTab"],
   [
     "outline",
     "zoomIn",

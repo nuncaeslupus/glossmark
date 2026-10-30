@@ -10,6 +10,7 @@ export const strings = {
   notices: {
     openFailed: "The Open dialog could not be shown.",
     exportFailed: "The PDF could not be saved.",
+    previewFailed: "The preview could not be shown.",
     printFailed: "The document could not be printed.",
     settingsUnavailable: "Settings could not be read; recent files will not be kept.",
     userCssUnavailable: "Your user.css could not be read; showing the theme without it.",
@@ -67,11 +68,11 @@ export const strings = {
     remoteImages: "Load remote images",
     shortcuts: "Keyboard shortcuts",
   },
-  // View › Theme shows the current choice; choosing it moves to the next.
+  // ⋮ More lists the three themes, the current one checked; Ctrl+Shift+L moves to the next.
   themes: {
-    system: "Theme: System",
-    light: "Theme: Light",
-    dark: "Theme: Dark",
+    system: "System theme",
+    light: "Light theme",
+    dark: "Dark theme",
   },
   // The wide-sheet toolbar toggle names the layout a click switches to.
   sheetFill: "Fill the window",
@@ -85,6 +86,7 @@ export const strings = {
     normal: "Normal",
     large: "Large",
     sample: "Aa",
+    preview: "Preview",
     cancel: "Cancel",
   },
   outlineEmpty: "No headings",
