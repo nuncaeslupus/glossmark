@@ -374,7 +374,7 @@ export class Shell {
     this.applyPrintZoom();
     try {
       const name = basename(pathOf(this.active)).replace(/\.[^.]*$/, "");
-      const path = await this.backend.saveDialog(`${name}.pdf`);
+      const path = await this.backend.saveDialog(`${name}.pdf`, this.config?.recentFiles[0]);
       if (!path) return;
       const back = await diagramsForPaper();
       try {
@@ -534,7 +534,7 @@ export class Shell {
     this.dialogOpen = true;
     let paths: string[] = [];
     try {
-      paths = await this.backend.openDialog();
+      paths = await this.backend.openDialog(this.config?.recentFiles[0]);
     } catch {
       this.show(strings.notices.openFailed);
     } finally {

@@ -100,6 +100,7 @@ describe("shell", () => {
     doExport();
     for (let i = 0; i < 5; i++) await settle();
     expect(state.saveNames).toEqual(["notes.pdf"]);
+    expect(state.dialogNear).toBe(state.config.recentFiles[0]);
     expect(state.exported).toEqual([]);
 
     state.savePath = "/out/notes.pdf";
@@ -263,6 +264,28 @@ describe("shell", () => {
 
     expect(click(links[2]).defaultPrevented).toBe(true);
     expect(state.external).toHaveLength(1);
+  });
+
+  it("test_open_dialog_starts_near_the_last_file_opened", async () => {
+    const pressOpen = async () => {
+      press({ key: "o", ctrlKey: true });
+      await settle();
+    };
+    const first = await open({}, []);
+    await pressOpen();
+    expect(first.state.dialogNear).toBeUndefined();
+
+    const recent = await open({}, [], (s) => {
+      s.config.recentFiles = ["/n/old.md"];
+    });
+    await pressOpen();
+    expect(recent.state.dialogNear).toBe("/n/old.md");
+
+    // Even with another tab in front.
+    const tabs = await open({ "/n/a.md": "# A", "/m/b.md": "# B" }, ["/n/a.md", "/m/b.md"]);
+    click(tabs.root.querySelector(".tab"));
+    await pressOpen();
+    expect(tabs.state.dialogNear).toBe("/m/b.md");
   });
 
   it("test_dialog_failure_shows_notice_and_second_open_is_ignored", async () => {

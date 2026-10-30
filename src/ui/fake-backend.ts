@@ -25,6 +25,7 @@ export function fakeBackend(files: Record<string, string>, launch: string[] = []
     userCss: null as string | null,
     dialogPaths: [] as string[],
     dialogCalls: 0,
+    dialogNear: undefined as string | undefined,
     /** What the save dialog returns; `null` is a cancel. */
     savePath: null as string | null,
     saveNames: [] as string[],
@@ -68,14 +69,16 @@ export function fakeBackend(files: Record<string, string>, launch: string[] = []
   };
   const backend: Backend = {
     takeOpenFiles: async () => launch.splice(0),
-    openDialog: async () => {
+    openDialog: async (near) => {
       state.dialogCalls++;
+      state.dialogNear = near;
       await state.readGate;
       failing("openDialog");
       return state.dialogPaths;
     },
-    saveDialog: async (name) => {
+    saveDialog: async (name, near) => {
       state.saveNames.push(name);
+      state.dialogNear = near;
       return state.savePath;
     },
     exportPdf: async (path) => {
