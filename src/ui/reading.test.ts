@@ -216,12 +216,12 @@ describe("reading tools", () => {
     press({ key: ",", ctrlKey: true });
     const item = (style: string) =>
       root.querySelector<HTMLElement>(`.settings-dialog [data-style=${style}]`);
-    click(item("book"));
-    expect(document.documentElement.dataset.style).toBe("book");
-    expect(item("book")?.getAttribute("aria-checked")).toBe("true");
+    click(item("paper"));
+    expect(document.documentElement.dataset.style).toBe("paper");
+    expect(item("paper")?.getAttribute("aria-checked")).toBe("true");
     expect(item("classic")?.getAttribute("aria-checked")).toBe("false");
     await settle();
-    expect(state.config.style).toBe("book");
+    expect(state.config.style).toBe("paper");
     press({ key: "Escape" });
   });
 

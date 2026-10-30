@@ -78,10 +78,10 @@ export const strings = {
   // Settings › Style: each name is shown in its own faces.
   styles: {
     classic: "Classic",
-    book: "Book",
-    report: "Report",
-    friendly: "Friendly",
-    editorial: "Editorial",
+    newspaper: "Newspaper",
+    paper: "Paper",
+    docs: "Docs",
+    typewriter: "Typewriter",
   },
   // The wide-sheet toolbar toggle names the layout a click switches to.
   sheetFill: "Fill the window",
