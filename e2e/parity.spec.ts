@@ -156,9 +156,16 @@ test("mermaid diagram zooms and pans", async ({ page }) => {
 test("test_wide_sheet_keeps_the_reading_place", async ({ page }) => {
   await page.setViewportSize({ width: 1600, height: 900 });
   await page.goto("/e2e/shell.html?big");
-  await expect(page.locator(".sheet .chunk")).toHaveCount(0);
   const heading = page.locator(".sheet h2").nth(100);
-  await heading.evaluate((el) => el.scrollIntoView());
+  // Headings first: before the document arrives there are no chunks either. A stuck parse
+  // worker takes WORKER_TIMEOUT_MS to give up.
+  await expect(heading).toBeAttached({ timeout: 20_000 });
+  await expect(page.locator(".sheet .chunk")).toHaveCount(0);
+  // Just past the top of the view: a heading exactly on that line may not be the one kept.
+  await heading.evaluate((el) => {
+    el.scrollIntoView();
+    el.closest(".canvas")?.scrollBy(0, 20);
+  });
   const top = () => heading.evaluate((el) => el.getBoundingClientRect().top);
   const before = await top();
   await page.keyboard.press("Control+9");
