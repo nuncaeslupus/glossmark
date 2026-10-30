@@ -35,7 +35,12 @@ describe("strings (D-14)", () => {
     // The zoom readout is built by a function; at the default zoom it reads 100 %. Menu items
     // show their shortcut's key names, which the action definitions hold.
     const keys = Object.values(actions).map((a) => a.key);
-    const allowed = new Set([...stringValues(strings), strings.zoomPercent(100), ...keys]);
+    const allowed = new Set([
+      ...stringValues(strings),
+      strings.zoomPercent(100),
+      strings.recentRemove("old.md"),
+      ...keys,
+    ]);
     const { backend, state } = fakeBackend({ "/n/a.md": "# A\n\n[x](https://a.org)" });
     state.config.recentFiles = ["/n/old.md"];
 

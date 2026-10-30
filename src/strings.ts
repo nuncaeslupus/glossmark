@@ -4,6 +4,8 @@ export const strings = {
   windowTitle: (document: string) => `${document} — Nacho Viewer`,
   emptyState: "Open or drop a Markdown file",
   recentFiles: "Recent files",
+  recentRemove: (name: string) => `Remove ${name} from the list`,
+  recentClear: "Clear list",
   documentError: "This document could not be opened.",
   zoomPercent: (percent: number) => `${percent}%`,
   zoomToggle: "Back to 100%",

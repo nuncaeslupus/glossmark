@@ -156,11 +156,40 @@ test("mermaid diagram zooms and pans", async ({ page }) => {
 test("test_wide_sheet_keeps_the_reading_place", async ({ page }) => {
   await page.setViewportSize({ width: 1600, height: 900 });
   await page.goto("/e2e/shell.html?big");
-  await expect(page.locator(".sheet .chunk")).toHaveCount(0);
   const heading = page.locator(".sheet h2").nth(100);
-  await heading.evaluate((el) => el.scrollIntoView());
+  // Headings first: before the document arrives there are no chunks either. With several WebKit
+  // pages loading at once, one can freeze for over 5 s once the document is in.
+  await expect(heading).toBeAttached({ timeout: 20_000 });
+  await expect(page.locator(".sheet .chunk")).toHaveCount(0);
+  // Just past the top of the view: a heading exactly on that line may not be the one kept.
+  await heading.evaluate((el) => {
+    el.scrollIntoView();
+    el.closest(".canvas")?.scrollBy(0, 20);
+  });
   const top = () => heading.evaluate((el) => el.getBoundingClientRect().top);
   const before = await top();
   await page.keyboard.press("Control+9");
   await expect.poll(top).toBeCloseTo(before, 0);
+});
+
+test("test_start_page_stays_put_when_recent_files_go", async ({ page }) => {
+  await page.goto("/e2e/shell.html?demo");
+  while (await page.locator(".tab-close").count()) await page.locator(".tab-close").first().click();
+  const place = () =>
+    page.evaluate(() =>
+      [".drop", ".recent"].map((s) => {
+        const { x, y, width } = (document.querySelector(s) as Element).getBoundingClientRect();
+        return { x, y, width };
+      }),
+    );
+  const before = await place();
+  await page.locator(".recent-remove").first().click();
+  await expect(page.locator(".recent-remove")).toHaveCount(1);
+  expect(await place()).toEqual(before);
+
+  const box = before[0];
+  await page.locator(".recent-clear").click();
+  await expect(page.locator(".recent")).toHaveCount(0);
+  await expect(page.locator(".drop")).toHaveCSS("grid-row-start", "2");
+  expect((await page.locator(".drop").boundingBox())?.y).toBe(box?.y);
 });

@@ -612,21 +612,28 @@ mark.find-match.current {
 }
 
 /* Empty state */
+/* Fixed tracks: the box and the list stay put as entries come and go. */
 .empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto minmax(0, 2fr);
+  grid-template-columns: min(24rem, 100% - 2rem);
   justify-content: center;
   gap: 2rem;
   height: 100%;
+  overflow: auto;
   color: var(--muted, #666);
 }
 
 .drop {
-  padding: 3rem 4rem;
+  grid-row: 2;
+  padding: 3rem 1rem;
   border: 2px dashed currentColor;
   border-radius: 12px;
   font-size: 1.25rem;
+}
+
+.recent {
+  grid-row: 3;
 }
 
 .recent h2 {
@@ -642,10 +649,49 @@ mark.find-match.current {
 }
 
 .recent-file {
+  overflow: hidden;
+  min-width: 0;
   padding: 4px 0;
   color: var(--ink, #222);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .recent-file:hover {
+  text-decoration: underline;
+}
+
+.recent li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.recent-remove {
+  flex: none;
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  border-radius: 50%;
+  color: var(--muted, #666);
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+.recent-remove:hover {
+  background: var(--rule, #ddd);
+  color: var(--ink, #222);
+}
+
+.recent-clear {
+  margin-top: 0.5rem;
+  padding: 0;
+  color: var(--muted, #666);
+  font-size: 0.875rem;
+}
+
+.recent-clear:hover {
+  color: var(--ink, #222);
   text-decoration: underline;
 }
