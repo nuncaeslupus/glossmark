@@ -875,10 +875,25 @@ export class Shell {
   private remember(path: string): void {
     if (!this.config) return;
     const recent = [path, ...this.config.recentFiles.filter((p) => p !== path)];
-    this.config = { ...this.config, recentFiles: recent.slice(0, MAX_RECENT_FILES) };
+    this.saveRecent(recent.slice(0, MAX_RECENT_FILES));
+  }
+
+  private saveRecent(recentFiles: string[]): void {
+    if (!this.config) return;
+    this.config = { ...this.config, recentFiles };
     void this.backend
       .setConfig(this.config)
       .catch(() => this.show(strings.notices.recentFilesNotSaved));
+  }
+
+  /** Redraws the page and puts focus on the X now in `index`'s place, or on the drop area. */
+  private dropRecent(recentFiles: string[], index: number): void {
+    this.saveRecent(recentFiles);
+    this.drawEmpty();
+    const removes = this.empty.querySelectorAll<HTMLElement>(".recent-remove");
+    (
+      removes[Math.min(index, removes.length - 1)] ?? this.empty.querySelector<HTMLElement>(".drop")
+    )?.focus();
   }
 
   private addTab(entry: Entry): Tab {
@@ -1426,15 +1441,26 @@ export class Shell {
     if (recent.length === 0) return;
     const section = h("section", "recent");
     const list = h("ul");
-    for (const path of recent) {
+    recent.forEach((path, index) => {
       const item = userText("button", "recent-file", basename(path));
       item.title = path;
       item.addEventListener("click", () => void this.openPaths([path]));
+      const remove = iconButton("recent-remove", strings.icons.closeTab);
+      remove.title = strings.recentRemove(basename(path));
+      remove.setAttribute("aria-label", remove.title);
+      remove.addEventListener("click", () =>
+        this.dropRecent(
+          recent.filter((p) => p !== path),
+          index,
+        ),
+      );
       const li = h("li");
-      li.append(item);
+      li.append(item, remove);
       list.append(li);
-    }
-    section.append(h("h2", "", strings.recentFiles), list);
+    });
+    const clear = h("button", "recent-clear", strings.recentClear);
+    clear.addEventListener("click", () => this.dropRecent([], 0));
+    section.append(h("h2", "", strings.recentFiles), list, clear);
     this.empty.append(section);
   }
 }

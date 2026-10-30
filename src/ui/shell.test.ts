@@ -234,6 +234,27 @@ describe("shell", () => {
     expect(root.querySelector(".tab.active .tab-label")?.textContent).toBe("11.md");
   });
 
+  it("test_recent_files_remove_one_then_clear", async () => {
+    const { root, state } = await open({}, [], (s) => {
+      s.config.recentFiles = ["/n/a.md", "/n/b.md", "/n/c.md"];
+    });
+    const names = () => [...root.querySelectorAll(".recent-file")].map((b) => b.textContent);
+    expect(names()).toEqual(["a.md", "b.md", "c.md"]);
+
+    click(root.querySelectorAll(".recent-remove")[1]);
+    await settle();
+    expect(names()).toEqual(["a.md", "c.md"]);
+    expect(state.config.recentFiles).toEqual(["/n/a.md", "/n/c.md"]);
+    // Removed with the keyboard, the next X is one Enter away.
+    expect(document.activeElement).toBe(root.querySelectorAll(".recent-remove")[1]);
+
+    click(root.querySelector(".recent-clear"));
+    await settle();
+    expect(root.querySelector(".recent")).toBeNull();
+    expect(state.config.recentFiles).toEqual([]);
+    expect(document.activeElement).toBe(root.querySelector(".drop"));
+  });
+
   it("test_file_open_menu_uses_core_dialog", async () => {
     const { root, state } = await open({ "/n/a.md": "# A" }, []);
     state.dialogPaths = ["/n/a.md"];
