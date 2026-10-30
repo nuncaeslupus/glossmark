@@ -612,21 +612,28 @@ mark.find-match.current {
 }
 
 /* Empty state */
+/* Fixed tracks: the box and the list stay put as entries come and go. */
 .empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto minmax(0, 2fr);
+  grid-template-columns: min(24rem, 100% - 2rem);
   justify-content: center;
   gap: 2rem;
   height: 100%;
+  overflow: auto;
   color: var(--muted, #666);
 }
 
 .drop {
-  padding: 3rem 4rem;
+  grid-row: 2;
+  padding: 3rem 1rem;
   border: 2px dashed currentColor;
   border-radius: 12px;
   font-size: 1.25rem;
+}
+
+.recent {
+  grid-row: 3;
 }
 
 .recent h2 {
@@ -642,8 +649,12 @@ mark.find-match.current {
 }
 
 .recent-file {
+  overflow: hidden;
+  min-width: 0;
   padding: 4px 0;
   color: var(--ink, #222);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .recent-file:hover {
@@ -658,6 +669,7 @@ mark.find-match.current {
 }
 
 .recent-remove {
+  flex: none;
   width: 1.5rem;
   height: 1.5rem;
   padding: 0;

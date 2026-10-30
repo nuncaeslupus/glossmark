@@ -164,3 +164,25 @@ test("test_wide_sheet_keeps_the_reading_place", async ({ page }) => {
   await page.keyboard.press("Control+9");
   await expect.poll(top).toBeCloseTo(before, 0);
 });
+
+test("test_start_page_stays_put_when_recent_files_go", async ({ page }) => {
+  await page.goto("/e2e/shell.html?demo");
+  while (await page.locator(".tab-close").count()) await page.locator(".tab-close").first().click();
+  const place = () =>
+    page.evaluate(() =>
+      [".drop", ".recent"].map((s) => {
+        const { x, y, width } = (document.querySelector(s) as Element).getBoundingClientRect();
+        return { x, y, width };
+      }),
+    );
+  const before = await place();
+  await page.locator(".recent-remove").first().click();
+  await expect(page.locator(".recent-remove")).toHaveCount(1);
+  expect(await place()).toEqual(before);
+
+  const box = before[0];
+  await page.locator(".recent-clear").click();
+  await expect(page.locator(".recent")).toHaveCount(0);
+  await expect(page.locator(".drop")).toHaveCSS("grid-row-start", "2");
+  expect((await page.locator(".drop").boundingBox())?.y).toBe(box?.y);
+});
