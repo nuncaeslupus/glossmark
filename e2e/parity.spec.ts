@@ -157,8 +157,8 @@ test("test_wide_sheet_keeps_the_reading_place", async ({ page }) => {
   await page.setViewportSize({ width: 1600, height: 900 });
   await page.goto("/e2e/shell.html?big");
   const heading = page.locator(".sheet h2").nth(100);
-  // Headings first: before the document arrives there are no chunks either. A stuck parse
-  // worker takes WORKER_TIMEOUT_MS to give up.
+  // Headings first: before the document arrives there are no chunks either. With several WebKit
+  // pages loading at once, one can freeze for over 5 s once the document is in.
   await expect(heading).toBeAttached({ timeout: 20_000 });
   await expect(page.locator(".sheet .chunk")).toHaveCount(0);
   // Just past the top of the view: a heading exactly on that line may not be the one kept.
