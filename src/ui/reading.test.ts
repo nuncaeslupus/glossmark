@@ -156,8 +156,9 @@ describe("reading tools", () => {
     const shell = new Shell(root, fake.backend, () => reloads++);
     shells.push(shell);
     await shell.start();
-    const item = root.querySelector<HTMLElement>(".menu-item[data-action=remoteImages]");
-    expect(item?.getAttribute("role")).toBe("menuitemcheckbox");
+    press({ key: ",", ctrlKey: true });
+    const item = root.querySelector<HTMLElement>(".settings-dialog [data-action=remoteImages]");
+    expect(item?.getAttribute("role")).toBe("checkbox");
     expect(item?.getAttribute("aria-checked")).toBe("true");
 
     click(item);
@@ -187,8 +188,9 @@ describe("reading tools", () => {
 
   it("test_theme_cycles_and_persists", async () => {
     const { root, state } = await open({}, []);
+    click(root.querySelector(".menu-item[data-action=settings]"));
     const item = (theme: string) =>
-      root.querySelector<HTMLElement>(`.menu-item[data-theme=${theme}]`);
+      root.querySelector<HTMLElement>(`.settings-dialog [data-theme=${theme}]`);
     expect(item("system")?.getAttribute("aria-checked")).toBe("true");
     expect(document.documentElement.dataset.theme).toBeUndefined();
 
@@ -196,6 +198,8 @@ describe("reading tools", () => {
     expect(item("light")?.getAttribute("aria-checked")).toBe("true");
     expect(item("system")?.getAttribute("aria-checked")).toBe("false");
     expect(document.documentElement.dataset.theme).toBe("light");
+    press({ key: "Escape" });
+    expect(root.querySelector(".settings-dialog")).toBeNull();
     press({ key: "L", ctrlKey: true, shiftKey: true });
     expect(document.documentElement.dataset.theme).toBe("dark");
     await settle();

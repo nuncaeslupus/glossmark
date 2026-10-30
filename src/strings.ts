@@ -66,9 +66,10 @@ export const strings = {
     viewSource: "View source",
     theme: "Theme",
     remoteImages: "Load remote images",
+    settings: "Settings…",
     shortcuts: "Keyboard shortcuts",
   },
-  // ⋮ More lists the three themes, the current one checked; Ctrl+Shift+L moves to the next.
+  // Settings lists the three themes, the current one checked; Ctrl+Shift+L moves to the next.
   themes: {
     system: "System theme",
     light: "Light theme",
@@ -88,6 +89,12 @@ export const strings = {
     sample: "Aa",
     preview: "Preview",
     cancel: "Cancel",
+  },
+  settingsDialog: {
+    title: "Settings",
+    theme: "Theme",
+    images: "Images",
+    done: "Done",
   },
   outlineEmpty: "No headings",
   findPlaceholder: "Find in document",

@@ -133,7 +133,7 @@ export class Shell {
   /** The "New tab" entry in the strip, showing the start page, and the tab it was opened from. */
   private shortcutsPanel: HTMLElement | null = null;
   /** The print dialog overlay while open, and the paper text size it last chose. */
-  private printPanel: HTMLElement | null = null;
+  private modal: HTMLElement | null = null;
   private printZoom = 1;
   private themeItems: HTMLElement[] = [];
   private sourceItem: HTMLElement | null = null;
@@ -179,6 +179,7 @@ export class Shell {
       void this.setRemoteImages(!(this.config?.remoteImages ?? true)).then(() => this.update());
     },
     viewSource: () => this.active && this.toggleSource(this.active),
+    settings: () => this.openSettings(),
     shortcuts: () => this.toggleShortcuts(),
   };
 
@@ -384,7 +385,7 @@ export class Shell {
 
   /** The intermediate print page (D-20): pick a paper text size, then print or save as PDF. */
   private openPrintDialog(primary: "print" | "export"): void {
-    if (this.printPanel || this.dialogOpen || !this.active) return;
+    if (this.modal || this.dialogOpen || !this.active) return;
     const panel = h("section", "print-dialog");
     panel.setAttribute("role", "dialog");
     panel.setAttribute("aria-modal", "true");
@@ -416,25 +417,69 @@ export class Shell {
       : h("button", "print-go", strings.actions.print);
     const cancel = h("button", "print-cancel", strings.printDialog.cancel);
     action.addEventListener("click", () => {
-      this.closePrintDialog();
+      this.closeModal();
       void (isExport ? this.exportPdf() : this.print());
     });
     // Preview leaves the dialog open, so another size can be tried.
     const preview = h("button", "print-preview", strings.printDialog.preview);
     preview.addEventListener("click", () => void this.previewPdf());
-    cancel.addEventListener("click", () => this.closePrintDialog());
+    cancel.addEventListener("click", () => this.closeModal());
     row.append(action, preview, cancel);
     panel.append(row);
+    this.showModal(panel, action);
+    this.markPrintSize();
+  }
 
+  /** ⋮ More › Settings: theme and remote images, each applied as soon as it is picked. */
+  private openSettings(): void {
+    if (this.modal || this.dialogOpen) return;
+    const s = strings.settingsDialog;
+    const panel = h("section", "print-dialog settings-dialog");
+    panel.setAttribute("role", "dialog");
+    panel.setAttribute("aria-modal", "true");
+    panel.setAttribute("aria-label", s.title);
+
+    const themes = h("div", "settings-group");
+    themes.setAttribute("role", "radiogroup");
+    themes.setAttribute("aria-label", s.theme);
+    this.themeItems = THEMES.map((theme) => {
+      const item = h("button", "menu-item", strings.themes[theme]);
+      item.setAttribute("role", "radio");
+      item.dataset.theme = theme;
+      item.addEventListener("click", () => {
+        this.theme = theme;
+        this.saveSettings();
+      });
+      return item;
+    });
+    themes.append(...this.themeItems);
+
+    const remote = h("button", "menu-item", strings.actions.remoteImages);
+    remote.setAttribute("role", "checkbox");
+    remote.dataset.action = "remoteImages";
+    remote.addEventListener("click", () => this.run("remoteImages"));
+    this.remoteItem = remote;
+
+    const row = h("div", "print-actions");
+    const done = h("button", "print-go", s.done);
+    done.addEventListener("click", () => this.closeModal());
+    row.append(done);
+    panel.append(h("h2", "", s.title), h("h3", "", s.theme), themes);
+    panel.append(h("h3", "", s.images), remote, row);
+    this.showModal(panel, done);
+    this.update();
+  }
+
+  /** Shows `panel` over the page; a click beside it or Esc closes it. */
+  private showModal(panel: HTMLElement, focus: HTMLElement): void {
     const overlay = h("div", "print-overlay");
     overlay.addEventListener("click", (e) => {
-      if (e.target === overlay) this.closePrintDialog();
+      if (e.target === overlay) this.closeModal();
     });
     overlay.append(panel);
     this.view.append(overlay);
-    this.printPanel = overlay;
-    this.markPrintSize();
-    action.focus();
+    this.modal = overlay;
+    focus.focus();
   }
 
   private pickPrintSize(zoom: number): void {
@@ -443,16 +488,16 @@ export class Shell {
   }
 
   private markPrintSize(): void {
-    for (const b of this.printPanel?.querySelectorAll<HTMLElement>(".print-size") ?? []) {
+    for (const b of this.modal?.querySelectorAll<HTMLElement>(".print-size") ?? []) {
       const on = Number(b.dataset.zoom) === this.printZoom;
       b.classList.toggle("current", on);
       b.setAttribute("aria-checked", String(on));
     }
   }
 
-  private closePrintDialog(): void {
-    this.printPanel?.remove();
-    this.printPanel = null;
+  private closeModal(): void {
+    this.modal?.remove();
+    this.modal = null;
   }
 
   private applyPrintZoom(): void {
@@ -624,7 +669,7 @@ export class Shell {
   }
 
   /** Theme and zoom: applied at once, kept in the config (when it could be read) after `delay`.
-   * The zoom last used is the default zoom: with no settings dialog (D-11), it is how one is set. */
+   * The zoom last used is the default zoom: it has no field in Settings, so this is how one is set. */
   private saveSettings(delay = 0): void {
     this.update();
     clearTimeout(this.saveTimer);
@@ -1128,34 +1173,17 @@ export class Shell {
         list.append(rule);
       }
       for (const id of section) {
-        // Theme is a choice of three, each its own item, the current one checked.
-        if (id === "theme") {
-          for (const theme of THEMES) {
-            const item = h("button", "menu-item", strings.themes[theme]);
-            item.setAttribute("role", "menuitemradio");
-            item.dataset.theme = theme;
-            item.addEventListener("click", () => {
-              this.closeMenus();
-              this.theme = theme;
-              this.saveSettings();
-            });
-            this.themeItems.push(item);
-            list.append(item);
-          }
-          continue;
-        }
         const item = h("button", "menu-item", actions[id].label);
         item.setAttribute("role", "menuitem");
         item.dataset.action = id;
+        // Each command shows its shortcut, as native menus do.
+        item.setAttribute("aria-keyshortcuts", actions[id].key);
+        item.append(h("kbd", "menu-key", actions[id].key));
         if (id === "viewSource") {
           this.sourceItem = item;
           item.setAttribute("role", "menuitemcheckbox");
         }
         if (id === "wideSheet") item.setAttribute("role", "menuitemcheckbox");
-        if (id === "remoteImages") {
-          this.remoteItem = item;
-          item.setAttribute("role", "menuitemcheckbox");
-        }
         item.addEventListener("click", () => {
           this.closeMenus();
           this.run(id);
@@ -1240,10 +1268,10 @@ export class Shell {
   private onKey(e: KeyboardEvent): void {
     // A key may scroll the page, which releases a section clicked in the outline.
     this.sectionHeld = false;
-    // The print dialog is modal: Esc closes it, other shortcuts wait behind it.
-    if (this.printPanel) {
+    // The print and settings dialogs are modal: Esc closes them, other shortcuts wait.
+    if (this.modal) {
       if (e.key === "Escape") {
-        this.closePrintDialog();
+        this.closeModal();
         e.preventDefault();
       }
       return;

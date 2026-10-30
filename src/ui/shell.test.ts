@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { strings } from "../strings";
-import { matchesKey, menus } from "./definition";
+import { actions, matchesKey, menus } from "./definition";
 import { fakeBackend, gate, settle } from "./fake-backend";
 import { Shell } from "./shell";
 
@@ -60,9 +60,10 @@ describe("shell", () => {
     expect(more[0]?.textContent).toBe("");
     click(more[0] ?? null);
     const items = [...root.querySelectorAll<HTMLElement>(".menu:not([hidden]) .menu-item")];
-    // Theme shows as its three choices.
-    expect(items.map((i) => i.dataset.action ?? "theme")).toEqual(
-      menus.flat().flatMap((id) => (id === "theme" ? ["theme", "theme", "theme"] : [id])),
+    expect(items.map((i) => i.dataset.action)).toEqual(menus.flat());
+    // Each item shows its shortcut.
+    expect(items.map((i) => i.querySelector("kbd")?.textContent)).toEqual(
+      menus.flat().map((id) => actions[id].key),
     );
   });
 
