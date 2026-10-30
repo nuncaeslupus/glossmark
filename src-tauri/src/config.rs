@@ -26,6 +26,8 @@ pub struct Config {
     pub remote_images: bool,
     /// The sheet fills the window instead of keeping a book's line length.
     pub wide_sheet: bool,
+    /// Settings › Style: the document's faces and spacing; an unknown one reads as Classic.
+    pub style: String,
     pub recent_files: Vec<String>,
 }
 
@@ -37,6 +39,7 @@ impl Default for Config {
             default_zoom: 100,
             remote_images: true,
             wide_sheet: false,
+            style: "classic".into(),
             recent_files: Vec::new(),
         }
     }

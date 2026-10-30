@@ -108,9 +108,9 @@ test("test_mermaid_redrawn_when_theme_changes", async ({ page }) => {
   const node = page.locator(".sheet .mermaid > svg .node :is(rect, polygon)").first();
   const fill = () => node.evaluate((el) => getComputedStyle(el).fill);
   const light = await fill();
-  // ⋮ More › Theme cycles System → Light → Dark.
   await page.locator(".menu-button").click();
-  await page.locator(".menu-item[data-action=theme]").click();
+  await page.locator(".menu-item[data-action=settings]").click();
+  await page.locator(".settings-dialog [data-theme=dark]").click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await expect.poll(fill).not.toBe(light);
   await expect(page.locator(".sheet .mermaid > svg")).toHaveCount(1);

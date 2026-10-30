@@ -8,7 +8,7 @@ import { applyUserCss } from "../themes/user-css";
 import { type ActionId, actions, bar, matchesKey, menus } from "./definition";
 import { clearMatches, highlightMatches } from "./find";
 import { type Backend, type Config, type Doc, type DocumentChanged, errorMessage } from "./ipc";
-import { type Entry, findTarget, type Gesture, History, route } from "./links";
+import { type Entry, findTarget, type Gesture, History, MARKDOWN, route } from "./links";
 import { currentSection, type Section, sections } from "./outline";
 import { restoreScroll, scrollAnchor, watchFile } from "./watch";
 import { clampZoom, sheetLayout, stepZoom } from "./zoom";
@@ -16,11 +16,18 @@ import { clampZoom, sheetLayout, stepZoom } from "./zoom";
 const MAX_RECENT_FILES = 10;
 const NOTICE_MS = 6000;
 const THEMES = ["system", "light", "dark"] as const;
+const STYLES = Object.keys(strings.styles) as (keyof typeof strings.styles)[];
 const FIND_DEBOUNCE_MS = 100;
 /** Find stops marking here, so a common word in a large document stays quick. */
 const FIND_LIMIT = 1000;
 /** Zoom keys come in bursts; the level is saved once the reader settles on it. */
 const ZOOM_SAVE_MS = 500;
+/** Paper text sizes the print dialog offers; the zoom multiplies the sheet's print font. */
+const PRINT_SIZES = [
+  { label: strings.printDialog.small, zoom: 0.85 },
+  { label: strings.printDialog.normal, zoom: 1 },
+  { label: strings.printDialog.large, zoom: 1.2 },
+] as const;
 
 interface Tab {
   history: History;
@@ -125,12 +132,15 @@ export class Shell {
   /** The sheet fills the window rather than keeping a book's line length. */
   private wide = false;
   /** The "New tab" entry in the strip, showing the start page, and the tab it was opened from. */
-  private startTab: HTMLElement | null = null;
-  private returnTo: Tab | null = null;
   private shortcutsPanel: HTMLElement | null = null;
-  private themeItem: HTMLElement | null = null;
+  /** The print dialog overlay while open, and the paper text size it last chose. */
+  private modal: HTMLElement | null = null;
+  private printZoom = 1;
+  private themeItems: HTMLElement[] = [];
   private sourceItem: HTMLElement | null = null;
   private theme: Config["theme"] = "system";
+  private style: (typeof STYLES)[number] = "classic";
+  private styleItems: HTMLElement[] = [];
   private zoom = 100;
   private noticeTimer: ReturnType<typeof setTimeout> | undefined;
   private dialogOpen = false;
@@ -140,9 +150,9 @@ export class Shell {
 
   private readonly handlers: Record<ActionId, () => void> = {
     open: () => void this.openDialog(),
-    print: () => void this.print(),
-    export: () => void this.exportPdf(),
-    closeTab: () => (this.active ? this.close(this.active) : this.closeStartTab()),
+    print: () => this.openPrintDialog("print"),
+    export: () => this.openPrintDialog("export"),
+    closeTab: () => this.active && this.close(this.active),
     nextTab: () => this.cycleTab(1),
     previousTab: () => this.cycleTab(-1),
     outline: () => {
@@ -154,11 +164,13 @@ export class Shell {
     zoomOut: () => this.setZoom(stepZoom(this.zoom, -1)),
     zoomIn: () => this.setZoom(stepZoom(this.zoom, 1)),
     zoomReset: () => this.setZoom(100),
-    newTab: () => this.openStartTab(),
-    wideSheet: () => {
-      this.wide = !this.wide;
-      this.saveSettings();
-    },
+    // One way to open a file: "+" and Ctrl+T show the same dialog as Open.
+    newTab: () => void this.openDialog(),
+    wideSheet: () =>
+      this.keepPlace(() => {
+        this.wide = !this.wide;
+        this.saveSettings();
+      }),
     find: () => this.openFind(),
     findNext: () => this.stepFind(1),
     findPrevious: () => this.stepFind(-1),
@@ -171,6 +183,7 @@ export class Shell {
       void this.setRemoteImages(!(this.config?.remoteImages ?? true)).then(() => this.update());
     },
     viewSource: () => this.active && this.toggleSource(this.active),
+    settings: () => this.openSettings(),
     shortcuts: () => this.toggleShortcuts(),
   };
 
@@ -194,6 +207,18 @@ export class Shell {
       if (!(e.target instanceof Element && inside(e.target))) this.closeMenus();
     };
     doc.addEventListener("click", outside, { signal });
+    // WebKit's own menu is a browser's: Reload, Open Link, and Inspect in dev builds. It stays
+    // only where it has a use: pasting into the find box and copying selected text.
+    doc.addEventListener(
+      "contextmenu",
+      (e) => {
+        const el = e.target as Element;
+        const picked = doc.getSelection();
+        const copying = picked && !picked.isCollapsed && picked.getRangeAt(0).intersectsNode(el);
+        if (el !== this.findInput && !(copying && !el.closest("a, img"))) e.preventDefault();
+      },
+      { signal },
+    );
     doc.defaultView?.addEventListener("resize", () => this.layoutSheet(), { signal });
     this.update();
   }
@@ -223,6 +248,8 @@ export class Shell {
       this.theme = THEMES.includes(this.config.theme) ? this.config.theme : "system";
       this.zoom = clampZoom(this.config.defaultZoom);
       this.wide = this.config.wideSheet === true;
+      const style = STYLES.find((s) => s === this.config?.style);
+      this.style = style ?? "classic";
     }
     await this.backend.readUserCss().then(
       (css) => applyUserCss(this.root.ownerDocument, css),
@@ -278,7 +305,10 @@ export class Shell {
 
   /** Opens each path in a new tab, or focuses its tab; the last one becomes active. */
   async openPaths(paths: string[]): Promise<void> {
-    await this.openEntries(paths.map((path) => ({ path, fragment: "", scroll: 0 })));
+    // Dialog, drop, launch args and recent files all land here; only Markdown opens (D-14).
+    const markdown = paths.filter((path) => MARKDOWN.test(path));
+    if (markdown.length < paths.length) this.show(strings.notices.notMarkdown);
+    await this.openEntries(markdown.map((path) => ({ path, fragment: "", scroll: 0 })));
   }
 
   private async openEntries(entries: Entry[]): Promise<void> {
@@ -295,8 +325,6 @@ export class Shell {
       }
     }
     if (!last) return;
-    // An already-open file chosen from the New tab: that tab has nothing left to show.
-    if (this.startTab && this.active === null) this.closeStartTab();
     const tab = last;
     this.activate(tab);
     await Promise.all(added.map((t) => this.load(t)));
@@ -315,6 +343,7 @@ export class Shell {
   private async print(): Promise<void> {
     if (this.dialogOpen || !this.active) return;
     this.dialogOpen = true;
+    this.applyPrintZoom();
     try {
       // `print()` usually blocks until the dialog closes; restoring after it covers a webview
       // that never fires `afterprint`.
@@ -331,13 +360,33 @@ export class Shell {
     }
   }
 
+  /** The print dialog's Preview: the PDF Export would save, opened in the system viewer. */
+  private async previewPdf(): Promise<void> {
+    if (this.dialogOpen || !this.active) return;
+    this.dialogOpen = true;
+    this.applyPrintZoom();
+    try {
+      const back = await diagramsForPaper();
+      try {
+        await this.backend.previewPdf(basename(pathOf(this.active)).replace(/\.[^.]*$/, ""));
+      } finally {
+        back();
+      }
+    } catch {
+      this.show(strings.notices.previewFailed);
+    } finally {
+      this.dialogOpen = false;
+    }
+  }
+
   /** Export: the print styling, saved as a PDF where the user picks (D-20). */
   private async exportPdf(): Promise<void> {
     if (this.dialogOpen || !this.active) return;
     this.dialogOpen = true;
+    this.applyPrintZoom();
     try {
       const name = basename(pathOf(this.active)).replace(/\.[^.]*$/, "");
-      const path = await this.backend.saveDialog(`${name}.pdf`);
+      const path = await this.backend.saveDialog(`${name}.pdf`, this.config?.recentFiles[0]);
       if (!path) return;
       const back = await diagramsForPaper();
       try {
@@ -352,13 +401,152 @@ export class Shell {
     }
   }
 
+  /** The intermediate print page (D-20): pick a paper text size, then print or save as PDF. */
+  private openPrintDialog(primary: "print" | "export"): void {
+    if (this.modal || this.dialogOpen || !this.active) return;
+    const panel = h("section", "print-dialog");
+    panel.setAttribute("role", "dialog");
+    panel.setAttribute("aria-modal", "true");
+    const title =
+      primary === "export" ? strings.printDialog.exportTitle : strings.printDialog.title;
+    panel.setAttribute("aria-label", title);
+    panel.append(h("h2", "", title));
+
+    const sizes = h("div", "print-sizes");
+    sizes.setAttribute("role", "radiogroup");
+    sizes.setAttribute("aria-label", strings.printDialog.size);
+    for (const size of PRINT_SIZES) {
+      const button = h("button", "print-size");
+      button.dataset.zoom = String(size.zoom);
+      button.setAttribute("role", "radio");
+      const sample = h("span", "print-sample", strings.printDialog.sample);
+      sample.style.fontSize = `${size.zoom}em`;
+      button.append(sample, h("span", "print-size-label", size.label));
+      button.addEventListener("click", () => this.pickPrintSize(size.zoom));
+      sizes.append(button);
+    }
+    panel.append(sizes);
+
+    // One action, the one the toolbar button asked for, so Print and Export stay distinct.
+    const row = h("div", "print-actions");
+    const isExport = primary === "export";
+    const action = isExport
+      ? h("button", "print-save", strings.actions.export)
+      : h("button", "print-go", strings.actions.print);
+    const cancel = h("button", "print-cancel", strings.printDialog.cancel);
+    action.addEventListener("click", () => {
+      this.closeModal();
+      void (isExport ? this.exportPdf() : this.print());
+    });
+    // Preview leaves the dialog open, so another size can be tried.
+    const preview = h("button", "print-preview", strings.printDialog.preview);
+    preview.addEventListener("click", () => void this.previewPdf());
+    cancel.addEventListener("click", () => this.closeModal());
+    row.append(action, preview, cancel);
+    panel.append(row);
+    this.showModal(panel, action);
+    this.markPrintSize();
+  }
+
+  /** ⋮ More › Settings: theme and remote images, each applied as soon as it is picked. */
+  private openSettings(): void {
+    if (this.modal || this.dialogOpen) return;
+    const s = strings.settingsDialog;
+    const panel = h("section", "print-dialog settings-dialog");
+    panel.setAttribute("role", "dialog");
+    panel.setAttribute("aria-modal", "true");
+    panel.setAttribute("aria-label", s.title);
+
+    const themes = h("div", "settings-group");
+    themes.setAttribute("role", "radiogroup");
+    themes.setAttribute("aria-label", s.theme);
+    this.themeItems = THEMES.map((theme) => {
+      const item = h("button", "menu-item", strings.themes[theme]);
+      item.setAttribute("role", "radio");
+      item.dataset.theme = theme;
+      item.addEventListener("click", () => {
+        this.theme = theme;
+        this.saveSettings();
+      });
+      return item;
+    });
+    themes.append(...this.themeItems);
+
+    const styles = h("div", "settings-group");
+    styles.setAttribute("role", "radiogroup");
+    styles.setAttribute("aria-label", s.style);
+    this.styleItems = STYLES.map((style) => {
+      const item = h("button", "menu-item", strings.styles[style]);
+      item.setAttribute("role", "radio");
+      item.dataset.style = style;
+      item.addEventListener("click", () => {
+        this.style = style;
+        this.saveSettings();
+      });
+      return item;
+    });
+    styles.append(...this.styleItems);
+
+    const remote = h("button", "menu-item", strings.actions.remoteImages);
+    remote.setAttribute("role", "checkbox");
+    remote.dataset.action = "remoteImages";
+    remote.addEventListener("click", () => this.run("remoteImages"));
+    this.remoteItem = remote;
+
+    const row = h("div", "print-actions");
+    const done = h("button", "print-go", s.done);
+    done.addEventListener("click", () => this.closeModal());
+    row.append(done);
+    panel.append(h("h2", "", s.title), h("h3", "", s.theme), themes, h("h3", "", s.style), styles);
+    panel.append(h("h3", "", s.images), remote, row);
+    this.showModal(panel, done);
+    this.update();
+  }
+
+  /** Shows `panel` over the page; a click beside it or Esc closes it. */
+  private showModal(panel: HTMLElement, focus: HTMLElement): void {
+    const overlay = h("div", "print-overlay");
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) this.closeModal();
+    });
+    overlay.append(panel);
+    this.view.append(overlay);
+    this.modal = overlay;
+    focus.focus();
+  }
+
+  private pickPrintSize(zoom: number): void {
+    this.printZoom = zoom;
+    this.markPrintSize();
+  }
+
+  private markPrintSize(): void {
+    for (const b of this.modal?.querySelectorAll<HTMLElement>(".print-size") ?? []) {
+      const on = Number(b.dataset.zoom) === this.printZoom;
+      b.classList.toggle("current", on);
+      b.setAttribute("aria-checked", String(on));
+    }
+  }
+
+  private closeModal(): void {
+    this.modal?.remove();
+    this.modal = null;
+  }
+
+  private applyPrintZoom(): void {
+    this.root.ownerDocument.documentElement.style.setProperty(
+      "--print-zoom",
+      String(this.printZoom),
+    );
+  }
+
   private async openDialog(): Promise<void> {
     // A second Ctrl+O while the dialog is up does nothing.
     if (this.dialogOpen) return;
     this.dialogOpen = true;
     let paths: string[] = [];
     try {
-      paths = await this.backend.openDialog();
+      paths = await this.backend.openDialog(this.config?.recentFiles[0]);
     } catch {
       this.show(strings.notices.openFailed);
     } finally {
@@ -514,7 +702,7 @@ export class Shell {
   }
 
   /** Theme and zoom: applied at once, kept in the config (when it could be read) after `delay`.
-   * The zoom last used is the default zoom: with no settings dialog (D-11), it is how one is set. */
+   * The zoom last used is the default zoom: it has no field in Settings, so this is how one is set. */
   private saveSettings(delay = 0): void {
     this.update();
     clearTimeout(this.saveTimer);
@@ -528,6 +716,7 @@ export class Shell {
     this.config = {
       ...this.config,
       theme: this.theme,
+      style: this.style,
       defaultZoom: this.zoom,
       wideSheet: this.wide,
     };
@@ -538,10 +727,17 @@ export class Shell {
 
   /** Zooms the sheets; the active tab keeps the heading the reader is at. */
   private setZoom(percent: number): void {
+    this.keepPlace(() => {
+      this.zoom = clampZoom(percent);
+      this.saveSettings(ZOOM_SAVE_MS);
+    });
+  }
+
+  /** Runs `reflow`, which changes the document's height, and keeps the reader where they were. */
+  private keepPlace(reflow: () => void): void {
     const tab = this.active;
     const anchor = tab && scrollAnchor(tab.canvas, tab.sheet);
-    this.zoom = clampZoom(percent);
-    this.saveSettings(ZOOM_SAVE_MS);
+    reflow();
     if (tab && anchor) restoreScroll(tab.canvas, tab.sheet, anchor);
   }
 
@@ -691,10 +887,25 @@ export class Shell {
   private remember(path: string): void {
     if (!this.config) return;
     const recent = [path, ...this.config.recentFiles.filter((p) => p !== path)];
-    this.config = { ...this.config, recentFiles: recent.slice(0, MAX_RECENT_FILES) };
+    this.saveRecent(recent.slice(0, MAX_RECENT_FILES));
+  }
+
+  private saveRecent(recentFiles: string[]): void {
+    if (!this.config) return;
+    this.config = { ...this.config, recentFiles };
     void this.backend
       .setConfig(this.config)
       .catch(() => this.show(strings.notices.recentFilesNotSaved));
+  }
+
+  /** Redraws the page and puts focus on the X now in `index`'s place, or on the drop area. */
+  private dropRecent(recentFiles: string[], index: number): void {
+    this.saveRecent(recentFiles);
+    this.drawEmpty();
+    const removes = this.empty.querySelectorAll<HTMLElement>(".recent-remove");
+    (
+      removes[Math.min(index, removes.length - 1)] ?? this.empty.querySelector<HTMLElement>(".drop")
+    )?.focus();
   }
 
   private addTab(entry: Entry): Tab {
@@ -764,51 +975,10 @@ export class Shell {
     });
 
     this.tabs.push(tab);
-    // A file opened from the start page takes the "New tab" entry's place.
-    if (this.startTab && this.active === null) {
-      this.startTab.replaceWith(handle);
-      this.startTab = null;
-    } else this.tabStrip.append(handle);
+    this.tabStrip.append(handle);
     this.view.append(canvas);
     this.canvasWidth?.observe(canvas);
     return tab;
-  }
-
-  /** A "New tab" in the strip showing the start page (Open, drop, recent files); opening a
-   * file there turns it into that file's tab. */
-  private openStartTab(): void {
-    if (!this.startTab) {
-      const handle = h("div", "tab start-tab");
-      handle.setAttribute("role", "tab");
-      const label = h("button", "tab-label", strings.actions.newTab);
-      label.addEventListener("click", () => {
-        if (this.active) this.returnTo = this.active;
-        this.active = null;
-        this.update();
-      });
-      const close = iconButton("tab-close", strings.icons.closeTab);
-      close.title = strings.actions.closeTab;
-      close.setAttribute("aria-label", strings.actions.closeTab);
-      close.addEventListener("click", () => this.closeStartTab());
-      handle.append(label, close);
-      this.tabStrip.append(handle);
-      this.startTab = handle;
-    }
-    if (this.active) this.returnTo = this.active;
-    this.active = null;
-    this.update();
-    this.startTab.scrollIntoView?.({ inline: "nearest" });
-  }
-
-  private closeStartTab(): void {
-    this.startTab?.remove();
-    this.startTab = null;
-    if (!this.active) {
-      const back = this.returnTo && this.tabs.includes(this.returnTo) ? this.returnTo : null;
-      this.active = back ?? this.tabs.at(-1) ?? null;
-    }
-    this.returnTo = null;
-    this.update();
   }
 
   private activate(tab: Tab): void {
@@ -829,12 +999,7 @@ export class Shell {
 
   /** Ctrl+Tab and Ctrl+Shift+Tab, wrapping at the ends. */
   private cycleTab(step: number): void {
-    if (!this.active) {
-      const back = this.returnTo && this.tabs.includes(this.returnTo) ? this.returnTo : null;
-      const tab = back ?? this.tabs[0];
-      if (tab) this.activate(tab);
-      return;
-    }
+    if (!this.active) return;
     const n = this.tabs.length;
     const tab = this.tabs[(this.tabs.indexOf(this.active) + step + n) % n];
     if (tab) this.activate(tab);
@@ -852,9 +1017,6 @@ export class Shell {
   }
 
   private enabled(id: ActionId): boolean {
-    // The New tab can be closed or left like any other tab.
-    const tabbing = id === "closeTab" || id === "nextTab" || id === "previousTab";
-    if (tabbing && this.startTab && !this.active) return id === "closeTab" || this.tabs.length > 0;
     if (actions[id].needsDocument && !this.active) return false;
     if (id === "back") return this.active?.history.canGoBack === true;
     if (id === "forward") return this.active?.history.canGoForward === true;
@@ -1070,16 +1232,14 @@ export class Shell {
         const item = h("button", "menu-item", actions[id].label);
         item.setAttribute("role", "menuitem");
         item.dataset.action = id;
-        if (id === "theme") this.themeItem = item;
+        // Each command shows its shortcut, as native menus do.
+        item.setAttribute("aria-keyshortcuts", actions[id].key);
+        item.append(h("kbd", "menu-key", actions[id].key));
         if (id === "viewSource") {
           this.sourceItem = item;
           item.setAttribute("role", "menuitemcheckbox");
         }
         if (id === "wideSheet") item.setAttribute("role", "menuitemcheckbox");
-        if (id === "remoteImages") {
-          this.remoteItem = item;
-          item.setAttribute("role", "menuitemcheckbox");
-        }
         item.addEventListener("click", () => {
           this.closeMenus();
           this.run(id);
@@ -1164,6 +1324,14 @@ export class Shell {
   private onKey(e: KeyboardEvent): void {
     // A key may scroll the page, which releases a section clicked in the outline.
     this.sectionHeld = false;
+    // The print and settings dialogs are modal: Esc closes them, other shortcuts wait.
+    if (this.modal) {
+      if (e.key === "Escape") {
+        this.closeModal();
+        e.preventDefault();
+      }
+      return;
+    }
     // Esc closes an open menu or the shortcuts list before it closes find.
     const menuOpen = [...this.menuBar.querySelectorAll<HTMLElement>(".menu")].some(
       (m) => !m.hidden,
@@ -1212,8 +1380,6 @@ export class Shell {
       tab.handle.setAttribute("aria-selected", String(tab === active));
       tab.canvas.hidden = tab !== active;
     }
-    this.startTab?.classList.toggle("active", active === null);
-    this.startTab?.setAttribute("aria-selected", String(active === null));
     this.empty.hidden = active !== null;
     if (!active) this.drawEmpty();
     this.root.ownerDocument.title = active
@@ -1243,7 +1409,7 @@ export class Shell {
   private layoutSheet(): void {
     const width = this.active?.canvas.clientWidth ?? 0;
     if (width <= 0) return;
-    const { maxWidth, padScale } = sheetLayout(width, this.zoom, this.wide);
+    const { maxWidth, padScale } = sheetLayout(width, this.wide);
     this.view.style.setProperty("--sheet-max", `${maxWidth}px`);
     this.view.style.setProperty("--sheet-pad", String(padScale));
   }
@@ -1252,15 +1418,28 @@ export class Shell {
     const html = this.root.ownerDocument.documentElement;
     if (this.theme === "system") delete html.dataset.theme;
     else html.dataset.theme = this.theme;
+    html.dataset.style = this.style;
     this.view.style.setProperty("--zoom", String(this.zoom / 100));
     for (const el of this.root.querySelectorAll('[data-action="wideSheet"]')) {
-      el.setAttribute(
-        el.getAttribute("role") === "menuitemcheckbox" ? "aria-checked" : "aria-pressed",
-        String(this.wide),
+      if (el.getAttribute("role") === "menuitemcheckbox") {
+        el.setAttribute("aria-checked", String(this.wide));
+        continue;
+      }
+      // Toolbar toggle: icon and tooltip name the layout a click switches to.
+      el.setAttribute("aria-pressed", String(this.wide));
+      const label = this.wide ? strings.sheetFixed : strings.sheetFill;
+      el.setAttribute("aria-label", label);
+      (el as HTMLElement).title = label;
+      el.querySelector("path")?.setAttribute(
+        "d",
+        this.wide ? strings.icons.sheetFixed : strings.icons.sheetFill,
       );
     }
     this.zoomReadout.textContent = strings.zoomPercent(this.zoom);
-    if (this.themeItem) this.themeItem.textContent = strings.themes[this.theme];
+    for (const item of this.themeItems)
+      item.setAttribute("aria-checked", String(item.dataset.theme === this.theme));
+    for (const item of this.styleItems)
+      item.setAttribute("aria-checked", String(item.dataset.style === this.style));
     this.remoteItem?.setAttribute("aria-checked", String(this.config?.remoteImages ?? true));
     this.sourceItem?.setAttribute("aria-checked", String(this.active?.source.hidden === false));
   }
@@ -1274,15 +1453,26 @@ export class Shell {
     if (recent.length === 0) return;
     const section = h("section", "recent");
     const list = h("ul");
-    for (const path of recent) {
+    recent.forEach((path, index) => {
       const item = userText("button", "recent-file", basename(path));
       item.title = path;
       item.addEventListener("click", () => void this.openPaths([path]));
+      const remove = iconButton("recent-remove", strings.icons.closeTab);
+      remove.title = strings.recentRemove(basename(path));
+      remove.setAttribute("aria-label", remove.title);
+      remove.addEventListener("click", () =>
+        this.dropRecent(
+          recent.filter((p) => p !== path),
+          index,
+        ),
+      );
       const li = h("li");
-      li.append(item);
+      li.append(item, remove);
       list.append(li);
-    }
-    section.append(h("h2", "", strings.recentFiles), list);
+    });
+    const clear = h("button", "recent-clear", strings.recentClear);
+    clear.addEventListener("click", () => this.dropRecent([], 0));
+    section.append(h("h2", "", strings.recentFiles), list, clear);
     this.empty.append(section);
   }
 }
