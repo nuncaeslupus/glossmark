@@ -3,7 +3,13 @@
 <!-- Written at session end. A new session reading this file can resume without
      additional context. -->
 
-## This session (cloud, 2026-10-29)
+## This session (local, 2026-10-30)
+
+- Merged: #118; Settings panel, shortcuts in the menu and five document styles, with their print
+  fixes (#120, also #119 for headings on paper). Preview confirmed by the owner.
+- `make dev` installs a hidden per-user desktop entry, so Alt+Tab shows the app's icon on Wayland.
+
+## Earlier (cloud, 2026-10-29)
 
 - **Renamed to Nacho Viewer** (#111, T14 t-66dcfed6); repo is `nuncaeslupus/nacho-viewer`.
   Settings carry over from `~/.config/glossmark` (old folder used while a copy fails).
@@ -12,16 +18,15 @@
   diagrams rendered for GitHub (`render_diagrams.py`, #116); Linux freeze fix — defaults
   `WEBKIT_DISABLE_DMABUF_RENDERER=1` (owner's Wayland + NVIDIA laptop) — and 256 px window
   icon (#117); title bar no longer traps clicks on Linux (#113); README hero (#112).
-- **Open: #118** reflow zoom + page-width toggle (Ctrl+9) + New tab (+ / Ctrl+T). Own
-  review of the zoom commit was running when the session ended; the New tab commit
-  (b348e69) has had no review yet. Merge when reviewed and green.
 - **Open: #97, #98** Windows/macOS PDF export — wait on the owner's page-count check; they
   now conflict with #115's `export.rs` and need a merge, and Print should route through
   them there as it does on Linux.
 
 ## What remains
 
-- Alt+Tab icon on Wayland comes from the installed desktop file; `make dev` shows a generic one.
+- Alt+Tab icon: the deb's `nacho-viewer.desktop` matches the app id, but no installed build has
+  been checked.
+- Perf gate t-c86fe6e8 waits on the owner: accept the ~650 ms floor or change the gate.
 - Export to PDF is Linux-only until #97/#98 land.
 
 ## Previous session (local, 2026-10-28)
