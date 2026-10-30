@@ -1,0 +1,136 @@
+/* Document styles: Settings › Style sets `data-style` on the root. Classic, the default, is the
+ * signature theme as it is; each other style changes its faces and rhythm, and a few heading
+ * details. Selectors start at `:root[data-style]`, so they beat the theme's rules after them. */
+
+@import "@fontsource-variable/literata/opsz.css";
+@import "@fontsource-variable/literata/opsz-italic.css";
+@import "@fontsource-variable/source-serif-4/opsz.css";
+@import "@fontsource-variable/source-serif-4/opsz-italic.css";
+@import "@fontsource-variable/source-sans-3";
+@import "@fontsource-variable/source-sans-3/wght-italic.css";
+@import "@fontsource-variable/nunito";
+@import "@fontsource-variable/nunito/wght-italic.css";
+@import "@fontsource-variable/figtree";
+@import "@fontsource-variable/figtree/wght-italic.css";
+@import "@fontsource-variable/fraunces/opsz.css";
+
+/* Settings › Style names each style in its own faces. */
+.settings-dialog [data-style="book"] {
+  font-family: "Literata Variable", serif;
+}
+
+.settings-dialog [data-style="report"] {
+  font-family: "Source Serif 4 Variable", serif;
+}
+
+.settings-dialog [data-style="friendly"] {
+  font-family: "Nunito Variable", sans-serif;
+}
+
+.settings-dialog [data-style="editorial"] {
+  font-family: "Fraunces Variable", serif;
+}
+
+/* Book: a serif made for long reading on screens, set a size up with generous leading. */
+:root[data-style="book"] {
+  --font-body: "Literata Variable", Georgia, serif;
+  --font-heading: "Literata Variable", Georgia, serif;
+  --text-size: 1.125rem;
+  --leading: 1.7;
+  --heading-weight: 650;
+  --heading-tracking: 0;
+  --h2-rule: 0 none;
+}
+
+:root[data-style="book"] .sheet :is(h1, h2, h3, h4, h5, h6) {
+  margin-top: 2em;
+}
+
+:root[data-style="book"] .sheet h1 {
+  font-weight: 700;
+  font-size: 2.1em;
+}
+
+:root[data-style="book"] .sheet h3 {
+  font-style: italic;
+  font-weight: 500;
+}
+
+/* Report: serif text under sans headings, like a well-set business or technical report. */
+:root[data-style="report"] {
+  --font-body: "Source Serif 4 Variable", Georgia, serif;
+  --font-heading: "Source Sans 3 Variable", system-ui, sans-serif;
+  --text-size: 1.0625rem;
+  --leading: 1.65;
+  --heading-weight: 700;
+  --heading-tracking: -0.005em;
+  --h1-rule: 2px solid var(--ink);
+  --h1-pad: 0.25em;
+  --h2-rule: 0 none;
+}
+
+:root[data-style="report"] .sheet h1 {
+  font-size: 2.1em;
+}
+
+:root[data-style="report"] .sheet h2 {
+  font-size: 1.4em;
+}
+
+:root[data-style="report"] .sheet h3 {
+  color: var(--muted);
+  font-size: 0.95em;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* Friendly: a rounded sans, a size up, with soft corners on code and quotes. */
+:root[data-style="friendly"] {
+  --font-body: "Nunito Variable", system-ui, sans-serif;
+  --font-heading: "Nunito Variable", system-ui, sans-serif;
+  --text-size: 1.125rem;
+  --leading: 1.7;
+  --heading-weight: 800;
+  --heading-tracking: 0;
+  --h2-rule: 0 none;
+}
+
+:root[data-style="friendly"] .sheet pre {
+  border-radius: 12px;
+}
+
+:root[data-style="friendly"] .sheet :not(pre) > code {
+  border-radius: 6px;
+}
+
+:root[data-style="friendly"] .sheet blockquote {
+  padding: 0.6em 1em;
+  border-left: 0;
+  border-radius: 12px;
+  background: var(--code-bg);
+}
+
+:root[data-style="friendly"] .sheet blockquote > :last-child {
+  margin-bottom: 0;
+}
+
+/* Editorial: a clean sans for the text under display-serif headings, as in a magazine. */
+:root[data-style="editorial"] {
+  --font-body: "Figtree Variable", system-ui, sans-serif;
+  --font-heading: "Fraunces Variable", Georgia, serif;
+  --text-size: 1.0625rem;
+  --leading: 1.7;
+  --heading-weight: 600;
+  --heading-tracking: -0.015em;
+  --h2-rule: 0 none;
+}
+
+:root[data-style="editorial"] .sheet h1 {
+  font-size: 2.4em;
+  font-weight: 650;
+  line-height: 1.1;
+}
+
+:root[data-style="editorial"] .sheet h2 {
+  font-size: 1.6em;
+}

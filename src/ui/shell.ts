@@ -16,6 +16,7 @@ import { clampZoom, sheetLayout, stepZoom } from "./zoom";
 const MAX_RECENT_FILES = 10;
 const NOTICE_MS = 6000;
 const THEMES = ["system", "light", "dark"] as const;
+const STYLES = Object.keys(strings.styles) as (keyof typeof strings.styles)[];
 const FIND_DEBOUNCE_MS = 100;
 /** Find stops marking here, so a common word in a large document stays quick. */
 const FIND_LIMIT = 1000;
@@ -138,6 +139,8 @@ export class Shell {
   private themeItems: HTMLElement[] = [];
   private sourceItem: HTMLElement | null = null;
   private theme: Config["theme"] = "system";
+  private style: (typeof STYLES)[number] = "classic";
+  private styleItems: HTMLElement[] = [];
   private zoom = 100;
   private noticeTimer: ReturnType<typeof setTimeout> | undefined;
   private dialogOpen = false;
@@ -232,6 +235,8 @@ export class Shell {
       this.theme = THEMES.includes(this.config.theme) ? this.config.theme : "system";
       this.zoom = clampZoom(this.config.defaultZoom);
       this.wide = this.config.wideSheet === true;
+      const style = STYLES.find((s) => s === this.config?.style);
+      this.style = style ?? "classic";
     }
     await this.backend.readUserCss().then(
       (css) => applyUserCss(this.root.ownerDocument, css),
@@ -454,6 +459,21 @@ export class Shell {
     });
     themes.append(...this.themeItems);
 
+    const styles = h("div", "settings-group");
+    styles.setAttribute("role", "radiogroup");
+    styles.setAttribute("aria-label", s.style);
+    this.styleItems = STYLES.map((style) => {
+      const item = h("button", "menu-item", strings.styles[style]);
+      item.setAttribute("role", "radio");
+      item.dataset.style = style;
+      item.addEventListener("click", () => {
+        this.style = style;
+        this.saveSettings();
+      });
+      return item;
+    });
+    styles.append(...this.styleItems);
+
     const remote = h("button", "menu-item", strings.actions.remoteImages);
     remote.setAttribute("role", "checkbox");
     remote.dataset.action = "remoteImages";
@@ -464,7 +484,7 @@ export class Shell {
     const done = h("button", "print-go", s.done);
     done.addEventListener("click", () => this.closeModal());
     row.append(done);
-    panel.append(h("h2", "", s.title), h("h3", "", s.theme), themes);
+    panel.append(h("h2", "", s.title), h("h3", "", s.theme), themes, h("h3", "", s.style), styles);
     panel.append(h("h3", "", s.images), remote, row);
     this.showModal(panel, done);
     this.update();
@@ -683,6 +703,7 @@ export class Shell {
     this.config = {
       ...this.config,
       theme: this.theme,
+      style: this.style,
       defaultZoom: this.zoom,
       wideSheet: this.wide,
     };
@@ -1362,6 +1383,7 @@ export class Shell {
     const html = this.root.ownerDocument.documentElement;
     if (this.theme === "system") delete html.dataset.theme;
     else html.dataset.theme = this.theme;
+    html.dataset.style = this.style;
     this.view.style.setProperty("--zoom", String(this.zoom / 100));
     for (const el of this.root.querySelectorAll('[data-action="wideSheet"]')) {
       if (el.getAttribute("role") === "menuitemcheckbox") {
@@ -1381,6 +1403,8 @@ export class Shell {
     this.zoomReadout.textContent = strings.zoomPercent(this.zoom);
     for (const item of this.themeItems)
       item.setAttribute("aria-checked", String(item.dataset.theme === this.theme));
+    for (const item of this.styleItems)
+      item.setAttribute("aria-checked", String(item.dataset.style === this.style));
     this.remoteItem?.setAttribute("aria-checked", String(this.config?.remoteImages ?? true));
     this.sourceItem?.setAttribute("aria-checked", String(this.active?.source.hidden === false));
   }

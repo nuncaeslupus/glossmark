@@ -210,6 +210,21 @@ describe("reading tools", () => {
     expect(state.config.theme).toBe("system");
   });
 
+  it("test_style_is_picked_in_settings_and_persists", async () => {
+    const { root, state } = await open({}, []);
+    expect(document.documentElement.dataset.style).toBe("classic");
+    press({ key: ",", ctrlKey: true });
+    const item = (style: string) =>
+      root.querySelector<HTMLElement>(`.settings-dialog [data-style=${style}]`);
+    click(item("book"));
+    expect(document.documentElement.dataset.style).toBe("book");
+    expect(item("book")?.getAttribute("aria-checked")).toBe("true");
+    expect(item("classic")?.getAttribute("aria-checked")).toBe("false");
+    await settle();
+    expect(state.config.style).toBe("book");
+    press({ key: "Escape" });
+  });
+
   it("test_find_marks_matches_and_survives_reload", async () => {
     const { root, state } = await open({ "/n/a.md": "# Cat\n\ncat and CAT, `cat`" }, ["/n/a.md"]);
     press({ key: "f", ctrlKey: true });

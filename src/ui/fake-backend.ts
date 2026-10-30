@@ -17,6 +17,7 @@ export function fakeBackend(files: Record<string, string>, launch: string[] = []
       defaultZoom: 100,
       remoteImages: true,
       wideSheet: false,
+      style: "classic",
       recentFiles: [],
     } as Config,
     external: [] as string[],

@@ -140,6 +140,7 @@ export const menus: ActionId[][] = [
 /** What the user can set; window size is remembered by the window-state plugin. */
 export const settings = [
   "theme",
+  "style",
   "defaultZoom",
   "remoteImages",
 ] as const satisfies readonly (keyof Config)[];

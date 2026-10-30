@@ -75,6 +75,14 @@ export const strings = {
     light: "Light theme",
     dark: "Dark theme",
   },
+  // Settings › Style: each name is shown in its own faces.
+  styles: {
+    classic: "Classic",
+    book: "Book",
+    report: "Report",
+    friendly: "Friendly",
+    editorial: "Editorial",
+  },
   // The wide-sheet toolbar toggle names the layout a click switches to.
   sheetFill: "Fill the window",
   sheetFixed: "Fixed width",
@@ -93,6 +101,7 @@ export const strings = {
   settingsDialog: {
     title: "Settings",
     theme: "Theme",
+    style: "Style",
     images: "Images",
     done: "Done",
   },

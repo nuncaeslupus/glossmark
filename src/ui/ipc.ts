@@ -9,6 +9,8 @@ export interface Config {
   remoteImages: boolean;
   /** The sheet fills the window instead of keeping a book's line length. */
   wideSheet: boolean;
+  /** Settings › Style: the document's faces and spacing. */
+  style: string;
   recentFiles: string[];
 }
 
