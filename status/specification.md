@@ -81,7 +81,8 @@ it waits.
   No second toolbar,
   no status bar, no side panels besides the outline. With no file open, the window shows a single
   "Open or drop a Markdown file" area and the recent files. Every toolbar action also has a keyboard
-  shortcut. Settings are limited to what a viewer needs: theme, default zoom, remote
+  shortcut. Settings are limited to what a viewer needs: theme, document style (Classic, the
+  default, Newspaper, Paper, Docs or Typewriter; owner, 2026-10-30), default zoom, remote
   images on/off (default on), and the remembered window size and recent files.
 
 ![Diagram 1](diagrams/specification-1.svg) <!-- drawspec-render -->
