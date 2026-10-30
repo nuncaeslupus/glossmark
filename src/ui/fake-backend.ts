@@ -17,6 +17,7 @@ export function fakeBackend(files: Record<string, string>, launch: string[] = []
       defaultZoom: 100,
       remoteImages: true,
       wideSheet: false,
+      style: "classic",
       recentFiles: [],
     } as Config,
     external: [] as string[],
@@ -28,6 +29,7 @@ export function fakeBackend(files: Record<string, string>, launch: string[] = []
     savePath: null as string | null,
     saveNames: [] as string[],
     exported: [] as string[],
+    previewed: [] as string[],
     /** Calls to the core's print; `printHandled` is what it answers. */
     printed: 0,
     printHandled: false,
@@ -78,6 +80,9 @@ export function fakeBackend(files: Record<string, string>, launch: string[] = []
     },
     exportPdf: async (path) => {
       state.exported.push(path);
+    },
+    previewPdf: async (name) => {
+      state.previewed.push(name);
     },
     printDocument: async () => {
       state.printed++;

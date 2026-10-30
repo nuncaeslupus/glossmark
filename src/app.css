@@ -184,6 +184,9 @@ button:disabled {
 
 .tab-close,
 .tab-menu {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 1.5rem;
   height: 1.5rem;
   margin-right: 4px;
@@ -192,6 +195,11 @@ button:disabled {
 
 .tab-menu {
   margin-right: 0;
+}
+
+/* The × is a text glyph; the tab font is small, so size it up on its own. */
+.tab-close {
+  font-size: 1.15rem;
 }
 
 .tab-menu svg {
@@ -227,6 +235,9 @@ button:disabled {
 
 .bar-button,
 .menu-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   min-width: 32px;
   height: 32px;
   border-radius: 50%;
@@ -298,19 +309,32 @@ button:disabled {
 }
 
 .menu-item {
-  display: block;
+  display: flex;
+  gap: 1rem;
   width: 100%;
   padding: 6px 16px;
   text-align: left;
+  white-space: nowrap;
 }
 
-.menu-item[aria-checked]::after {
-  float: right;
-  margin-left: 1rem;
+/* A column on the right for a checked item's ✓, so the shortcuts line up beside it. */
+.menu-item::after {
+  content: "";
+  width: 1em;
+}
+
+.menu-item:not(:has(.menu-key))::after {
+  margin-left: auto;
 }
 
 .menu-item[aria-checked="true"]::after {
   content: "✓";
+}
+
+.menu-key {
+  margin-left: auto;
+  font: inherit;
+  opacity: 0.6;
 }
 
 .menu-rule {
@@ -337,8 +361,8 @@ button:disabled {
   box-sizing: border-box;
 }
 
-/* --sheet-max and --sheet-pad come from the window's width (sheetLayout): a zoomed sheet
- * rewraps rather than overflowing the canvas. */
+/* --sheet-max and --sheet-pad come from the window's width (sheetLayout): the column fits the
+ * canvas, and zoom grows the font inside it rather than widening the sheet. */
 .sheet {
   box-sizing: border-box;
   max-width: var(--sheet-max, 816px);
@@ -350,10 +374,6 @@ button:disabled {
 
 .view.with-outline .canvas {
   left: var(--outline-width);
-}
-
-.sheet {
-  zoom: var(--zoom, 1);
 }
 
 /* Outline sidebar */
@@ -432,9 +452,13 @@ button:disabled {
 }
 
 .find-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 28px;
   height: 28px;
   border-radius: 50%;
+  font-size: 1.15rem;
 }
 
 .find-button:hover:enabled {
@@ -479,6 +503,99 @@ mark.find-match.current {
 .shortcuts-hint {
   margin: 8px 0 0;
   opacity: 0.7;
+}
+
+/* Print dialog: a small centred page to pick the paper text size, then print or save */
+.print-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgb(0 0 0 / 40%);
+}
+
+.print-dialog {
+  min-width: 300px;
+  padding: 20px 24px;
+  background: var(--menu);
+  color: var(--menu-ink);
+  border-radius: 10px;
+  box-shadow: 0 8px 32px rgb(0 0 0 / 40%);
+}
+
+.print-dialog h2 {
+  margin: 0 0 16px;
+  font-size: 1.1rem;
+}
+
+.print-sizes {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.print-size {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 8px;
+  border: 1px solid var(--muted, #666);
+  border-radius: 8px;
+}
+
+.print-sample {
+  line-height: 1;
+}
+
+.print-size-label {
+  font-size: 0.8125rem;
+}
+
+.print-size:hover,
+.print-size.current {
+  background: var(--menu-hover);
+}
+
+.print-size.current {
+  border-color: currentColor;
+}
+
+.print-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.print-actions button {
+  padding: 8px 14px;
+  border-radius: 6px;
+}
+
+.print-actions button:hover {
+  background: var(--menu-hover);
+}
+
+.settings-dialog h3 {
+  margin: 12px 0 4px;
+  font-size: 0.8125rem;
+  opacity: 0.7;
+}
+
+.settings-dialog .menu-item {
+  border-radius: 6px;
+}
+
+.settings-dialog .print-actions {
+  margin-top: 20px;
+}
+
+.print-go,
+.print-save {
+  background: var(--menu-hover);
 }
 
 .doc-error {

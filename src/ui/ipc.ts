@@ -9,6 +9,8 @@ export interface Config {
   remoteImages: boolean;
   /** The sheet fills the window instead of keeping a book's line length. */
   wideSheet: boolean;
+  /** Settings › Style: the document's faces and spacing. */
+  style: string;
   recentFiles: string[];
 }
 
@@ -48,6 +50,8 @@ export interface Backend {
   saveDialog(name: string): Promise<string | null>;
   /** Prints the page to `path`, which must be the Save dialog's last answer. */
   exportPdf(path: string): Promise<void>;
+  /** The same PDF in the temp folder, opened in the system viewer. */
+  previewPdf(name: string): Promise<void>;
   /** The system print dialog over the same page as the PDF; `false` where the webview's own
    * print is used instead. */
   printDocument(): Promise<boolean>;
@@ -87,6 +91,7 @@ export const tauriBackend: Backend = {
   openDialog: () => invoke<OpenFiles>("open_dialog").then((r) => r.paths),
   saveDialog: (name) => invoke<string | null>("save_dialog", { name }),
   exportPdf: (path) => invoke<void>("export_pdf", { path }),
+  previewPdf: (name) => invoke<void>("preview_pdf", { name }),
   printDocument: () => invoke<boolean>("print_document"),
   readDocument: (path) => invoke<Doc>("read_document", { path }),
   readSvg: (path) => invoke<{ svg: string }>("read_svg", { path }).then((r) => r.svg),

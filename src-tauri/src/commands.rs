@@ -168,6 +168,24 @@ pub async fn export_pdf<R: Runtime>(
     export::print_to_pdf(&window, &path)
 }
 
+/// The print dialog's Preview: the same PDF as Export, in the temp folder, opened in the
+/// system's viewer. Only the name's last component is used, so it cannot leave that folder.
+#[tauri::command]
+pub async fn preview_pdf<R: Runtime>(app: AppHandle<R>, name: String) -> Result<(), IpcError> {
+    let io = |e: String| IpcError::new(ErrorKind::Io, e);
+    let file = Path::new(&name)
+        .file_name()
+        .ok_or_else(|| io(format!("{name} is not a file name")))?;
+    let path = export::with_pdf_extension(std::env::temp_dir().join(file));
+    let window = app
+        .get_webview_window("main")
+        .ok_or_else(|| io("no window to preview".into()))?;
+    export::print_to_pdf(&window, &path)?;
+    app.opener()
+        .open_path(path.to_string_lossy(), None::<&str>)
+        .map_err(|e| io(e.to_string()))
+}
+
 /// File › Print through the same page setup as Export; `false` asks the frontend to print itself.
 #[tauri::command]
 pub async fn print_document<R: Runtime>(app: AppHandle<R>) -> Result<bool, IpcError> {

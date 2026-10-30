@@ -27,7 +27,7 @@ export interface Entry {
   visited?: boolean;
 }
 
-const MARKDOWN = /\.(?:md|markdown)$/i;
+export const MARKDOWN = /\.(?:md|markdown)$/i;
 
 export function linkKind(link: Element): LinkKind {
   const href = link.getAttribute("href") ?? "";

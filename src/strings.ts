@@ -10,6 +10,7 @@ export const strings = {
   notices: {
     openFailed: "The Open dialog could not be shown.",
     exportFailed: "The PDF could not be saved.",
+    previewFailed: "The preview could not be shown.",
     printFailed: "The document could not be printed.",
     settingsUnavailable: "Settings could not be read; recent files will not be kept.",
     userCssUnavailable: "Your user.css could not be read; showing the theme without it.",
@@ -65,13 +66,44 @@ export const strings = {
     viewSource: "View source",
     theme: "Theme",
     remoteImages: "Load remote images",
+    settings: "Settings…",
     shortcuts: "Keyboard shortcuts",
   },
-  // View › Theme shows the current choice; choosing it moves to the next.
+  // Settings lists the three themes, the current one checked; Ctrl+Shift+L moves to the next.
   themes: {
-    system: "Theme: System",
-    light: "Theme: Light",
-    dark: "Theme: Dark",
+    system: "System theme",
+    light: "Light theme",
+    dark: "Dark theme",
+  },
+  // Settings › Style: each name is shown in its own faces.
+  styles: {
+    classic: "Classic",
+    newspaper: "Newspaper",
+    paper: "Paper",
+    docs: "Docs",
+    typewriter: "Typewriter",
+  },
+  // The wide-sheet toolbar toggle names the layout a click switches to.
+  sheetFill: "Fill the window",
+  sheetFixed: "Fixed width",
+  // The print dialog (D-20): pick a paper text size, then print or save as PDF.
+  printDialog: {
+    title: "Print",
+    exportTitle: "Export PDF",
+    size: "Text size",
+    small: "Small",
+    normal: "Normal",
+    large: "Large",
+    sample: "Aa",
+    preview: "Preview",
+    cancel: "Cancel",
+  },
+  settingsDialog: {
+    title: "Settings",
+    theme: "Theme",
+    style: "Style",
+    images: "Images",
+    done: "Done",
   },
   outlineEmpty: "No headings",
   findPlaceholder: "Find in document",
@@ -87,8 +119,12 @@ export const strings = {
     forward: "→",
     zoomOut: "−",
     zoomIn: "+",
-    wideSheet:
-      "M160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h640q33 0 56.5 23.5T880-720v480q0 33-23.5 56.5T800-160H160Zm0-80h40v-480h-40v480Zm120 0h400v-480H280v480Zm480 0h40v-480h-40v480ZM280-720v480-480Z",
+    // A wide page with triangles inside pushing the walls out (fill the window), or a narrow
+    // column with triangles outside pushing in (fixed width). The toggle swaps them.
+    sheetFill:
+      "M120-840H840V-120H120ZM180-780V-180H780V-780H180ZM240-480L390-590L390-370ZM720-480L570-590L570-370Z",
+    sheetFixed:
+      "M330-840H630V-120H330ZM390-780V-180H570V-780H390ZM270-480L120-590L120-370ZM690-480L840-590L840-370Z",
     find: "M784-120 532-372q-30 24-69 38t-83 14q-109 0-184.5-75.5T120-580q0-109 75.5-184.5T380-840q109 0 184.5 75.5T640-580q0 44-14 83t-38 69l252 252-56 56ZM380-400q75 0 127.5-52.5T560-580q0-75-52.5-127.5T380-760q-75 0-127.5 52.5T200-580q0 75 52.5 127.5T380-400Z",
     findNext: "↓",
     findPrevious: "↑",

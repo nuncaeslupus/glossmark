@@ -67,7 +67,7 @@ export const actions: Record<ActionId, Action> = {
   wideSheet: {
     id: "wideSheet",
     label: a.wideSheet,
-    icon: i.wideSheet,
+    icon: i.sheetFill,
     key: "Ctrl+9",
     needsDocument: true,
   },
@@ -96,6 +96,7 @@ export const actions: Record<ActionId, Action> = {
   viewSource: { id: "viewSource", label: a.viewSource, key: "Ctrl+U", needsDocument: true },
   theme: { id: "theme", label: a.theme, key: "Ctrl+Shift+L" },
   remoteImages: { id: "remoteImages", label: a.remoteImages, key: "Ctrl+Shift+M" },
+  settings: { id: "settings", label: a.settings, key: "Ctrl+," },
   shortcuts: { id: "shortcuts", label: a.shortcuts, key: "F1" },
 };
 
@@ -129,25 +130,17 @@ export const bar: BarItem[][] = [
 
 /** ⋮ More's sections, divided by rules; every command keeps its shortcut. */
 export const menus: ActionId[][] = [
-  ["open", "newTab", "export", "print", "closeTab"],
-  [
-    "outline",
-    "zoomIn",
-    "zoomOut",
-    "zoomReset",
-    "wideSheet",
-    "find",
-    "viewSource",
-    "theme",
-    "remoteImages",
-  ],
+  ["open", "export", "print", "closeTab"],
+  ["outline", "zoomIn", "zoomOut", "zoomReset", "wideSheet", "find", "viewSource"],
   ["back", "forward", "nextTab", "previousTab"],
-  ["shortcuts"],
+  // Theme and remote images are set in Settings; their shortcuts still work from anywhere.
+  ["settings", "shortcuts"],
 ];
 
 /** What the user can set; window size is remembered by the window-state plugin. */
 export const settings = [
   "theme",
+  "style",
   "defaultZoom",
   "remoteImages",
 ] as const satisfies readonly (keyof Config)[];
