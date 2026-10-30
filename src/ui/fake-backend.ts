@@ -76,8 +76,9 @@ export function fakeBackend(files: Record<string, string>, launch: string[] = []
       failing("openDialog");
       return state.dialogPaths;
     },
-    saveDialog: async (name) => {
+    saveDialog: async (name, near) => {
       state.saveNames.push(name);
+      state.dialogNear = near;
       return state.savePath;
     },
     exportPdf: async (path) => {

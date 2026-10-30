@@ -47,8 +47,8 @@ export interface Backend {
   takeOpenFiles(): Promise<string[]>;
   /** The native Open dialog, starting in the folder of `near`, the last file opened. */
   openDialog(near?: string): Promise<string[]>;
-  /** The native Save dialog, offering `name`; `null` when cancelled. */
-  saveDialog(name: string): Promise<string | null>;
+  /** The native Save dialog, offering `name`, starting like Open; `null` when cancelled. */
+  saveDialog(name: string, near?: string): Promise<string | null>;
   /** Prints the page to `path`, which must be the Save dialog's last answer. */
   exportPdf(path: string): Promise<void>;
   /** The same PDF in the temp folder, opened in the system viewer. */
@@ -90,7 +90,7 @@ interface OpenFiles {
 export const tauriBackend: Backend = {
   takeOpenFiles: () => invoke<OpenFiles>("take_open_files").then((r) => r.paths),
   openDialog: (near) => invoke<OpenFiles>("open_dialog", { near }).then((r) => r.paths),
-  saveDialog: (name) => invoke<string | null>("save_dialog", { name }),
+  saveDialog: (name, near) => invoke<string | null>("save_dialog", { name, near }),
   exportPdf: (path) => invoke<void>("export_pdf", { path }),
   previewPdf: (name) => invoke<void>("preview_pdf", { name }),
   printDocument: () => invoke<boolean>("print_document"),

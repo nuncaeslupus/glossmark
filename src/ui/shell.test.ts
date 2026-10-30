@@ -100,6 +100,7 @@ describe("shell", () => {
     doExport();
     for (let i = 0; i < 5; i++) await settle();
     expect(state.saveNames).toEqual(["notes.pdf"]);
+    expect(state.dialogNear).toBe(state.config.recentFiles[0]);
     expect(state.exported).toEqual([]);
 
     state.savePath = "/out/notes.pdf";

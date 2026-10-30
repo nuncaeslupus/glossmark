@@ -112,9 +112,9 @@ pub fn take_open_files(state: State<'_, AppState>) -> OpenFiles {
     }
 }
 
-/// Where Open starts: the folder of `near` if it still exists, else `home`. Left unset, GTK
+/// Where Open and Export start: the folder of `near` if it still exists, else `home`. Left unset, GTK
 /// starts in the process's working directory.
-fn open_folder(near: Option<&Path>, home: Option<PathBuf>) -> Option<PathBuf> {
+fn start_folder(near: Option<&Path>, home: Option<PathBuf>) -> Option<PathBuf> {
     near.and_then(Path::parent)
         .filter(|dir| dir.is_dir())
         .map(Path::to_path_buf)
@@ -136,7 +136,7 @@ pub async fn open_dialog<R: Runtime>(
     if let Some(window) = app.get_webview_window("main") {
         dialog = dialog.set_parent(&window);
     }
-    if let Some(dir) = open_folder(near.as_deref().map(Path::new), app.path().home_dir().ok()) {
+    if let Some(dir) = start_folder(near.as_deref().map(Path::new), app.path().home_dir().ok()) {
         dialog = dialog.set_directory(dir);
     }
     let picked = dialog.blocking_pick_files().unwrap_or_default();
@@ -150,6 +150,7 @@ pub async fn save_dialog<R: Runtime>(
     app: AppHandle<R>,
     state: State<'_, AppState>,
     name: String,
+    near: Option<String>,
 ) -> Result<Option<String>, IpcError> {
     let mut dialog = app
         .dialog()
@@ -158,6 +159,9 @@ pub async fn save_dialog<R: Runtime>(
         .set_file_name(name);
     if let Some(window) = app.get_webview_window("main") {
         dialog = dialog.set_parent(&window);
+    }
+    if let Some(dir) = start_folder(near.as_deref().map(Path::new), app.path().home_dir().ok()) {
+        dialog = dialog.set_directory(dir);
     }
     let picked = dialog
         .blocking_save_file()
@@ -359,21 +363,21 @@ mod tests {
     }
 
     #[test]
-    fn test_open_folder_prefers_the_file_folder_then_home() {
+    fn test_start_folder_prefers_the_file_folder_then_home() {
         let dir = tempfile::tempdir().unwrap();
         let home = PathBuf::from("/home/someone");
         let doc = dir.path().join("a.md");
         assert_eq!(
-            open_folder(Some(&doc), Some(home.clone())).as_deref(),
+            start_folder(Some(&doc), Some(home.clone())).as_deref(),
             Some(dir.path())
         );
         let gone = dir.path().join("gone/a.md");
         assert_eq!(
-            open_folder(Some(&gone), Some(home.clone())),
+            start_folder(Some(&gone), Some(home.clone())),
             Some(home.clone())
         );
-        assert_eq!(open_folder(None, Some(home.clone())), Some(home));
-        assert_eq!(open_folder(None, None), None);
+        assert_eq!(start_folder(None, Some(home.clone())), Some(home));
+        assert_eq!(start_folder(None, None), None);
     }
 
     #[test]
