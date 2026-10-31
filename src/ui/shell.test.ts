@@ -109,6 +109,17 @@ describe("shell", () => {
     expect(state.exported).toEqual(["/out/notes.pdf"]);
   });
 
+  it("test_export_marks_links_only_while_it_prints", async () => {
+    const source = "[a](https://a.example)";
+    const { root, state } = await open({ "/n/notes.md": source }, ["/n/notes.md"]);
+    state.savePath = "/out/notes.pdf";
+    click(root.querySelector('.bar [data-action="export"]'));
+    click(root.querySelector(".print-dialog .print-save"));
+    for (let i = 0; i < 5; i++) await settle();
+    expect(state.pdfMarks).toEqual([{ uri: "https://a.example" }]);
+    expect(root.querySelector<HTMLElement>(".sheet a")?.style.backgroundColor).toBe("");
+  });
+
   it("test_new_tab_opens_the_open_dialog", async () => {
     const { root, state } = await open({ "/n/a.md": "# A", "/n/b.md": "# B" }, ["/n/a.md"]);
     const labels = () => [...root.querySelectorAll(".tabs .tab-label")].map((l) => l.textContent);

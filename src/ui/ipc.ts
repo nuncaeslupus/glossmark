@@ -1,6 +1,7 @@
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import type { PdfMark } from "./links";
 
 export interface Config {
   version: number;
@@ -50,9 +51,9 @@ export interface Backend {
   /** The native Save dialog, offering `name`, starting like Open; `null` when cancelled. */
   saveDialog(name: string, near?: string): Promise<string | null>;
   /** Prints the page to `path`, which must be the Save dialog's last answer. */
-  exportPdf(path: string): Promise<void>;
+  exportPdf(path: string, marks: PdfMark[]): Promise<void>;
   /** The same PDF in the temp folder, opened in the system viewer. */
-  previewPdf(name: string): Promise<void>;
+  previewPdf(name: string, marks: PdfMark[]): Promise<void>;
   /** The system print dialog over the same page as the PDF; `false` where the webview's own
    * print is used instead. */
   printDocument(): Promise<boolean>;
@@ -91,8 +92,8 @@ export const tauriBackend: Backend = {
   takeOpenFiles: () => invoke<OpenFiles>("take_open_files").then((r) => r.paths),
   openDialog: (near) => invoke<OpenFiles>("open_dialog", { near }).then((r) => r.paths),
   saveDialog: (name, near) => invoke<string | null>("save_dialog", { name, near }),
-  exportPdf: (path) => invoke<void>("export_pdf", { path }),
-  previewPdf: (name) => invoke<void>("preview_pdf", { name }),
+  exportPdf: (path, marks) => invoke<void>("export_pdf", { path, marks }),
+  previewPdf: (name, marks) => invoke<void>("preview_pdf", { name, marks }),
   printDocument: () => invoke<boolean>("print_document"),
   readDocument: (path) => invoke<Doc>("read_document", { path }),
   readSvg: (path) => invoke<{ svg: string }>("read_svg", { path }).then((r) => r.svg),
