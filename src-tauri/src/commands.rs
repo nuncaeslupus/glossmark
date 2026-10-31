@@ -3,6 +3,7 @@ use crate::document::{self, Document, Svg};
 use crate::error::{ErrorKind, IpcError};
 use crate::export;
 use crate::external;
+use crate::help;
 use crate::image;
 use crate::scope::{self, Scope};
 use crate::updater;
@@ -218,6 +219,25 @@ pub async fn print_document<R: Runtime>(app: AppHandle<R>) -> Result<bool, IpcEr
     tauri::async_runtime::spawn_blocking(move || export::print_dialog(&window))
         .await
         .map_err(|e| IpcError::new(ErrorKind::Io, e.to_string()))?
+}
+
+/// Writes the guide to the app's data folder and brings it into scope.
+#[tauri::command]
+pub async fn help_file<R: Runtime>(
+    app: AppHandle<R>,
+    state: State<'_, AppState>,
+) -> Result<String, IpcError> {
+    let failed = |message: String| IpcError::new(ErrorKind::Io, message);
+    let dir = app
+        .path()
+        .app_local_data_dir()
+        .map_err(|e| failed(e.to_string()))?
+        .join("help");
+    let guide = help::write(&dir).map_err(|e| IpcError::from_io(&e, &dir))?;
+    state
+        .open([guide])
+        .pop()
+        .ok_or_else(|| failed("the guide could not be opened".into()))
 }
 
 /// Called once after first paint; a newer version arrives as `update-available`.

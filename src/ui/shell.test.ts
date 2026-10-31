@@ -246,6 +246,38 @@ describe("shell", () => {
     expect(root.querySelector(".tab.active .tab-label")?.textContent).toBe("11.md");
   });
 
+  it("test_user_guide_opens_as_a_tab_and_stays_out_of_recent_files", async () => {
+    const { root, state } = await open({}, []);
+    press({ key: "F1", shiftKey: true });
+    await vi.waitFor(() => expect(root.querySelector(".tab")).not.toBeNull());
+    await settle();
+    expect(root.querySelector(".sheet h1")?.textContent).toContain("Guide");
+    expect(state.config.recentFiles).toEqual([]);
+  });
+
+  it("test_user_guide_failure_shows_a_notice", async () => {
+    const { root } = await open({}, [], (s) => {
+      s.guide = null;
+    });
+    press({ key: "F1", shiftKey: true });
+    await vi.waitFor(() => expect(notice(root)).toBe(strings.notices.helpFailed));
+  });
+
+  it("test_about_shows_the_version_and_links_to_github", async () => {
+    const { root, state } = await open({}, []);
+    press({ key: "F1", ctrlKey: true });
+    const panel = await vi.waitFor(() => {
+      const found = root.querySelector(".about-dialog");
+      expect(found).not.toBeNull();
+      return found;
+    });
+    expect(panel?.textContent).toContain("Version 1.2.3");
+    click(panel?.querySelector(".print-go") ?? null);
+    expect(state.external).toEqual(["https://github.com/nuncaeslupus/nacho-viewer"]);
+    click(panel?.querySelector(".print-cancel") ?? null);
+    expect(root.querySelector(".about-dialog")).toBeNull();
+  });
+
   it("test_recent_files_remove_one_then_clear", async () => {
     const { root, state } = await open({}, [], (s) => {
       s.config.recentFiles = ["/n/a.md", "/n/b.md", "/n/c.md"];

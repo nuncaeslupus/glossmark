@@ -23,6 +23,8 @@ export function fakeBackend(files: Record<string, string>, launch: string[] = []
     } as Config,
     external: [] as string[],
     revealed: [] as string[],
+    /** Where the guide lands; `null` makes `helpFile` fail. */
+    guide: "/data/help/Guide.md" as string | null,
     userCss: null as string | null,
     dialogPaths: [] as string[],
     dialogCalls: 0,
@@ -131,6 +133,12 @@ export function fakeBackend(files: Record<string, string>, launch: string[] = []
     revealFile: async (path) => {
       state.revealed.push(path);
     },
+    helpFile: async () => {
+      if (state.guide === null) throw { kind: "io", message: "no guide" };
+      files[state.guide] = "# Guide";
+      return state.guide;
+    },
+    appVersion: async () => "1.2.3",
     watch: async (path) => {
       if (state.unwatchable.includes(path)) throw { kind: "io", message: `${path}: no watch` };
       state.watched[path] = (state.watched[path] ?? 0) + 1;

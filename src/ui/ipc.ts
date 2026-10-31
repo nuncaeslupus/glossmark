@@ -1,3 +1,4 @@
+import { getVersion } from "@tauri-apps/api/app";
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
@@ -69,6 +70,10 @@ export interface Backend {
   openExternal(url: string): Promise<void>;
   /** Opens the system file manager at an open document, with it selected. */
   revealFile(path: string): Promise<void>;
+  /** Writes the bundled user guide to disk and returns its path, ready to open. */
+  helpFile(): Promise<string>;
+  /** The version of the running app. */
+  appVersion(): Promise<string>;
   /** The window's own buttons, drawn in the tab strip; absent where the system draws them. */
   window?: WindowControls;
   /** Watching is reference-counted in the core: each `watch` needs its own `unwatch`. */
@@ -103,6 +108,8 @@ export const tauriBackend: Backend = {
   readUserCss: () => invoke<{ css: string | null }>("read_user_css").then((r) => r.css),
   openExternal: (url) => invoke<void>("open_external", { url }),
   revealFile: (path) => invoke<void>("reveal_file", { path }),
+  helpFile: () => invoke<string>("help_file"),
+  appVersion: getVersion,
   window: {
     minimize: () => getCurrentWindow().minimize(),
     toggleMaximize: () => getCurrentWindow().toggleMaximize(),
