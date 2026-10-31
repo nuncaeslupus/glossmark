@@ -5,6 +5,8 @@ mod error;
 mod export;
 mod external;
 mod image;
+#[cfg(target_os = "linux")]
+mod pdf_links;
 mod scope;
 mod updater;
 mod watch;

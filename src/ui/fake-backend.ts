@@ -1,4 +1,5 @@
 import type { Backend, Config, DocumentChanged, UpdateAvailable } from "./ipc";
+import type { PdfMark } from "./links";
 
 /** Where the fake's `image:` protocol URLs point (Tauri's Windows form, so a browser can route it). */
 export const FAKE_IMAGE_ORIGIN = "http://image.localhost";
@@ -31,6 +32,7 @@ export function fakeBackend(files: Record<string, string>, launch: string[] = []
     saveNames: [] as string[],
     exported: [] as string[],
     previewed: [] as string[],
+    pdfMarks: [] as PdfMark[],
     /** Calls to the core's print; `printHandled` is what it answers. */
     printed: 0,
     printHandled: false,
@@ -81,11 +83,13 @@ export function fakeBackend(files: Record<string, string>, launch: string[] = []
       state.dialogNear = near;
       return state.savePath;
     },
-    exportPdf: async (path) => {
+    exportPdf: async (path, marks) => {
       state.exported.push(path);
+      state.pdfMarks = marks;
     },
-    previewPdf: async (name) => {
+    previewPdf: async (name, marks) => {
       state.previewed.push(name);
+      state.pdfMarks = marks;
     },
     printDocument: async () => {
       state.printed++;

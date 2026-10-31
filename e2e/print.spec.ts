@@ -92,6 +92,26 @@ test("test_print_keeps_blocks_whole", async ({ page }) => {
   expect(seen.wrap).toBe("pre-wrap");
 });
 
+test("a wide table does not shrink the printed page", async ({ page }) => {
+  // WebKit scales every page to fit the widest thing, so an overflow makes all the text small.
+  await open(page, "light");
+  await page.setViewportSize({ width: 602, height: 910 });
+  await page.emulateMedia({ media: "print" });
+  const overflow = await page.evaluate(() => {
+    const row = (cell: string) =>
+      `<tr>${Array.from({ length: 7 }, () => `<td>${cell}</td>`).join("")}</tr>`;
+    const url = `<a href="https://a.example">https://a.example/${"long/".repeat(12)}</a>`;
+    document
+      .querySelector(".sheet")
+      ?.insertAdjacentHTML(
+        "beforeend",
+        `<table>${row("Quarter")}${row("113,190.00")}<tr><td colspan="7">${url}</td></tr></table>`,
+      );
+    return document.documentElement.scrollWidth - document.documentElement.clientWidth;
+  });
+  expect(overflow).toBe(0);
+});
+
 test("print keeps headings with their text", async ({ page }) => {
   // WebKit ignores `break-after`, so the fix is a reserved band below each heading, inside
   // `break-inside: avoid`. Playwright cannot paginate WebKit (page.pdf is Chromium-only), so

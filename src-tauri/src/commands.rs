@@ -177,18 +177,23 @@ pub async fn export_pdf<R: Runtime>(
     app: AppHandle<R>,
     state: State<'_, AppState>,
     path: String,
+    marks: Vec<export::Mark>,
 ) -> Result<(), IpcError> {
     let path = export::target(lock(&state.export_path).take(), &path)?;
     let window = app
         .get_webview_window("main")
         .ok_or_else(|| IpcError::new(ErrorKind::Io, "no window to export"))?;
-    export::print_to_pdf(&window, &path)
+    export::print_to_pdf(&window, &path, &marks)
 }
 
 /// The print dialog's Preview: the same PDF as Export, in the temp folder, opened in the
 /// system's viewer. Only the name's last component is used, so it cannot leave that folder.
 #[tauri::command]
-pub async fn preview_pdf<R: Runtime>(app: AppHandle<R>, name: String) -> Result<(), IpcError> {
+pub async fn preview_pdf<R: Runtime>(
+    app: AppHandle<R>,
+    name: String,
+    marks: Vec<export::Mark>,
+) -> Result<(), IpcError> {
     let io = |e: String| IpcError::new(ErrorKind::Io, e);
     let file = Path::new(&name)
         .file_name()
@@ -197,7 +202,7 @@ pub async fn preview_pdf<R: Runtime>(app: AppHandle<R>, name: String) -> Result<
     let window = app
         .get_webview_window("main")
         .ok_or_else(|| io("no window to preview".into()))?;
-    export::print_to_pdf(&window, &path)?;
+    export::print_to_pdf(&window, &path, &marks)?;
     app.opener()
         .open_path(path.to_string_lossy(), None::<&str>)
         .map_err(|e| io(e.to_string()))
